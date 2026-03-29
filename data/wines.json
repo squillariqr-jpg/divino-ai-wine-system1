@@ -70,5 +70,113 @@
     "priceTier": "alto",
     "grape": "Nebbiolo",
     "description": "Rosso di prestigio, complesso e aristocratico, per chi apprezza dettaglio e longevità."
+  },
+  {
+    "id": "prosecco-valdobbiadene",
+    "name": "Prosecco Valdobbiadene Superiore",
+    "region": "Veneto",
+    "style": "fresco",
+    "priceTier": "basso",
+    "grape": "Glera",
+    "description": "Bollicina leggera e fragrante, ottima porta d'ingresso per chi si avvicina alle bollicine italiane."
+  },
+  {
+    "id": "montepulciano-abruzzo",
+    "name": "Montepulciano d'Abruzzo",
+    "region": "Abruzzo",
+    "style": "morbido",
+    "priceTier": "basso",
+    "grape": "Montepulciano",
+    "description": "Rosso dal carattere diretto, con tannini morbidi e un frutto scuro generoso. Immediato e soddisfacente."
+  },
+  {
+    "id": "soave-classico",
+    "name": "Soave Classico DOC",
+    "region": "Veneto",
+    "style": "fresco",
+    "priceTier": "medio",
+    "grape": "Garganega",
+    "description": "Bianco floreale e minerale, con una freschezza pulita che si abbina a quasi tutto."
+  },
+  {
+    "id": "brunello",
+    "name": "Brunello di Montalcino",
+    "region": "Toscana",
+    "style": "strutturato",
+    "priceTier": "alto",
+    "grape": "Sangiovese Grosso",
+    "description": "Uno dei rossi più longevi d'Italia. Struttura imponente, ma con una precisione che premia chi sa aspettare."
+  },
+  {
+    "id": "ripasso",
+    "name": "Valpolicella Ripasso DOC",
+    "region": "Veneto",
+    "style": "morbido",
+    "priceTier": "medio",
+    "grape": "Corvina, Corvinone",
+    "description": "La via di mezzo tra Valpolicella e Amarone: corpo pieno, frutto caldo, tannicità accessibile."
+  },
+  {
+    "id": "gewurztraminer",
+    "name": "Gewürztraminer Alto Adige",
+    "region": "Alto Adige",
+    "style": "elegante",
+    "priceTier": "medio",
+    "grape": "Gewürztraminer",
+    "description": "Bianco aromatico e raffinato, con note di rosa e litchi. Insolito e memorabile, ottimo da raccontare."
+  },
+  {
+    "id": "sagrantino",
+    "name": "Sagrantino di Montefalco DOCG",
+    "region": "Umbria",
+    "style": "strutturato",
+    "priceTier": "medio",
+    "grape": "Sagrantino",
+    "description": "Autoctono raro e tannico, per chi ama il vino come storia di territorio. Impegnativo e identitario."
+  },
+  {
+    "id": "falanghina",
+    "name": "Falanghina del Sannio DOC",
+    "region": "Campania",
+    "style": "morbido",
+    "priceTier": "basso",
+    "grape": "Falanghina",
+    "description": "Bianco morbido e fruttato, con una beva facile che conquista anche chi parte da zero con i bianchi."
+  },
+  {
+    "id": "taurasi",
+    "name": "Taurasi DOCG",
+    "region": "Campania",
+    "style": "strutturato",
+    "priceTier": "alto",
+    "grape": "Aglianico",
+    "description": "Il grande rosso del Sud: austero, potente, con una complessità che cresce nel bicchiere e nel tempo."
+  },
+  {
+    "id": "alto-adige-pinot-grigio",
+    "name": "Pinot Grigio Alto Adige DOC",
+    "region": "Alto Adige",
+    "style": "fresco",
+    "priceTier": "medio",
+    "grape": "Pinot Grigio",
+    "description": "Bianco preciso, pulito e versatile. Facile da abbinare, difficile da dimenticare se scelto bene."
+  },
+  {
+    "id": "nero-davola",
+    "name": "Nero d'Avola Riserva",
+    "region": "Sicilia",
+    "style": "morbido",
+    "priceTier": "medio",
+    "grape": "Nero d'Avola",
+    "description": "Rosso caldo e avvolgente con note di ciliegia matura e spezie dolci. Immediato, ma con sostanza."
+  },
+  {
+    "id": "gavi",
+    "name": "Gavi di Gavi DOCG",
+    "region": "Piemonte",
+    "style": "elegante",
+    "priceTier": "medio",
+    "grape": "Cortese",
+    "description": "Bianco elegante e minerale del Piemonte. Sobrio, raffinato, ideale per chi cerca stile senza eccessi."
   }
 ]

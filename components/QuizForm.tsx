@@ -22,44 +22,59 @@ type StepDefinition<T extends StepKey> = {
 const steps: StepDefinition<StepKey>[] = [
   {
     key: "level",
-    label: "Il tuo livello",
+    label: "Qual è il tuo livello nel vino?",
     description: "Per capire da dove partire con il giusto ritmo.",
     options: [
-      { value: "principiante", label: "Principiante" },
-      { value: "intermedio", label: "Intermedio" },
-      { value: "professionista", label: "Professionista" }
+      { value: "principiante", label: "Sto iniziando da zero" },
+      { value: "intermedio", label: "Ho una base e voglio capire di più" },
+      { value: "professionista", label: "Lavoro già nel settore" },
+      { value: "esperto", label: "Sono appassionato avanzato / collezionista" }
     ]
   },
   {
     key: "goal",
-    label: "Il tuo obiettivo",
+    label: "Cosa vuoi ottenere soprattutto?",
     description: "Così il sistema ti accompagna verso il prossimo passo migliore.",
     options: [
-      { value: "imparare", label: "Imparare con metodo" },
-      { value: "scegliere-meglio", label: "Scegliere vini migliori" },
-      { value: "business-ai", label: "Usare AI e business nel vino" },
-      { value: "acquisto-professionale", label: "Acquisto professionale" }
+      { value: "scegliere-meglio", label: "Bere e scegliere meglio" },
+      { value: "imparare", label: "Imparare in modo semplice e guidato" },
+      { value: "business-ai", label: "Creare contenuti / usare l'AI nel vino" },
+      { value: "business-crescita", label: "Far crescere un business nel vino" },
+      { value: "acquisto-professionale", label: "Migliorare acquisti, selezione o strategia" }
     ]
   },
   {
     key: "taste",
-    label: "Stile che preferisci",
+    label: "Quale stile di vino ti rappresenta di più?",
     description: "Ogni suggerimento parte dal tuo gusto reale, non da etichette vuote.",
     options: [
-      { value: "morbido", label: "Morbido e avvolgente" },
-      { value: "fresco", label: "Fresco e teso" },
+      { value: "fresco", label: "Fresco e leggero" },
+      { value: "morbido", label: "Morbido e rotondo" },
       { value: "strutturato", label: "Strutturato e intenso" },
-      { value: "elegante", label: "Elegante e raffinato" }
+      { value: "elegante", label: "Elegante e complesso" },
+      { value: "esploratore", label: "Amo esplorare un po' tutto" }
     ]
   },
   {
     key: "budget",
-    label: "Budget medio per bottiglia",
+    label: "Qual è il tuo budget medio per bottiglia?",
     description: "Serve a suggerire etichette coerenti con il tuo momento di acquisto.",
     options: [
-      { value: "basso", label: "Sotto i 20€" },
-      { value: "medio", label: "Tra 20€ e 50€" },
-      { value: "alto", label: "Oltre 50€" }
+      { value: "basso", label: "Sotto i 15€" },
+      { value: "medio", label: "15€–30€" },
+      { value: "alto", label: "30€–60€" },
+      { value: "molto-alto", label: "Oltre 60€" }
+    ]
+  },
+  {
+    key: "journey",
+    label: "Vuoi un percorso più…",
+    description: "L'ultimo segnale che affina il tuo profilo e il prodotto consigliato.",
+    options: [
+      { value: "semplice-pratico", label: "Semplice e pratico" },
+      { value: "creativo-moderno", label: "Creativo e moderno" },
+      { value: "professionale-tecnico", label: "Professionale e tecnico" },
+      { value: "esclusivo-approfondito", label: "Esclusivo e approfondito" }
     ]
   }
 ] as const;
@@ -68,7 +83,8 @@ const initialAnswers: QuizAnswers = {
   level: "principiante",
   goal: "imparare",
   taste: "morbido",
-  budget: "medio"
+  budget: "medio",
+  journey: "semplice-pratico"
 };
 
 export function QuizForm() {

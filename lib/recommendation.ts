@@ -39,6 +39,11 @@ const levelWeights: WeightMap<QuizAnswers["level"]> = {
     "buyer-professionale": 5,
     "builder-digitale": 2,
     "appassionato-pratico": 1
+  },
+  esperto: {
+    "appassionato-pratico": 4,
+    "buyer-professionale": 3,
+    "builder-digitale": 1
   }
 };
 
@@ -53,6 +58,11 @@ const goalWeights: WeightMap<QuizAnswers["goal"]> = {
   },
   "business-ai": {
     "builder-digitale": 6,
+    "appassionato-pratico": 1
+  },
+  "business-crescita": {
+    "builder-digitale": 4,
+    "buyer-professionale": 3,
     "appassionato-pratico": 1
   },
   "acquisto-professionale": {
@@ -77,6 +87,10 @@ const tasteWeights: WeightMap<QuizAnswers["taste"]> = {
   elegante: {
     "buyer-professionale": 2,
     "appassionato-pratico": 2
+  },
+  esploratore: {
+    "appassionato-pratico": 2,
+    "builder-digitale": 1
   }
 };
 
@@ -91,6 +105,29 @@ const budgetWeights: WeightMap<QuizAnswers["budget"]> = {
   alto: {
     "buyer-professionale": 2,
     "appassionato-pratico": 1
+  },
+  "molto-alto": {
+    "buyer-professionale": 3,
+    "appassionato-pratico": 1
+  }
+};
+
+const journeyWeights: WeightMap<QuizAnswers["journey"]> = {
+  "semplice-pratico": {
+    "novizio-curioso": 3,
+    "appassionato-pratico": 1
+  },
+  "creativo-moderno": {
+    "builder-digitale": 4,
+    "appassionato-pratico": 1
+  },
+  "professionale-tecnico": {
+    "buyer-professionale": 4,
+    "builder-digitale": 1
+  },
+  "esclusivo-approfondito": {
+    "appassionato-pratico": 3,
+    "buyer-professionale": 2
   }
 };
 
@@ -111,6 +148,12 @@ const tieBreakers: Record<QuizAnswers["goal"], SegmentId[]> = {
     "builder-digitale",
     "appassionato-pratico",
     "buyer-professionale",
+    "novizio-curioso"
+  ],
+  "business-crescita": [
+    "builder-digitale",
+    "buyer-professionale",
+    "appassionato-pratico",
     "novizio-curioso"
   ],
   "acquisto-professionale": [
@@ -168,6 +211,7 @@ function classifyProfile(answers: QuizAnswers) {
   applyWeights(scores, goalWeights[answers.goal]);
   applyWeights(scores, tasteWeights[answers.taste]);
   applyWeights(scores, budgetWeights[answers.budget]);
+  applyWeights(scores, journeyWeights[answers.journey]);
 
   const maxScore = Math.max(...Object.values(scores));
   const segment =
@@ -178,15 +222,19 @@ function classifyProfile(answers: QuizAnswers) {
 }
 
 function pickWines(taste: QuizAnswers["taste"], budget: QuizAnswers["budget"]): Wine[] {
-  const exact = wineList.filter(
-    (wine) => wine.style === taste && wine.priceTier === budget
-  );
+  // normalize: esploratore picks from all styles; molto-alto maps to alto
+  const normalizedBudget = budget === "molto-alto" ? "alto" : budget;
+  const exact = taste === "esploratore"
+    ? wineList.filter((wine) => wine.priceTier === normalizedBudget)
+    : wineList.filter((wine) => wine.style === taste && wine.priceTier === normalizedBudget);
 
   if (exact.length >= fallbackWineCount) {
     return exact.slice(0, fallbackWineCount);
   }
 
-  const sameStyle = wineList.filter((wine) => wine.style === taste);
+  const sameStyle = taste === "esploratore"
+    ? wineList
+    : wineList.filter((wine) => wine.style === taste);
   const merged = [...exact];
 
   for (const wine of sameStyle) {

@@ -14,6 +14,12 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
         <p className="mt-4 max-w-2xl leading-7 text-ink/75">
           {result.persona.summary}
         </p>
+        {result.persona.whyRight ? (
+          <div className="mt-5 rounded-[20px] border border-bottle/15 bg-bottle/5 px-5 py-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-bottle/80">Perché è giusto per te</p>
+            <p className="mt-2 leading-7 text-ink/80">{result.persona.whyRight}</p>
+          </div>
+        ) : null}
         <div className="mt-6 grid gap-3 md:grid-cols-2">
           {result.rationale.map((item) => (
             <div

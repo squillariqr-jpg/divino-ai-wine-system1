@@ -1,26 +1,30 @@
 [
   {
     "id": "novizio-curioso",
-    "label": "Novizio Curioso",
-    "summary": "Vuole sentirsi sicuro nelle scelte e capire il vino senza gergo inutile.",
-    "bestFor": "Corso Introduttivo in 5 Lezioni"
+    "label": "Beginner Explorer",
+    "summary": "Stai iniziando il tuo percorso nel vino e vuoi farlo bene fin dall'inizio — senza gergo inutile, con metodo pratico. Il Corso Introduttivo in 5 Lezioni è fatto esattamente per te.",
+    "bestFor": "Corso Introduttivo in 5 Lezioni",
+    "whyRight": "Hai bisogno di basi solide prima di tutto. Il corso ti dà un metodo chiaro, due vini didattici da esplorare subito e un percorso che puoi seguire anche senza esperienza."
   },
   {
     "id": "appassionato-pratico",
-    "label": "Appassionato Pratico",
-    "summary": "Ha già una base e cerca strumenti per scegliere meglio bottiglie, occasioni e budget.",
-    "bestFor": "Quiz + raccomandazioni personalizzate"
+    "label": "Enthusiast & Collector",
+    "summary": "Sei già nel vino — per passione, curiosità o collezione. Cerchi strumenti per scegliere con più criterio, scoprire etichette nuove e costruire una cantina che abbia senso.",
+    "bestFor": "Wine AI Mastery",
+    "whyRight": "Il tuo livello chiede più della teoria base. Wine AI Mastery ti porta dentro la scelta consapevole, l'uso dell'AI come strumento e le logiche dietro ogni selezione premium."
   },
   {
     "id": "builder-digitale",
-    "label": "Builder Digitale",
-    "summary": "Vuole usare AI e contenuti per vendere meglio, educare il pubblico o costruire un funnel.",
-    "bestFor": "Wine AI Mastery"
+    "label": "AI Wine Creator",
+    "summary": "Usi contenuti, AI e digitale per comunicare, vendere o costruire sistemi. Il vino è il tuo vertice creativo — e vuoi che lavori anche commercialmente.",
+    "bestFor": "Wine AI Mastery",
+    "whyRight": "Wine AI Mastery è stato costruito per chi fa esattamente questo: trasformare la conoscenza del vino in asset digitali, funnel e contenuti che scalano."
   },
   {
     "id": "buyer-professionale",
-    "label": "Buyer Professionale",
-    "summary": "Compra o seleziona vino per il business e ha bisogno di metodo, criteri e marginalità.",
-    "bestFor": "Wine Buyer Academy"
+    "label": "Wine Business Professional",
+    "summary": "Operi nel vino come business: enoteca, buyer, horeca, distribuzione. Hai bisogno di metodo decisionale, criteri di selezione e strumenti che lavorino sulla marginalità.",
+    "bestFor": "Wine Buyer Academy",
+    "whyRight": "La Wine Buyer Academy è il percorso premium per chi prende decisioni d'acquisto con denaro reale. Criteri, carta vini, negoziazione, margine — tutto in un sistema applicabile da subito."
   }
 ]

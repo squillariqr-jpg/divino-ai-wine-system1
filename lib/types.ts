@@ -2,7 +2,7 @@ export type Wine = {
   id: string;
   name: string;
   region: string;
-  style: "morbido" | "fresco" | "strutturato" | "elegante";
+  style: "morbido" | "fresco" | "strutturato" | "elegante" | "esploratore";
   priceTier: "basso" | "medio" | "alto";
   grape: string;
   description: string;
@@ -25,6 +25,7 @@ export type Persona = {
   label: string;
   summary: string;
   bestFor: string;
+  whyRight?: string;
 };
 
 export type SegmentId =
@@ -34,14 +35,20 @@ export type SegmentId =
   | "buyer-professionale";
 
 export type QuizAnswers = {
-  level: "principiante" | "intermedio" | "professionista";
+  level: "principiante" | "intermedio" | "professionista" | "esperto";
   goal:
     | "imparare"
     | "scegliere-meglio"
     | "business-ai"
+    | "business-crescita"
     | "acquisto-professionale";
-  taste: "morbido" | "fresco" | "strutturato" | "elegante";
-  budget: "basso" | "medio" | "alto";
+  taste: "morbido" | "fresco" | "strutturato" | "elegante" | "esploratore";
+  budget: "basso" | "medio" | "alto" | "molto-alto";
+  journey:
+    | "semplice-pratico"
+    | "creativo-moderno"
+    | "professionale-tecnico"
+    | "esclusivo-approfondito";
 };
 
 export type ScoreMap = Record<SegmentId, number>;
