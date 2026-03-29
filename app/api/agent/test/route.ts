@@ -123,6 +123,3 @@ export async function GET(request: Request) {
   });
 }
 
-export async function GET_ALL() {
-  return NextResponse.json({ fixtures: fixtures.map((f) => f.id) });
-}

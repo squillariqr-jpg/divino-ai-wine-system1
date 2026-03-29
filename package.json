@@ -11,6 +11,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@supabase/supabase-js": "^2.100.1",
+    "@x402/fetch": "^2.8.0",
     "agentmail": "^0.4.13",
     "next": "14.2.5",
     "react": "18.3.1",
