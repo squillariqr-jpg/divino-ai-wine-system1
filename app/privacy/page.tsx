@@ -19,11 +19,12 @@ export default function PrivacyPage() {
 
           <h2 className="mt-8 text-xl font-semibold text-ink">1. Titolare del trattamento</h2>
           <p>
-            Il titolare del trattamento è Luca Toesca, in relazione al progetto Divino AI / Divino Market –
-            L'Outlet del Vino. Per qualsiasi richiesta relativa alla privacy, scrivi a:{" "}
+            Il titolare del trattamento è <strong>Luca Toesca – Divino Market, L'Outlet del Vino</strong>,
+            email:{" "}
             <a href="mailto:luca@divinomarket.it" className="text-burgundy underline">
               luca@divinomarket.it
             </a>
+            . Per qualsiasi richiesta relativa alla privacy scrivi a questo indirizzo.
           </p>
 
           <h2 className="mt-8 text-xl font-semibold text-ink">2. Dati personali raccolti</h2>
@@ -38,7 +39,11 @@ export default function PrivacyPage() {
           <h2 className="mt-8 text-xl font-semibold text-ink">3. Finalità del trattamento</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>fornire il risultato del quiz e il percorso personalizzato richiesto;</li>
-            <li>inviare email informative, educative o commerciali relative ai contenuti e ai prodotti del progetto;</li>
+            <li>
+              inviare comunicazioni <strong>informative, educative e promozionali</strong> relative
+              ai contenuti e ai prodotti del progetto Divino AI (email marketing), previo consenso
+              dell'utente;
+            </li>
             <li>gestire richieste di contatto, supporto o risposta personalizzata;</li>
             <li>migliorare i contenuti, i prodotti e l'esperienza utente del sito;</li>
             <li>adempiere a obblighi di legge o richieste delle autorità competenti.</li>
@@ -58,11 +63,19 @@ export default function PrivacyPage() {
             fino a revoca del consenso o richiesta di cancellazione.
           </p>
 
-          <h2 className="mt-8 text-xl font-semibold text-ink">6. Destinatari</h2>
+          <h2 className="mt-8 text-xl font-semibold text-ink">6. Destinatari e fornitori tecnici</h2>
           <p>
-            I dati potranno essere trattati da fornitori tecnici coinvolti nell'erogazione del servizio
-            (hosting, database, servizi email, strumenti AI), nominati se necessario responsabili del
-            trattamento. Non cediamo dati a terzi per finalità di marketing esterno.
+            I dati potranno essere trattati dai seguenti fornitori tecnici, coinvolti nell'erogazione
+            del servizio e nominati se necessario responsabili del trattamento:
+          </p>
+          <ul className="mt-2 list-disc pl-5 space-y-1">
+            <li><strong>Vercel Inc.</strong> — hosting e deployment del sito (USA, standard contractual clauses);</li>
+            <li><strong>Supabase Inc.</strong> — database e storage dei dati lead (USA, standard contractual clauses);</li>
+            <li><strong>AgentMail</strong> — infrastruttura email agentica per l'invio e la ricezione delle comunicazioni;</li>
+            <li><strong>Anthropic PBC</strong> — elaborazione linguistica per la generazione di risposte personalizzate (USA, standard contractual clauses).</li>
+          </ul>
+          <p className="mt-2">
+            Non cediamo dati a terzi per finalità di marketing esterno.
           </p>
 
           <h2 className="mt-8 text-xl font-semibold text-ink">7. Trasferimenti extra UE</h2>
