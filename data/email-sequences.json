@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "sender_name": "Luca",
+    "sender_signature": "Luca\nDivino Market – L'Outlet del Vino",
+    "sender_email": "luca@divinomarket.it",
+    "delays_days": { "email_1": 0, "email_2": 2, "email_3": 4 }
+  },
+  "sequences": {
+    "novizio-curioso": {
+      "label": "Beginner Explorer",
+      "product": "Corso Introduttivo in 5 Lezioni",
+      "product_url": "/corso",
+      "emails": [
+        {
+          "id": "beginner_1",
+          "delay_days": 0,
+          "subject": "Il tuo profilo vino è pronto 🍷",
+          "body": "Ciao {{nome}},\n\nho visto le tue risposte — e il tuo punto di partenza è chiaro:\n\nsei un Beginner Explorer. Vuoi capire il vino senza perderti in gergo inutile, scegliere con più sicurezza e goderti ogni bottiglia sapendo perché l'hai scelta.\n\nÈ esattamente il punto giusto per iniziare.\n\n🍷 I 2 vini che ti consiglio adesso:\n\n→ Lugana Superiore (Lombardia)\nBianco fresco e sapido, quasi didattico nella sua precisione. Perfetto per capire cosa significa \"freschezza\" in un vino.\n\n→ Primitivo di Manduria (Puglia)\nRosso morbido e avvolgente. Il tipo di vino che non ti spaventa, ti conquista — e ti fa capire subito cosa vuoi di più.\n\n🎯 Il passo più intelligente ora:\n\nIl Corso Introduttivo in 5 Lezioni è stato costruito per chi è esattamente dove sei tu. Niente teoria astratta — ogni lezione ha un vino reale, un'applicazione pratica, un risultato che senti nel bicchiere.\n\n→ Entra nel corso a €79: /corso\n\nSe vuoi, nella prossima email ti racconto l'errore più comune che fa chi inizia con il vino — e come evitarlo.\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "beginner_2",
+          "delay_days": 2,
+          "subject": "L'errore che fa quasi chiunque inizia con il vino",
+          "body": "Ciao {{nome}},\n\nc'è un errore che vedo continuamente in chi si avvicina al vino per la prima volta.\n\nNon è scegliere la bottiglia sbagliata.\nNon è non conoscere le denominazioni.\n\nÈ questo: iniziare dai vini sbagliati per il proprio gusto.\n\nChi ama i sapori morbidi e avvolgenti spesso inizia con bianchi secchi e fruttati — e pensa \"il vino non fa per me\". Ma non è vero. È solo che il vino giusto non era in quel bicchiere.\n\nPer questo nel corso partiamo sempre da te — dal tuo gusto, dal tuo budget, dalla tua occasione d'uso.\n\nNon da un manuale.\n\n→ Le 5 lezioni ti portano dal primo bicchiere consapevole a scegliere in enoteca senza sentirti perso: /corso\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "beginner_3",
+          "delay_days": 4,
+          "subject": "Vale €79 — ma dipende da cosa vuoi",
+          "body": "Ciao {{nome}},\n\nte lo dico direttamente: il Corso Introduttivo in 5 Lezioni costa €79.\n\nNon è poco se lo confronti con un libro. È pochissimo se lo confronti con una cena dove non sai cosa stai bevendo, o con una bottiglia che hai comprato a caso e non hai capito perché non ti piaceva.\n\nQuello che ti do è un sistema: come guardare un vino, come leggerlo, come sceglierlo la prossima volta con meno tentativi ed errori.\n\n5 lezioni. Un metodo. Risultati che senti subito.\n\n→ Accedi ora: /corso\n\nSe hai domande prima di entrare, rispondimi direttamente a questa email.\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        }
+      ]
+    },
+    "appassionato-pratico": {
+      "label": "Enthusiast & Collector",
+      "product": "Wine AI Mastery",
+      "product_url": "/wine-ai-mastery",
+      "emails": [
+        {
+          "id": "enthusiast_1",
+          "delay_days": 0,
+          "subject": "Il tuo profilo: Enthusiast & Collector 🍷",
+          "body": "Ciao {{nome}},\n\nhai già una base. Sai cosa bevi, hai un gusto formato, probabilmente hai qualche bottiglia tenuta da parte con un motivo preciso.\n\nIl tuo profilo è Enthusiast & Collector — e il tuo passo successivo non è imparare le basi. È affinare la selezione e capire come l'intelligenza artificiale può diventare il tuo strumento per scegliere meglio, scoprire etichette fuori dai circuiti mainstream e costruire una cantina che abbia senso nel tempo.\n\n🍷 2 vini per il tuo livello:\n\n→ Etna Rosso DOC (Sicilia – Nerello Mascalese)\nFloreale, minerale, con una complessità che cresce nel bicchiere. Il tipo di vino che racconta un territorio senza urlarlo.\n\n→ Barolo Classico (Piemonte – Nebbiolo)\nAristocratico, longevo, esigente. Se non l'hai ancora in cantina, è il momento giusto.\n\n🎯 Il tuo prossimo step:\n\nWine AI Mastery è stato costruito per chi sa già bere — e vuole usare l'AI per scegliere con più criterio, scoprire prima degli altri, e trasformare la passione in qualcosa di più solido.\n\n→ Scopri Wine AI Mastery: /wine-ai-mastery\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "enthusiast_2",
+          "delay_days": 2,
+          "subject": "Come l'AI cambia il modo di scegliere il vino (davvero)",
+          "body": "Ciao {{nome}},\n\nquando si parla di AI applicata al vino, la maggior parte delle persone pensa a chatbot che suggeriscono abbinamenti generici.\n\nNon è quello.\n\nL'AI che funziona nel vino fa cose diverse: analizza tendenze di prezzo su mercati internazionali, identifica denominazioni sottoesposte prima che diventino mainstream, incrocia dati di produzione con annate e valutazioni — e ti porta informazioni che prima richiedevano ore di ricerca.\n\nIn Wine AI Mastery ti mostro esattamente come uso questi strumenti nella selezione reale — con esempi concreti, non teoria.\n\n→ Vedi cosa c'è dentro: /wine-ai-mastery\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "enthusiast_3",
+          "delay_days": 4,
+          "subject": "Per chi sa già — ma vuole il livello successivo",
+          "body": "Ciao {{nome}},\n\nWine AI Mastery è €249.\n\nNon è per chi inizia. È per chi ha già un gusto formato e vuole uno strumento per alzare ulteriormente il livello delle proprie scelte — con meno tentativi, più criterio, e l'intelligenza artificiale come alleato.\n\nSe hai già speso €249 in vino quest'anno senza un metodo preciso, questo è il momento giusto per cambiare approccio.\n\n→ Accedi a Wine AI Mastery: /wine-ai-mastery\n\nHai domande prima di decidere? Rispondimi qui.\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        }
+      ]
+    },
+    "builder-digitale": {
+      "label": "AI Wine Creator",
+      "product": "Wine AI Mastery",
+      "product_url": "/wine-ai-mastery",
+      "emails": [
+        {
+          "id": "creator_1",
+          "delay_days": 0,
+          "subject": "Profilo AI Wine Creator — il tuo sistema inizia adesso",
+          "body": "Ciao {{nome}},\n\nhai risposto come chi usa già l'AI nel lavoro quotidiano e vede nel vino un verticale con margini di comunicazione ancora largamente inesplorati.\n\nHai ragione.\n\nIl vino è uno dei settori dove il gap tra qualità del prodotto e qualità della comunicazione è ancora enorme. Chi sa usare l'AI per colmarlo — con contenuti, funnel, raccomandazioni personalizzate — ha un vantaggio reale.\n\n🍷 2 vini da mettere nel tuo contenuto subito:\n\n→ Gewürztraminer Alto Adige\nAromatico, riconoscibile, insolito. Il tipo di vino che genera commenti — perché sorprende chi lo beve e chi lo legge.\n\n→ Etna Rosso DOC (Sicilia)\nVino di territorio con una storia narrativa fortissima. Perfetto per contenuti che vanno oltre la bottiglia.\n\n🎯 Il tuo prossimo step:\n\nWine AI Mastery ti dà il metodo per costruire un sistema — contenuti + AI + conversione — nel settore vino. Con template pronti, casi reali e una logica che puoi applicare da subito.\n\n→ Scopri Wine AI Mastery: /wine-ai-mastery\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "creator_2",
+          "delay_days": 2,
+          "subject": "Il problema con i contenuti sul vino (e come risolverlo con l'AI)",
+          "body": "Ciao {{nome}},\n\nil problema con i contenuti sul vino non è la mancanza di argomenti.\n\nÈ il contrario: troppi argomenti, troppo dispersivi, troppo autoreferenziali. Il risultato è contenuto che parla a chi già sa — e non converte chi non sa ancora.\n\nL'AI cambia questo. Non perché scriva meglio di te — ma perché ti aiuta a strutturare il messaggio in funzione di chi lo legge, non di quello che vuoi dire.\n\nIn Wine AI Mastery dedico un modulo intero a questo: come usare l'AI per creare contenuti vino che portano qualcuno da \"non sapevo\" a \"voglio comprare\" — in modo sistematico, replicabile, scalabile.\n\n→ Vedi il programma completo: /wine-ai-mastery\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "creator_3",
+          "delay_days": 4,
+          "subject": "€249 — quello che ottieni dentro Wine AI Mastery",
+          "body": "Ciao {{nome}},\n\nti dico esattamente cosa trovi dentro Wine AI Mastery:\n\n→ Il metodo per costruire un funnel vino con l'AI (dalla lead al prodotto)\n→ Template di contenuto pronti — adattabili al tuo stile\n→ Come usare i modelli di linguaggio per analisi di mercato, tasting note, newsletter\n→ La logica di un quiz di segmentazione (come quello che hai appena fatto)\n→ Casi reali con numeri\n\nNon è un corso teorico. È un sistema che puoi usare il giorno dopo.\n\n→ Accedi ora a €249: /wine-ai-mastery\n\nSe vuoi sapere se è adatto al tuo progetto specifico, rispondimi qui e ne parliamo.\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        }
+      ]
+    },
+    "buyer-professionale": {
+      "label": "Wine Business Professional",
+      "product": "Wine Buyer Academy",
+      "product_url": "/academy",
+      "emails": [
+        {
+          "id": "buyer_1",
+          "delay_days": 0,
+          "subject": "Profilo Wine Business Professional — il tuo percorso è diverso",
+          "body": "Ciao {{nome}},\n\nle tue risposte parlano chiaro: sei nel vino come business. Compri, selezioni, gestisci una carta o un magazzino. Le decisioni che prendi hanno un impatto diretto sul margine.\n\nPer questo il tuo profilo — Wine Business Professional — non ha bisogno di un corso introduttivo.\n\nHa bisogno di un metodo.\n\n🍷 2 vini da conoscere anche sul lato commerciale:\n\n→ Sagrantino di Montefalco DOCG (Umbria)\nAutoctono raro, margini ancora interessanti sul mercato retail. Chi lo conosce prima degli altri ha un vantaggio.\n\n→ Brunello di Montalcino (Toscana)\nPrestigioso, con una domanda stabile anche in fascia premium. Selezione e rotazione giuste fanno la differenza.\n\n🎯 Il tuo prossimo step:\n\nWine Buyer Academy è il percorso costruito per chi prende decisioni d'acquisto con denaro reale. Criteri di selezione, gestione della carta vini, negoziazione con i fornitori, analisi della marginalità.\n\nNon è formazione generica. È applicazione diretta.\n\n→ Scopri Wine Buyer Academy: /academy\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "buyer_2",
+          "delay_days": 2,
+          "subject": "Il criterio che separa una selezione buona da una che vende",
+          "body": "Ciao {{nome}},\n\nnel vino professionale c'è una differenza sottile ma decisiva tra una cantina ben assortita e una cantina che vende.\n\nNon è la qualità delle bottiglie. Spesso è la struttura della selezione: troppo concentrata su un segmento, troppo dispersiva per prezzo, senza una logica di rotazione chiara.\n\nIl risultato: prodotti fermi, margini compressi, clienti che non trovano quello che cercano.\n\nIn Wine Buyer Academy lavoriamo su questo — con strumenti concreti per analizzare la tua selezione attuale, identificare i gap e costruire una carta che funzioni sul lungo periodo.\n\n→ Vedi il programma: /academy\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        },
+        {
+          "id": "buyer_3",
+          "delay_days": 4,
+          "subject": "Wine Buyer Academy — per chi decide con numeri veri",
+          "body": "Ciao {{nome}},\n\nWine Buyer Academy è €1.490.\n\nÈ il percorso più completo che offro — e non è per tutti.\n\nÈ per chi gestisce già un volume d'acquisto significativo e sa che il problema non è trovare vini buoni, ma costruire un sistema di selezione che regga nel tempo: con criteri oggettivi, margini calcolati, relazioni con i fornitori che funzionano anche quando il mercato cambia.\n\nSe sei in quella posizione, il ritorno sull'investimento arriva nel primo acquisto in cui applichi il metodo.\n\nSe vuoi capire se fa per te prima di decidere:\n→ Prenota una call gratuita di 20 minuti: /academy\n\nParlami del tuo business e ti dico onestamente se ha senso.\n\nA presto,\nLuca\nDivino Market – L'Outlet del Vino"
+        }
+      ]
+    }
+  }
+}
