@@ -232,21 +232,28 @@ function pickWines(taste: QuizAnswers["taste"], budget: QuizAnswers["budget"]): 
     return exact.slice(0, fallbackWineCount);
   }
 
+  // fallback 1: same budget, any style (budget coherence > style)
+  const sameBudget = wineList.filter((wine) => wine.priceTier === normalizedBudget);
+  // fallback 2: same style, any budget
   const sameStyle = taste === "esploratore"
     ? wineList
     : wineList.filter((wine) => wine.style === taste);
+
   const merged = [...exact];
 
+  for (const wine of sameBudget) {
+    if (merged.length >= fallbackWineCount) break;
+    if (!merged.some((item) => item.id === wine.id)) merged.push(wine);
+  }
+
   for (const wine of sameStyle) {
-    if (!merged.some((item) => item.id === wine.id)) {
-      merged.push(wine);
-    }
+    if (merged.length >= fallbackWineCount) break;
+    if (!merged.some((item) => item.id === wine.id)) merged.push(wine);
   }
 
   for (const wine of wineList) {
-    if (!merged.some((item) => item.id === wine.id)) {
-      merged.push(wine);
-    }
+    if (merged.length >= fallbackWineCount) break;
+    if (!merged.some((item) => item.id === wine.id)) merged.push(wine);
   }
 
   return merged.slice(0, fallbackWineCount);
