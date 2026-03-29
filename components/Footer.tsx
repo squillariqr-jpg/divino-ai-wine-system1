@@ -13,11 +13,20 @@ export function Footer() {
             per accompagnare ogni persona dal primo sorso alla scelta professionale.
           </p>
         </div>
-        <div className="flex gap-5 text-sm text-ink/75">
-          <Link href="/">Home</Link>
-          <Link href="/quiz">Quiz</Link>
-          <Link href="/academy">Academy</Link>
-          <Link href="/wine-ai-mastery">Mastery</Link>
+        <div className="flex flex-col gap-4 sm:items-end">
+          <div className="flex gap-5 text-sm text-ink/75">
+            <Link href="/">Home</Link>
+            <Link href="/quiz">Quiz</Link>
+            <Link href="/academy">Academy</Link>
+            <Link href="/wine-ai-mastery">Mastery</Link>
+          </div>
+          <div className="flex gap-5 text-xs text-ink/50">
+            <a href="/privacy" className="hover:text-burgundy transition">Privacy Policy</a>
+            <a href="mailto:luca@divinomarket.it" className="hover:text-burgundy transition">Contatti</a>
+          </div>
+          <p className="text-xs text-ink/40">
+            Contenuti riservati ai maggiorenni · 18+
+          </p>
         </div>
       </div>
     </footer>

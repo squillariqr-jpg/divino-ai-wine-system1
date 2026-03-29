@@ -4,6 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import "./globals.css";
 
+import { AgeGate } from "@/components/AgeGate";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body>
+        <AgeGate />
         <div className="min-h-screen">
           <header className="sticky top-0 z-30 border-b border-burgundy/10 bg-cream/85 backdrop-blur">
             <div className="container-shell flex items-center justify-between gap-4 py-4">

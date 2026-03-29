@@ -28,6 +28,7 @@ export function LeadCaptureForm({
 }: LeadCaptureFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [status, setStatus] = useState<LeadCaptureResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,9 +93,26 @@ export function LeadCaptureForm({
           required
           className="w-full rounded-2xl border border-burgundy/10 bg-cream/55 px-4 py-3 text-sm text-ink outline-none transition focus:border-burgundy"
         />
+        <label className="flex items-start gap-3 text-sm leading-6 text-ink/70">
+          <input
+            type="checkbox"
+            required
+            checked={privacyConsent}
+            onChange={(e) => setPrivacyConsent(e.target.checked)}
+            className="mt-0.5 accent-burgundy"
+          />
+          <span>
+            Ho letto la{" "}
+            <a href="/privacy" className="underline hover:text-burgundy">
+              Privacy Policy
+            </a>{" "}
+            e acconsento al trattamento dei miei dati per ricevere il percorso
+            personalizzato e comunicazioni di Divino AI.
+          </span>
+        </label>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !privacyConsent}
           className="w-full rounded-full bg-burgundy px-5 py-3 text-sm font-semibold text-cream disabled:opacity-60"
         >
           {isSubmitting ? "Invio in corso..." : buttonLabel}
