@@ -83,8 +83,8 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
                     {wine.region} · {wine.grape}
                   </p>
                 </div>
-                <span className="rounded-full bg-burgundy/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-burgundy">
-                  {wine.priceTier}
+                <span className="rounded-full bg-burgundy/8 px-3 py-1 text-xs font-semibold text-burgundy">
+                  {wine.priceTier === "basso" ? "sotto €20" : wine.priceTier === "medio" ? "€20–50" : "oltre €50"}
                 </span>
               </div>
               <p className="mt-4 leading-7 text-ink/75">{wine.description}</p>
