@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.12), transparent 32%),
+    linear-gradient(180deg, #f8f4e7 0%, #f5f5dc 45%, #efe7d3 100%);
+  color: #241417;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container-shell {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+}
+
+.section-eyebrow {
+  @apply text-xs font-semibold uppercase tracking-[0.28em] text-burgundy/80;
+}
+
+.card-surface {
+  @apply rounded-[28px] border border-white/60 bg-white/70 shadow-soft backdrop-blur;
+}
+
+.gold-ring {
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 175, 55, 0.55),
+    0 18px 40px rgba(36, 20, 23, 0.08);
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "etna-rosso",
+    "name": "Etna Rosso DOC",
+    "region": "Sicilia",
+    "style": "elegante",
+    "priceTier": "medio",
+    "grape": "Nerello Mascalese",
+    "description": "Rosso raffinato, floreale e minerale, perfetto per chi cerca finezza e progressione."
+  },
+  {
+    "id": "chianti-classico",
+    "name": "Chianti Classico Riserva",
+    "region": "Toscana",
+    "style": "strutturato",
+    "priceTier": "medio",
+    "grape": "Sangiovese",
+    "description": "Profilo intenso e gastronomico, con equilibrio tra frutto, spezia e tannino."
+  },
+  {
+    "id": "lugana",
+    "name": "Lugana Superiore",
+    "region": "Lombardia",
+    "style": "fresco",
+    "priceTier": "basso",
+    "grape": "Turbiana",
+    "description": "Bianco teso e sapido, ideale per chi ama precisione, freschezza e bevibilità."
+  },
+  {
+    "id": "franciacorta",
+    "name": "Franciacorta Satèn",
+    "region": "Lombardia",
+    "style": "elegante",
+    "priceTier": "alto",
+    "grape": "Chardonnay",
+    "description": "Bollicina cremosa e signorile, pensata per palati orientati al lusso discreto."
+  },
+  {
+    "id": "primitivo",
+    "name": "Primitivo di Manduria",
+    "region": "Puglia",
+    "style": "morbido",
+    "priceTier": "basso",
+    "grape": "Primitivo",
+    "description": "Rosso avvolgente, caldo e fruttato, molto accessibile e appagante."
+  },
+  {
+    "id": "amarone",
+    "name": "Amarone della Valpolicella",
+    "region": "Veneto",
+    "style": "strutturato",
+    "priceTier": "alto",
+    "grape": "Corvina Blend",
+    "description": "Scelta iconica per chi desidera concentrazione, profondità e grande persistenza."
+  },
+  {
+    "id": "vermentino",
+    "name": "Vermentino di Gallura",
+    "region": "Sardegna",
+    "style": "fresco",
+    "priceTier": "medio",
+    "grape": "Vermentino",
+    "description": "Bianco mediterraneo, profumato e vibrante, adatto a una scoperta immediata."
+  },
+  {
+    "id": "barolo",
+    "name": "Barolo Classico",
+    "region": "Piemonte",
+    "style": "elegante",
+    "priceTier": "alto",
+    "grape": "Nebbiolo",
+    "description": "Rosso di prestigio, complesso e aristocratico, per chi apprezza dettaglio e longevità."
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "novizio-curioso",
+    "label": "Novizio Curioso",
+    "summary": "Vuole sentirsi sicuro nelle scelte e capire il vino senza gergo inutile.",
+    "bestFor": "Corso Introduttivo in 5 Lezioni"
+  },
+  {
+    "id": "appassionato-pratico",
+    "label": "Appassionato Pratico",
+    "summary": "Ha già una base e cerca strumenti per scegliere meglio bottiglie, occasioni e budget.",
+    "bestFor": "Quiz + raccomandazioni personalizzate"
+  },
+  {
+    "id": "builder-digitale",
+    "label": "Builder Digitale",
+    "summary": "Vuole usare AI e contenuti per vendere meglio, educare il pubblico o costruire un funnel.",
+    "bestFor": "Wine AI Mastery"
+  },
+  {
+    "id": "buyer-professionale",
+    "label": "Buyer Professionale",
+    "summary": "Compra o seleziona vino per il business e ha bisogno di metodo, criteri e marginalità.",
+    "bestFor": "Wine Buyer Academy"
+  }
+]
