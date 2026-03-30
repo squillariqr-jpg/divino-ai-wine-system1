@@ -2,13 +2,24 @@ import { NextResponse } from "next/server";
 import { AgentMailClient } from "agentmail";
 
 import { classifyIntent } from "@/lib/emailAgent/classifier";
-import { generateReply } from "@/lib/emailAgent/replyEngine";
+import { getHermesReply } from "@/lib/hermesClient";
 import type { AgentMailWebhookPayload, LeadContext } from "@/lib/emailAgent/types";
 import { supabase } from "@/lib/supabase";
 
 const agentmail = new AgentMailClient({
   apiKey: process.env.AGENTMAIL_API_KEY ?? "",
 });
+
+const FALLBACK_REPLY =
+  "Grazie per il messaggio. Ti rispondo a breve con un consiglio mirato.\n\nA presto,\nLuca\nAffari Divini";
+
+const HANDOFF_REPLY =
+  "Certo, capisco che tu voglia parlare direttamente.\nRispondimi con due righe sul tuo caso e ti contatto nel modo più utile.\n\nA presto,\nLuca\nAffari Divini";
+
+function limitWords(text: string, max = 220): string {
+  const words = text.trim().split(/\s+/);
+  return words.length <= max ? text.trim() : words.slice(0, max).join(" ") + "…";
+}
 
 export async function POST(request: Request) {
   let payload: AgentMailWebhookPayload;
@@ -25,11 +36,12 @@ export async function POST(request: Request) {
 
   const msg = payload.message;
 
-  // 1. Look up lead context by sender email
+  // 1. Resolve sender email
   const senderEmail = msg.from.includes("<")
     ? msg.from.match(/<(.+?)>/)?.[1] ?? msg.from
     : msg.from;
 
+  // 2. Look up lead context
   const { data: leadRow } = await supabase
     .from("leads")
     .select("id, name, segment, product_name, emails_sent")
@@ -44,11 +56,11 @@ export async function POST(request: Request) {
     emailsSent: leadRow?.emails_sent ?? 0,
   };
 
-  // 2. Classify intent
+  // 3. Classify intent
   const bodyText = msg.extracted_text ?? msg.text ?? "";
   const intent = classifyIntent(bodyText);
 
-  // 3. Log inbound message
+  // 4. Log inbound
   await supabase.from("email_messages").insert({
     thread_id: msg.thread_id,
     message_id: msg.message_id,
@@ -61,62 +73,60 @@ export async function POST(request: Request) {
     lead_id: lead.leadId ?? null,
   });
 
-  // 4. Skip if human_help — mark for manual follow-up
+  const inboxId = process.env.AGENTMAIL_INBOX_ID ?? "";
+
+  // 5. Human handoff — no AI, short reply + flag
   if (intent.intent === "human_help") {
     await supabase.from("agent_actions").insert({
       thread_id: msg.thread_id,
       action_type: "handoff",
-      action_payload: {
-        reason: "human_help intent",
-        sender: senderEmail,
-        subject: msg.subject,
-      },
+      action_payload: { reason: "human_help", sender: senderEmail, subject: msg.subject },
+    });
+
+    await agentmail.inboxes.messages.reply(inboxId, msg.message_id, {
+      text: HANDOFF_REPLY,
     });
 
     return NextResponse.json({ handled: "handoff", intent: intent.intent });
   }
 
-  // 5. Generate reply
-  const reply = await generateReply({
-    inboundMessage: msg,
-    intent,
-    lead,
-  });
+  // 6. Generate reply via Hermes (Marco — Sommelier AI)
+  let replyText: string;
 
-  // 6. Safety gate — if not approved, mark for review
-  if (!reply.approved) {
+  try {
+    replyText = await getHermesReply({
+      message: bodyText,
+      segment: lead.segment ?? undefined,
+      userName: lead.name ?? senderEmail.split("@")[0],
+      subject: msg.subject,
+    });
+    replyText = limitWords(replyText);
+  } catch (err) {
+    console.error("Hermes reply failed:", err);
+    replyText = FALLBACK_REPLY;
+
     await supabase.from("agent_actions").insert({
       thread_id: msg.thread_id,
-      action_type: "review_required",
-      action_payload: {
-        reasons: reply.safetyCheck.reasons,
-        draft: reply.text,
-      },
-    });
-
-    return NextResponse.json({
-      handled: "review_required",
-      reasons: reply.safetyCheck.reasons,
+      action_type: "hermes_fallback",
+      action_payload: { error: String(err) },
     });
   }
 
-  // 7. Send reply via AgentMail
-  const inboxId = process.env.AGENTMAIL_INBOX_ID ?? "";
-
+  // 7. Send reply
   await agentmail.inboxes.messages.reply(inboxId, msg.message_id, {
-    text: reply.text,
+    text: replyText,
   });
 
-  // 8. Log outbound action
+  // 8. Log outbound
   await supabase.from("agent_actions").insert({
     thread_id: msg.thread_id,
     action_type: "reply",
     action_payload: {
-      subject: reply.subject,
-      intent: reply.intent,
-      word_count: reply.safetyCheck.wordCount,
+      intent: intent.intent,
+      via: "hermes",
+      word_count: replyText.split(/\s+/).length,
     },
   });
 
-  return NextResponse.json({ handled: "replied", intent: reply.intent });
+  return NextResponse.json({ handled: "replied", intent: intent.intent, via: "hermes" });
 }
