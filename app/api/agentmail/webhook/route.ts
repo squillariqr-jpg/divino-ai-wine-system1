@@ -30,6 +30,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  try {
+    return await handleWebhook(payload);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Webhook unhandled error:", msg);
+    return NextResponse.json({ error: "server_error", detail: msg }, { status: 500 });
+  }
+}
+
+async function handleWebhook(payload: AgentMailWebhookPayload) {
+
   if (payload.event_type !== "message.received") {
     return NextResponse.json({ skipped: true });
   }
