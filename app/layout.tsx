@@ -8,16 +8,17 @@ import { AgeGate } from "@/components/AgeGate";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Divino AI Wine System",
+  title: "Affari Divini",
   description:
-    "Ecosistema premium dedicato a educazione enologica, AI commerce e raccomandazioni vino personalizzate."
+    "Usa l'intelligenza artificiale per capire, scegliere e vendere vino meglio della media."
 };
 
 const navigation: { href: Route; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/quiz", label: "Quiz" },
-  { href: "/academy", label: "Academy" },
-  { href: "/wine-ai-mastery", label: "Wine AI Mastery" }
+  { href: "/prompt-generator" as Route, label: "Prompt Engine" },
+  { href: "/abbonamenti" as Route, label: "Abbonamenti" },
+  { href: "/academy", label: "Academy" }
 ];
 
 export default function RootLayout({
@@ -34,14 +35,14 @@ export default function RootLayout({
             <div className="container-shell flex items-center justify-between gap-4 py-4">
               <Link href="/" className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-burgundy text-sm font-semibold tracking-[0.2em] text-cream">
-                  DA
+                  AD
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-burgundy/75">
-                    Divino AI
+                    Affari
                   </p>
                   <p className="text-base font-semibold text-ink">
-                    Wine System
+                    Divini
                   </p>
                 </div>
               </Link>
