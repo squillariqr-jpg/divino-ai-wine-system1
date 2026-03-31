@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 const navigation: { href: Route; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/quiz", label: "Quiz" },
+  { href: "/agenti" as Route, label: "Agenti AI" },
   { href: "/prompt-generator" as Route, label: "Prompt Engine" },
   { href: "/abbonamenti" as Route, label: "Abbonamenti" },
   { href: "/academy", label: "Academy" }
@@ -53,6 +54,12 @@ export default function RootLayout({
                   </Link>
                 ))}
               </nav>
+              <Link
+                href="/quiz"
+                className="hidden rounded-full bg-burgundy px-5 py-2.5 text-xs font-semibold text-cream transition hover:bg-burgundy/90 md:inline-block"
+              >
+                Fai il Quiz
+              </Link>
             </div>
           </header>
           <main>{children}</main>
