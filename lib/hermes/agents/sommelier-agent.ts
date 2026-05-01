@@ -36,6 +36,7 @@ export function runSommelierAgent(input: {
     userSegment: "appassionato",
     segmentRationale,
     segment: recommendation.segment,
+    systemKey: "content",
     profileLabel: recommendation.persona.label,
     diagnosis: `Ti stiamo guidando come ${recommendation.persona.label.toLowerCase()}: prima chiarezza, poi scelta, poi progressione verso il prodotto giusto.`,
     rationale: recommendation.rationale,
@@ -45,6 +46,33 @@ export function runSommelierAgent(input: {
     nextAction: recommendation.postQuizCta.description,
     nextActionLabel: recommendation.postQuizCta.primaryLabel,
     nextActionHref: recommendation.postQuizCta.primaryHref,
+    workflowAction: "send_content",
+    contentJobs: [
+      {
+        jobType: "wine_sheet",
+        templateId: "divino_wine_sheet",
+        title: "Scheda vino personalizzata",
+        goal: "Tradurre il gusto del lead in una scheda vino utile e convincente.",
+        variables: {
+          wine_name: recommendation.wines[0]?.name ?? "Selezione Divino",
+          denominazione: recommendation.wines[0]?.region ?? "Selezione premium",
+          caratteristiche:
+            recommendation.wines[0]?.description ??
+            "Profilo elegante, accessibile e coerente col gusto dichiarato"
+        }
+      },
+      {
+        jobType: "email",
+        templateId: "divino_email",
+        title: "Email percorso wine",
+        goal: "Inviare un follow-up editoriale premium con suggerimenti e prossimo step.",
+        variables: {
+          business_type: "appassionato vino",
+          problem: "vuole orientarsi meglio tra stile, gusto e acquisto",
+          system: recommendation.postQuizCta.title
+        }
+      }
+    ],
     internalNote: `Lead appassionato con segmento ${recommendation.segment}. Proporre ${recommendation.productRecommendation.name} dopo invio di ${recommendation.leadMagnet.title}.`
   };
 }

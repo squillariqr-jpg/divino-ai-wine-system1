@@ -40,10 +40,12 @@ Apri [http://localhost:3000](http://localhost:3000).
 - `/docs/funnel.md`
 - `/docs/ai-logic.md`
 - `/docs/roadmap.md`
+- `/docs/agents.md`
+- `/docs/n8n-openwebui-supabase.md`
 
 ## Placeholder integrazioni future
 
-- `.env.example` contiene i placeholder per Supabase, n8n, layer agentico e Notion
+- `.env.example` contiene i placeholder per Supabase, n8n, OpenWebUI, layer agentico e Notion
 - `lib/integrations.ts` espone le interfacce per repository, workflow, agent layer e backoffice editoriale
 
 ## Contenuti starter

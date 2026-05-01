@@ -4,6 +4,50 @@ import { submitLeadToPlaceholderBackend } from "@/lib/placeholder-backend";
 import { getSupabase } from "@/lib/supabase";
 import type { LeadCapturePayload } from "@/lib/types";
 
+async function forwardBusinessLeadToN8n(payload: LeadCapturePayload) {
+  const webhookUrl = process.env.DIVINO_N8N_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    return;
+  }
+
+  const isBusinessLead =
+    payload.source === "quiz-business-result" ||
+    Boolean(payload.businessType) ||
+    payload.segment === "builder-digitale" ||
+    payload.segment === "buyer-professionale";
+
+  if (!isBusinessLead) {
+    return;
+  }
+
+  try {
+    const signal =
+      typeof AbortSignal.timeout === "function"
+        ? AbortSignal.timeout(2000)
+        : undefined;
+
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      signal,
+      body: JSON.stringify({
+        name: payload.name ?? "",
+        email: payload.email,
+        businessType: payload.businessType ?? "",
+        problem: payload.problem ?? "",
+        goal: payload.goal ?? "",
+        recommendedSystem: payload.recommendedSystem ?? "",
+        quizResult: payload.quizResult ?? ""
+      })
+    });
+  } catch (error) {
+    console.error("n8n lead forward skipped:", error);
+  }
+}
+
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<LeadCapturePayload>;
 
@@ -21,6 +65,9 @@ export async function POST(request: Request) {
     segment: body.segment,
     interest: body.interest,
     businessType: body.businessType,
+    problem: body.problem,
+    goal: body.goal,
+    recommendedSystem: body.recommendedSystem,
     quizResult: body.quizResult,
     message: body.message,
     notes: body.notes,
@@ -60,6 +107,8 @@ export async function POST(request: Request) {
       console.error("Supabase lead sync skipped:", error);
     }
   }
+
+  await forwardBusinessLeadToN8n(normalizedPayload);
 
   return NextResponse.json({
     success: true,

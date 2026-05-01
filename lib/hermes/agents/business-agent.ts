@@ -251,6 +251,7 @@ export function runBusinessAgent(input: {
     userSegment: "business",
     segmentRationale,
     segment: recommendation.segment,
+    systemKey: system,
     profileLabel: BUSINESS_TYPE_LABELS[answers.businessType],
     diagnosis: systemConfig.diagnosisSentence,
     rationale: [
@@ -268,6 +269,32 @@ export function runBusinessAgent(input: {
     nextAction: `Attivare ${systemConfig.systemName} e spostare il lead verso ${target.label}.`,
     nextActionLabel: "Attiva il tuo sistema",
     nextActionHref: target.href,
+    workflowAction:
+      system === "retention" ? "send_followup" : "send_email_offer",
+    contentJobs: [
+      {
+        jobType: "email",
+        templateId: "divino_email",
+        title: "Email diagnosi business vino",
+        goal: "Spiegare il problema e proporre il sistema corretto con invito a call.",
+        variables: {
+          business_type: BUSINESS_TYPE_LABELS[answers.businessType],
+          problem: MAIN_PROBLEM_LABELS[answers.mainProblem],
+          system: systemConfig.systemName
+        }
+      },
+      {
+        jobType: "sales_offer",
+        templateId: "divino_sales",
+        title: "Proposta commerciale",
+        goal: "Preparare una proposta concreta orientata alla conversione.",
+        variables: {
+          business_type: BUSINESS_TYPE_LABELS[answers.businessType],
+          problem: MAIN_PROBLEM_LABELS[answers.mainProblem],
+          system: systemConfig.systemName
+        }
+      }
+    ],
     followUpEmailSubject: `Divino AI | Diagnosi pronta: ${systemConfig.systemName}`,
     followUpEmailBody: `Ciao, abbiamo completato la tua diagnosi business. Il punto di leva più chiaro è ${systemConfig.systemName}: ${MAIN_PROBLEM_LABELS[answers.mainProblem]} sta rallentando la crescita, mentre l'obiettivo rimane ${MAIN_GOAL_LABELS[answers.mainGoal]}. Il prossimo passo consigliato è ${target.label}. Se vuoi, partiamo da qui e costruiamo il sistema più adatto al tuo business del vino.`,
     internalNote: `Lead business (${BUSINESS_TYPE_LABELS[answers.businessType]}). Diagnosi: ${systemConfig.systemName}. Next action: ${target.label}.`

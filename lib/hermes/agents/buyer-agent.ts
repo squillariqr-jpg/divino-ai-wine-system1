@@ -7,7 +7,7 @@ export function runBuyerAgent(input: {
   leadProfile: LeadProfile;
   segmentRationale: string[];
 }): AgentDecision {
-  const { recommendation, segmentRationale } = input;
+  const { recommendation, segmentRationale, leadProfile } = input;
 
   return {
     orchestrator: "hermes_orchestrator",
@@ -17,6 +17,7 @@ export function runBuyerAgent(input: {
     userSegment: "buyer",
     segmentRationale,
     segment: recommendation.segment,
+    systemKey: "buyer_academy",
     profileLabel: "Buyer e decision maker wine",
     diagnosis:
       "Il profilo è professionale: qui non serve solo contenuto, serve un metodo di acquisto più strutturato.",
@@ -44,6 +45,31 @@ export function runBuyerAgent(input: {
       "Inviare briefing premium e accompagnare il lead verso la Wine Buyer Academy con una conversazione dedicata.",
     nextActionLabel: "Percorso Professionale",
     nextActionHref: "/academy",
+    workflowAction: "send_buyer_brief",
+    contentJobs: [
+      {
+        jobType: "email",
+        templateId: "divino_email",
+        title: "Email buyer academy",
+        goal: "Inviare un invito professionale e orientato alla call.",
+        variables: {
+          business_type: leadProfile.businessType ?? "buyer o professionista wine",
+          problem: "serve un metodo di acquisto più strutturato",
+          system: "Wine Buyer Academy"
+        }
+      },
+      {
+        jobType: "sales_offer",
+        templateId: "divino_sales",
+        title: "Proposta buyer academy",
+        goal: "Preparare un'offerta premium orientata a buyer e decision maker.",
+        variables: {
+          business_type: leadProfile.businessType ?? "buyer o professionista wine",
+          problem: "serve un metodo di acquisto più strutturato",
+          system: "Wine Buyer Academy"
+        }
+      }
+    ],
     followUpEmailSubject:
       "Divino AI | Il prossimo passo per strutturare i tuoi acquisti wine",
     followUpEmailBody:

@@ -75,6 +75,7 @@ const starterLeads: PlaceholderLeadRecord[] = [
         "Serve accompagnamento educativo prima della vendita."
       ],
       segment: "novizio-curioso",
+      systemKey: "content",
       profileLabel: "Novizio curioso",
       diagnosis:
         "Serve una guida semplice e ordinata prima di spingere prodotti avanzati.",
@@ -90,6 +91,20 @@ const starterLeads: PlaceholderLeadRecord[] = [
       nextAction: "Inviare asset gratuito e poi corso introduttivo.",
       nextActionLabel: "Scopri il tuo percorso",
       nextActionHref: "/quiz",
+      workflowAction: "send_content",
+      contentJobs: [
+        {
+          jobType: "wine_sheet",
+          templateId: "divino_wine_sheet",
+          title: "Scheda vino introduttiva",
+          goal: "Generare una scheda vino coerente col profilo del lead.",
+          variables: {
+            wine_name: "Selezione Divino",
+            denominazione: "Cantina Minima",
+            caratteristiche: "Profilo morbido e introduttivo"
+          }
+        }
+      ],
       memory: {
         profileTag: "Novizio curioso",
         preferences: ["Livello: principiante", "Obiettivo: imparare"],
@@ -128,6 +143,7 @@ const starterLeads: PlaceholderLeadRecord[] = [
         "Serve diagnosi di sistema prima del follow-up commerciale."
       ],
       segment: "builder-digitale",
+      systemKey: "content",
       profileLabel: "creator o progetto editoriale wine",
       diagnosis:
         "Il business ha bisogno di un Content System che colleghi contenuti e conversione.",
@@ -155,6 +171,31 @@ const starterLeads: PlaceholderLeadRecord[] = [
         "Attivare Content System e portare il lead verso Wine AI Mastery.",
       nextActionLabel: "Attiva il tuo sistema",
       nextActionHref: "/wine-ai-mastery",
+      workflowAction: "send_email_offer",
+      contentJobs: [
+        {
+          jobType: "email",
+          templateId: "divino_email",
+          title: "Email diagnosi business",
+          goal: "Spiegare il problema e proporre il sistema corretto.",
+          variables: {
+            business_type: "creator o progetto editoriale wine",
+            problem: "contenuti incostanti",
+            system: "Content System"
+          }
+        },
+        {
+          jobType: "sales_offer",
+          templateId: "divino_sales",
+          title: "Proposta commerciale content system",
+          goal: "Preparare una proposta premium orientata alla conversione.",
+          variables: {
+            business_type: "creator o progetto editoriale wine",
+            problem: "contenuti incostanti",
+            system: "Content System"
+          }
+        }
+      ],
       memory: {
         profileTag: "creator o progetto editoriale wine",
         preferences: [
@@ -202,6 +243,7 @@ const starterLeads: PlaceholderLeadRecord[] = [
         "Richiede percorso Academy e gestione premium."
       ],
       segment: "buyer-professionale",
+      systemKey: "buyer_academy",
       profileLabel: "Buyer e decision maker wine",
       diagnosis:
         "Profilo da gestire come lead premium con focus su selezione e marginalita.",
@@ -214,6 +256,20 @@ const starterLeads: PlaceholderLeadRecord[] = [
         "Inviare briefing premium e accompagnare verso Wine Buyer Academy.",
       nextActionLabel: "Percorso Professionale",
       nextActionHref: "/academy",
+      workflowAction: "send_buyer_brief",
+      contentJobs: [
+        {
+          jobType: "email",
+          templateId: "divino_email",
+          title: "Email buyer academy",
+          goal: "Inviare un follow-up professionale e orientato alla call.",
+          variables: {
+            business_type: "buyer o professionista wine",
+            problem: "serve un metodo di acquisto più strutturato",
+            system: "Wine Buyer Academy"
+          }
+        }
+      ],
       memory: {
         profileTag: "Buyer e decision maker wine",
         preferences: [

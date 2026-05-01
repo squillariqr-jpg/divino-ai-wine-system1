@@ -98,6 +98,33 @@ export type AgentSystemRecommendation = {
   benefits?: string[];
 };
 
+export type WorkflowActionCode =
+  | "send_email_offer"
+  | "send_followup"
+  | "send_content"
+  | "send_sales_offer"
+  | "send_buyer_brief";
+
+export type OpenWebUITemplateId =
+  | "divino_email"
+  | "divino_wine_sheet"
+  | "divino_social"
+  | "divino_sales";
+
+export type OpenWebUIJobType =
+  | "email"
+  | "wine_sheet"
+  | "social_post"
+  | "sales_offer";
+
+export type OpenWebUIJob = {
+  jobType: OpenWebUIJobType;
+  templateId: OpenWebUITemplateId;
+  title: string;
+  goal: string;
+  variables: Record<string, string>;
+};
+
 export type MemorySnapshot = {
   profileTag: string;
   preferences: string[];
@@ -119,6 +146,7 @@ export type AgentDecision = {
   userSegment: HermesSegment;
   segmentRationale: string[];
   segment?: SegmentId;
+  systemKey?: string;
   profileLabel: string;
   diagnosis: string;
   rationale: string[];
@@ -132,6 +160,8 @@ export type AgentDecision = {
   nextAction: string;
   nextActionLabel: string;
   nextActionHref: string;
+  workflowAction: WorkflowActionCode;
+  contentJobs: OpenWebUIJob[];
   followUpEmailSubject?: string;
   followUpEmailBody?: string;
   internalNote?: string;
@@ -147,4 +177,18 @@ export type HermesInput = {
   recommendation: RecommendationResponse;
   context?: RecommendRequestContext;
   source?: string;
+};
+
+export type DecideActionInput = {
+  problem?: string;
+  businessType?: string;
+  userSegment?: HermesSegment;
+  businessGoal?: string;
+  recommendationSegment?: SegmentId;
+};
+
+export type DecideActionOutput = {
+  agent: AgentName;
+  system: string;
+  nextAction: WorkflowActionCode;
 };

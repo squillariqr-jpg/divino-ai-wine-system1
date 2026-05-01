@@ -16,6 +16,7 @@ export function runSalesAgent(input: {
     userSegment: "business",
     segmentRationale,
     segment: recommendation.segment,
+    systemKey: "acquisition",
     profileLabel: "Business wine orientato alla crescita",
     diagnosis:
       "Il profilo ha bisogno di un sistema commerciale più leggibile: acquisizione, follow-up e offerta devono muoversi insieme.",
@@ -44,6 +45,31 @@ export function runSalesAgent(input: {
       "Portare il lead in diagnosi business e poi verso il sistema di vendita piu adatto.",
     nextActionLabel: "Diagnosi Business Vino",
     nextActionHref: "/quiz-business",
+    workflowAction: "send_sales_offer",
+    contentJobs: [
+      {
+        jobType: "email",
+        templateId: "divino_email",
+        title: "Email problema vendite vino",
+        goal: "Aprire la conversazione commerciale con tono premium ma diretto.",
+        variables: {
+          business_type: leadProfile.businessType ?? "business wine",
+          problem: leadProfile.businessProblem ?? "sistema di vendita poco leggibile",
+          system: "Sales System"
+        }
+      },
+      {
+        jobType: "sales_offer",
+        templateId: "divino_sales",
+        title: "Proposta aumento vendite",
+        goal: "Formulare una soluzione concreta per aumentare le vendite.",
+        variables: {
+          business_type: leadProfile.businessType ?? "business wine",
+          problem: leadProfile.businessProblem ?? "sistema di vendita poco leggibile",
+          system: "Sales System"
+        }
+      }
+    ],
     followUpEmailSubject:
       "Divino AI | Cosa manca oggi al tuo sistema di vendita wine",
     followUpEmailBody:

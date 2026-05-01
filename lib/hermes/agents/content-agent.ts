@@ -16,6 +16,7 @@ export function runContentAgent(input: {
     userSegment: "business",
     segmentRationale,
     segment: recommendation.segment,
+    systemKey: "content",
     profileLabel: "Creator e content builder wine",
     diagnosis:
       "Il collo di bottiglia non è il vino: è il sistema contenuti che deve generare domanda, fiducia e continuità.",
@@ -44,6 +45,31 @@ export function runContentAgent(input: {
       "Attivare un sistema contenuti che accompagni il traffico fino a Wine AI Mastery.",
     nextActionLabel: "Diagnosi Business Vino",
     nextActionHref: "/quiz-business",
+    workflowAction: "send_content",
+    contentJobs: [
+      {
+        jobType: "social_post",
+        templateId: "divino_social",
+        title: "Post Instagram enoteca",
+        goal: "Aumentare interesse e portare traffico qualificato in negozio o nel funnel.",
+        variables: {
+          business_type: leadProfile.businessType ?? "business wine",
+          problem: leadProfile.businessProblem ?? "contenuti non abbastanza efficaci",
+          system: "Content System"
+        }
+      },
+      {
+        jobType: "email",
+        templateId: "divino_email",
+        title: "Email contenuti e funnel",
+        goal: "Inviare un follow-up editoriale con CTA commerciale.",
+        variables: {
+          business_type: leadProfile.businessType ?? "business wine",
+          problem: leadProfile.businessProblem ?? "contenuti non abbastanza efficaci",
+          system: "Content System"
+        }
+      }
+    ],
     followUpEmailSubject:
       "Divino AI | Il tuo prossimo sistema è quello dei contenuti",
     followUpEmailBody:

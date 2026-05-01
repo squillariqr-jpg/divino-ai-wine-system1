@@ -55,6 +55,8 @@ type BusinessDiagnosticResult = {
 
 type BusinessLeadCaptureCardProps = {
   businessTypeLabel: string;
+  problemLabel: string;
+  goalLabel: string;
   diagnosis: BusinessDiagnosticResult;
   recommendation: RecommendApiResponse;
 };
@@ -459,6 +461,8 @@ function BusinessDiagnosisResult({
 }) {
   const [showLeadForm, setShowLeadForm] = useState(false);
   const businessTypeLabel = BUSINESS_TYPE_LABELS[answers.businessType];
+  const problemLabel = MAIN_PROBLEM_LABELS[answers.mainProblem];
+  const goalLabel = MAIN_GOAL_LABELS[answers.mainGoal];
 
   return (
     <section className="space-y-6">
@@ -538,6 +542,8 @@ function BusinessDiagnosisResult({
       {showLeadForm ? (
         <BusinessLeadCaptureCard
           businessTypeLabel={businessTypeLabel}
+          problemLabel={problemLabel}
+          goalLabel={goalLabel}
           diagnosis={diagnosis}
           recommendation={recommendation}
         />
@@ -548,6 +554,8 @@ function BusinessDiagnosisResult({
 
 function BusinessLeadCaptureCard({
   businessTypeLabel,
+  problemLabel,
+  goalLabel,
   diagnosis,
   recommendation
 }: BusinessLeadCaptureCardProps) {
@@ -571,6 +579,9 @@ function BusinessLeadCaptureCard({
       segment: recommendation.segment,
       interest: quizResultLabel,
       businessType: businessTypeLabel,
+      problem: problemLabel,
+      goal: goalLabel,
+      recommendedSystem: diagnosis.systemName,
       quizResult: quizResultLabel,
       message: message || undefined,
       notes: message || undefined,
