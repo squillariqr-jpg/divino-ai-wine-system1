@@ -8,6 +8,8 @@ import { buildMemorySnapshot } from "@/lib/hermes/memory";
 import type {
   AgentDecision,
   AgentName,
+  DecideActionInput,
+  DecideActionOutput,
   HermesInput,
   LeadProfile
 } from "@/lib/hermes/types";
@@ -33,6 +35,82 @@ function buildLeadProfile(input: HermesInput): LeadProfile {
 
 function dedupeAgents(agents: AgentName[]) {
   return [...new Set(agents)];
+}
+
+// TODO: keep this helper aligned with the n8n "Hermes Decision" code node.
+// A future OpenClaw or LangChain layer can call this contract directly.
+export function decideAction(input: DecideActionInput): DecideActionOutput {
+  const problem = `${input.problem ?? ""}`.toLowerCase();
+  const businessGoal = `${input.businessGoal ?? ""}`.toLowerCase();
+
+  if (input.userSegment === "buyer") {
+    return {
+      agent: "buyer_agent",
+      system: "buyer_academy",
+      nextAction: "send_buyer_brief"
+    };
+  }
+
+  if (
+    problem.includes("schede") ||
+    problem.includes("contenuti") ||
+    businessGoal.includes("contenuti")
+  ) {
+    return {
+      agent: "content_agent",
+      system: "content",
+      nextAction: "send_content"
+    };
+  }
+
+  if (
+    problem.includes("pochi clienti") ||
+    problem.includes("acquisizione")
+  ) {
+    return {
+      agent: "business_agent",
+      system: "acquisition",
+      nextAction: "send_email_offer"
+    };
+  }
+
+  if (
+    problem.includes("fidelizzare") ||
+    problem.includes("ritornano") ||
+    businessGoal.includes("riacquisti")
+  ) {
+    return {
+      agent: "sales_agent",
+      system: "retention",
+      nextAction: "send_followup"
+    };
+  }
+
+  if (
+    problem.includes("tempo") ||
+    problem.includes("manuale") ||
+    businessGoal.includes("automazione")
+  ) {
+    return {
+      agent: "business_agent",
+      system: "automation",
+      nextAction: "send_sales_offer"
+    };
+  }
+
+  if (input.userSegment === "appassionato") {
+    return {
+      agent: "sommelier_agent",
+      system: "content",
+      nextAction: "send_content"
+    };
+  }
+
+  return {
+    agent: "business_agent",
+    system: "business_pro",
+    nextAction: "send_sales_offer"
+  };
 }
 
 export function routeHermesDecision(input: HermesInput): AgentDecision {

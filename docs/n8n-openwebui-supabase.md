@@ -57,6 +57,14 @@ Nome consigliato:
 
 `Divino AI Wine System - Lead Orchestration`
 
+Workflow importabile gia pronto nel repo:
+
+- [divino-ai-wine-system-lead-orchestration.json](/Users/luca/codex/divino-ai-wine-system/docs/n8n/divino-ai-wine-system-lead-orchestration.json)
+
+Nota:
+
+il nodo `Hermes Decision` del workflow rispecchia la helper `decideAction()` in [orchestrator.ts](/Users/luca/codex/divino-ai-wine-system/lib/hermes/orchestrator.ts), cosi la regola decisionale resta allineata tra app e automazione.
+
 Struttura:
 
 1. `Webhook`

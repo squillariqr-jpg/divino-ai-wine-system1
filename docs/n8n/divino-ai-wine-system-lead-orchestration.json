@@ -1,0 +1,257 @@
+{
+  "name": "Divino AI Wine System - Lead Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "divino-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-divino-lead",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        240
+      ],
+      "webhookId": "divino-lead"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst problem = String(input.problem || '').toLowerCase();\n\nlet action = 'business_pro';\nlet system = input.recommendedSystem || 'Business Pro System';\n\nif (problem.includes('pochi clienti') || problem.includes('acquisizione')) {\n  action = 'acquisition';\n  system = 'Acquisition System';\n} else if (problem.includes('fidelizzare') || problem.includes('ritornano')) {\n  action = 'retention';\n  system = 'Retention System';\n} else if (problem.includes('tempo') || problem.includes('manuale')) {\n  action = 'automation';\n  system = 'Automation System';\n} else if (problem.includes('schede') || problem.includes('contenuti')) {\n  action = 'content';\n  system = 'Content System';\n}\n\nreturn [{\n  json: {\n    ...input,\n    agent: 'business_agent',\n    action,\n    system,\n    recommendedSystem: input.recommendedSystem || system,\n    segment: 'business'\n  }\n}];"
+      },
+      "id": "hermes-decision",
+      "name": "Hermes Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -920,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.OPENWEBUI_URL || 'http://localhost:3001') + '/api/chat/completions' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ($env.OPENWEBUI_API_KEY || 'replace-me') }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ model: $env.OPENWEBUI_MODEL || 'qwen', messages: [ { role: 'system', content: 'Sei Divino Business Agent, consulente AI per enoteche, ristoranti, ecommerce vino e piccole aziende vinicole. Rispondi sempre in JSON valido con subject, body, internal_note, next_action.' }, { role: 'user', content: `Crea una email follow-up per questo lead: Nome=${$json.name || ''}, Email=${$json.email || ''}, Tipo attivita=${$json.businessType || ''}, Problema=${$json.problem || ''}, Obiettivo=${$json.goal || ''}, Sistema consigliato=${$json.recommendedSystem || $json.system || ''}, Risultato quiz=${typeof $json.quizResult === 'string' ? $json.quizResult : JSON.stringify($json.quizResult || {})}` } ], response_format: { type: 'json_object' } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "openwebui-content-agent",
+      "name": "OpenWebUI Content Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -660,
+        240
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Hermes Decision').item.json;\nconst rawContent = $json.choices?.[0]?.message?.content || $json.message?.content || $json.response || '';\n\nfunction safeParse(value) {\n  if (!value) return null;\n  if (typeof value === 'object') return value;\n  try {\n    return JSON.parse(value);\n  } catch (error) {\n    const match = String(value).match(/\\{[\\s\\S]*\\}/);\n    if (match) {\n      try {\n        return JSON.parse(match[0]);\n      } catch (innerError) {}\n    }\n  }\n  return null;\n}\n\nconst parsed = safeParse(rawContent);\nconst subjectByAction = {\n  acquisition: 'Migliora l acquisizione clienti della tua attivita vino',\n  retention: 'Trasforma i contatti in clienti che ritornano',\n  automation: 'Riduci il lavoro manuale e rendi il sistema piu efficiente',\n  content: 'Rendi i tuoi contenuti vino piu utili e piu vendibili',\n  business_pro: 'Costruiamo un sistema commerciale piu strutturato per il tuo business'\n};\n\nconst fallbackSubject = subjectByAction[source.action] || 'Costruiamo il sistema giusto per il tuo business del vino';\nconst fallbackBody = `Ciao ${source.name || ''}, grazie per aver completato la diagnosi Divino. Il problema principale che emerge e ${source.problem || 'una crescita non ancora strutturata'}. Il sistema consigliato per te e ${source.recommendedSystem || source.system}. Se vuoi, possiamo confrontarci e costruire il prossimo passo piu adatto al tuo business del vino.`;\nconst fallbackNote = `Lead business da quiz. Azione suggerita: ${source.action}. Sistema: ${source.recommendedSystem || source.system}.`;\nconst fallbackNextAction = source.action === 'content' ? 'Inviare proposta contenuti e piano editoriale' : 'Proporre call diagnostica commerciale';\n\nreturn [{\n  json: {\n    ...source,\n    generatedSubject: parsed?.subject || fallbackSubject,\n    generatedBody: parsed?.body || fallbackBody,\n    internalNote: parsed?.internal_note || fallbackNote,\n    nextAction: parsed?.next_action || fallbackNextAction\n  }\n}];"
+      },
+      "id": "parse-openwebui-response",
+      "name": "Parse OpenWebUI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.SUPABASE_URL || 'https://replace-me.supabase.co') + '/rest/v1/divino_leads' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY || 'replace-me' }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ($env.SUPABASE_SERVICE_ROLE_KEY || 'replace-me') }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ name: $json.name || '', email: $json.email || '', business_type: $json.businessType || '', problem: $json.problem || '', goal: $json.goal || '', segment: $json.segment || 'business', recommended_system: $json.recommendedSystem || $json.system || '', quiz_result: $json.quizResult || {}, agent_name: $json.agent || 'business_agent', agent_action: $json.action || 'business_pro', agent_subject: $json.generatedSubject || '', agent_body: $json.generatedBody || '', internal_note: $json.internalNote || '', next_action: $json.nextAction || '', source: 'quiz_business', status: 'new' }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "save-to-supabase",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -140,
+        240
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "json": "={{ ({ ...$json, emailDelivery: { enabled: false, provider: 'AgentMail', status: 'todo', note: 'Configure a real delivery node before going live.' } }) }}"
+        },
+        "options": {}
+      },
+      "id": "todo-agentmail-delivery",
+      "name": "TODO AgentMail Delivery",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "json": "={{ ({ ok: true, message: 'Lead ricevuto e workflow AI avviato', action: $json.action, system: $json.recommendedSystem || $json.system, nextAction: $json.nextAction }) }}"
+        },
+        "options": {}
+      },
+      "id": "build-response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        380,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        640,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Hermes Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hermes Decision": {
+      "main": [
+        [
+          {
+            "node": "OpenWebUI Content Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenWebUI Content Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse OpenWebUI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OpenWebUI Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [
+          {
+            "node": "TODO AgentMail Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TODO AgentMail Delivery": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "staticData": {}
+}
