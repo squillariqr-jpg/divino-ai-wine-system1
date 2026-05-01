@@ -12,6 +12,10 @@ export function Hero() {
             <span className="text-burgundy">Scegli meglio.</span>{" "}
             Costruisci qualcosa di serio.
           </h1>
+          <p className="max-w-2xl text-xl font-semibold leading-8 text-burgundy sm:text-2xl">
+            Per appassionati, creator e business del vino: trasforma clienti,
+            contenuti e dati in vendite automatiche.
+          </p>
           <p className="max-w-2xl text-lg leading-8 text-ink/75">
             Formazione guidata, strumenti AI e prodotti digitali per appassionati,
             creator e buyer professionali. Senza elitismo, con metodo.
@@ -21,13 +25,13 @@ export function Hero() {
               href="/quiz"
               className="rounded-full bg-burgundy px-7 py-3.5 text-center text-sm font-semibold text-cream transition hover:bg-burgundy/90"
             >
-              Fai il Quiz Vino
+              Scopri il tuo percorso
             </Link>
             <Link
               href="/quiz-business"
               className="rounded-full border border-gold/70 px-7 py-3.5 text-center text-sm font-semibold text-burgundy transition hover:bg-white/60"
             >
-              Fai il Quiz Business
+              Diagnosi Business Vino
             </Link>
             <Link
               href="/academy"

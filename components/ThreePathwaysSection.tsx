@@ -23,7 +23,7 @@ const pathways: {
       "Ingresso naturale a Cantina Minima e corso introduttivo"
     ],
     href: "/quiz",
-    cta: "Fai il Quiz Vino",
+    cta: "Scopri il tuo stile di vino",
     theme: "light"
   },
   {
@@ -38,7 +38,7 @@ const pathways: {
       "Tono moderno, operativo e subito applicabile"
     ],
     href: { pathname: "/quiz-business", query: { focus: "creator" } },
-    cta: "Fai il Quiz Business",
+    cta: "Analizza il tuo sistema di vendita",
     theme: "bottle"
   },
   {
@@ -53,7 +53,7 @@ const pathways: {
       "Approccio premium e decisionale, non teorico"
     ],
     href: { pathname: "/quiz-business", query: { focus: "buyer" } },
-    cta: "Valuta il Percorso Buyer",
+    cta: "Scopri il percorso professionale",
     theme: "burgundy"
   }
 ];
