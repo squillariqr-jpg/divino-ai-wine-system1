@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { RecommendationCard } from "@/components/RecommendationCard";
 import type { QuizAnswers, RecommendationResponse } from "@/lib/types";
+import { track } from "@/lib/track";
 
 type StepKey = keyof QuizAnswers;
 
@@ -87,6 +88,107 @@ const initialAnswers: QuizAnswers = {
   journey: "semplice-pratico"
 };
 
+type PreviewSegment = "neutral" | "creator" | "business";
+
+function detectPreview(answers: QuizAnswers): PreviewSegment {
+  if (answers.goal === "business-ai") return "creator";
+  if (answers.goal === "acquisto-professionale") return "business";
+  if (answers.goal === "business-crescita") {
+    if (answers.journey === "creativo-moderno") return "creator";
+    return "business";
+  }
+  return "neutral";
+}
+
+const PREVIEW_CONTENT: Record<PreviewSegment, {
+  eyebrow: string;
+  title: string;
+  description: string;
+  hint: string;
+  accent: string;
+  product?: string;
+  price?: string;
+}> = {
+  neutral: {
+    eyebrow: "Risultato personalizzato",
+    title: "Il tuo profilo Divino sta prendendo forma",
+    description: "Rispondi a poche domande e qui vedrai comparire l'anteprima del percorso più adatto a te.",
+    hint: "",
+    accent: "neutral",
+  },
+  creator: {
+    eyebrow: "Profilo in costruzione",
+    title: "Creator",
+    description: "Stai costruendo un sistema per creare contenuti wine che attirano, educano e convertono.",
+    hint: "Continua il quiz per vedere il tuo piano consigliato.",
+    accent: "bottle",
+    product: "Wine AI Mastery",
+    price: "€249",
+  },
+  business: {
+    eyebrow: "Profilo in costruzione",
+    title: "Business",
+    description: "Stai ottimizzando decisioni di acquisto, margini e selezione con un approccio più strutturato.",
+    hint: "Continua il quiz per vedere il tuo piano consigliato.",
+    accent: "burgundy",
+    product: "Wine Buyer Academy",
+    price: "€1.490",
+  },
+};
+
+function QuizPreviewPanel({ answers }: { answers: QuizAnswers }) {
+  const segment = detectPreview(answers);
+  const content = PREVIEW_CONTENT[segment];
+
+  if (segment === "creator") {
+    return (
+      <div className="card-surface flex h-full min-h-[420px] flex-col justify-between overflow-hidden p-0">
+        <div className="flex-1 p-8">
+          <p className="section-eyebrow text-bottle/80">{content.eyebrow}</p>
+          <h3 className="mt-4 text-4xl font-bold text-ink">{content.title}</h3>
+          <p className="mt-4 leading-7 text-ink/75">{content.description}</p>
+          <p className="mt-6 text-sm text-ink/45 italic">{content.hint}</p>
+        </div>
+        <div className="bg-bottle px-8 py-6 text-cream">
+          <p className="text-xs uppercase tracking-[0.22em] text-gold/80">Percorso consigliato</p>
+          <div className="mt-2 flex items-baseline gap-3">
+            <span className="text-xl font-semibold">{content.product}</span>
+            <span className="text-2xl font-bold text-gold">{content.price}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (segment === "business") {
+    return (
+      <div className="card-surface flex h-full min-h-[420px] flex-col justify-between overflow-hidden p-0">
+        <div className="flex-1 p-8">
+          <p className="section-eyebrow text-burgundy/70">{content.eyebrow}</p>
+          <h3 className="mt-4 text-4xl font-bold text-ink">{content.title}</h3>
+          <p className="mt-4 leading-7 text-ink/75">{content.description}</p>
+          <p className="mt-6 text-sm text-ink/45 italic">{content.hint}</p>
+        </div>
+        <div className="bg-burgundy px-8 py-6 text-cream">
+          <p className="text-xs uppercase tracking-[0.22em] text-gold/80">Percorso consigliato</p>
+          <div className="mt-2 flex items-baseline gap-3">
+            <span className="text-xl font-semibold">{content.product}</span>
+            <span className="text-2xl font-bold text-gold">{content.price}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card-surface flex h-full min-h-[420px] flex-col justify-center p-8">
+      <p className="section-eyebrow">{content.eyebrow}</p>
+      <h3 className="mt-4 text-3xl text-ink">{content.title}</h3>
+      <p className="mt-4 max-w-xl leading-7 text-ink/75">{content.description}</p>
+    </div>
+  );
+}
+
 export function QuizForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers);
@@ -95,6 +197,10 @@ export function QuizForm() {
   const [error, setError] = useState<string | null>(null);
 
   const step = steps[currentStep];
+
+  useEffect(() => {
+    track("quiz_started");
+  }, []);
 
   function updateAnswer(value: QuizAnswers[StepKey]) {
     setAnswers((prev) => ({
@@ -122,6 +228,7 @@ export function QuizForm() {
 
       const payload = (await response.json()) as RecommendationResponse;
       setResult(payload);
+      track("quiz_completed", { segment: payload.segment, answers });
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
@@ -187,9 +294,10 @@ export function QuizForm() {
           {currentStep < steps.length - 1 ? (
             <button
               type="button"
-              onClick={() =>
-                setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1))
-              }
+              onClick={() => {
+                track("quiz_step_completed", { step: currentStep + 1, key: step.key, answer: answers[step.key] });
+                setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+              }}
               className="rounded-full bg-burgundy px-5 py-3 text-sm font-semibold text-cream"
             >
               Continua
@@ -213,17 +321,7 @@ export function QuizForm() {
         {result ? (
           <RecommendationCard result={result} />
         ) : (
-          <div className="card-surface flex h-full min-h-[420px] flex-col justify-center p-8">
-            <p className="section-eyebrow">Risultato personalizzato</p>
-            <h3 className="mt-4 text-3xl text-ink">
-              Qui comparirà la tua selezione Divino.
-            </h3>
-            <p className="mt-4 max-w-xl leading-7 text-ink/75">
-              Alla fine del quiz vedrai segmento assegnato, punteggi del motore
-              decisionale, lead magnet, offerta primaria, CTA post-quiz e due
-              vini coerenti con gusto e budget.
-            </p>
-          </div>
+          <QuizPreviewPanel answers={answers} />
         )}
       </div>
     </div>

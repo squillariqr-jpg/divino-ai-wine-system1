@@ -15,7 +15,8 @@ export const metadata: Metadata = {
 
 const navigation: { href: Route; label: string }[] = [
   { href: "/", label: "Home" },
-  { href: "/quiz", label: "Quiz" },
+  { href: "/quiz", label: "Quiz Vino" },
+  { href: "/quiz-business", label: "Quiz Business" },
   { href: "/agenti" as Route, label: "Agenti AI" },
   { href: "/prompt-generator" as Route, label: "Prompt Engine" },
   { href: "/abbonamenti" as Route, label: "Abbonamenti" },

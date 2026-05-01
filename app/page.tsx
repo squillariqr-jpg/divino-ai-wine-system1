@@ -5,7 +5,9 @@ import { FunnelOfferSection } from "@/components/FunnelOfferSection";
 import { Hero } from "@/components/Hero";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { ProductCard } from "@/components/ProductCard";
+import { SommelierCTA } from "@/components/SommelierCTA";
 import { TestimonialPlaceholders } from "@/components/TestimonialPlaceholders";
+import { ThreePathwaysSection } from "@/components/ThreePathwaysSection";
 import products from "@/data/products.json";
 import type { Product } from "@/lib/types";
 
@@ -36,35 +38,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-
-      <section className="container-shell py-14 sm:py-20">
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="card-surface p-6">
-            <p className="section-eyebrow">Proposta di valore</p>
-            <h2 className="mt-3 text-3xl text-ink">Un funnel premium, non solo una vetrina.</h2>
-            <p className="mt-4 leading-7 text-ink/75">
-              Divino AI Wine System organizza acquisizione, profilazione,
-              raccomandazione e vendita in un percorso elegante e leggibile.
-            </p>
-          </div>
-          <div className="card-surface bg-burgundy p-6 text-cream">
-            <p className="section-eyebrow text-gold/90">AI-operated funnel</p>
-            <h2 className="mt-3 text-3xl">Segmenti, regole, follow-up.</h2>
-            <p className="mt-4 leading-7 text-cream/82">
-              Il sistema parte rule-based, ma la struttura è pronta per workflow,
-              agenti AI e storage evoluto dei profili.
-            </p>
-          </div>
-          <div className="card-surface p-6">
-            <p className="section-eyebrow">Promessa</p>
-            <h2 className="mt-3 text-3xl text-ink">Premium ma accessibile.</h2>
-            <p className="mt-4 leading-7 text-ink/75">
-              Linguaggio competente, design raffinato e nessun elitismo inutile:
-              solo chiarezza, gusto e utilità concreta.
-            </p>
-          </div>
-        </div>
-      </section>
+      <ThreePathwaysSection />
 
       <section className="container-shell py-14 sm:py-20">
         <div className="mb-10 max-w-3xl">
@@ -246,24 +220,28 @@ export default function HomePage() {
       <TestimonialPlaceholders />
 
       <section className="container-shell pb-16 pt-6 sm:pb-24">
-        <div className="card-surface bg-burgundy p-8 text-cream sm:p-10">
-          <p className="section-eyebrow text-gold/90">Call to action</p>
-          <h2 className="mt-3 max-w-3xl text-3xl sm:text-4xl">
-            Inizia dal tuo segmento e lascia che il funnel ti porti al prossimo passo giusto.
+        <div className="rounded-[28px] bg-burgundy p-8 text-cream shadow-soft sm:p-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold/90">Da dove vuoi iniziare?</p>
+          <h2 className="mt-3 max-w-3xl text-3xl text-cream sm:text-4xl">
+            Fai il quiz, esplora i prodotti, o scrivi direttamente al Sommelier AI.
           </h2>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href={quizRoute}
-              className="rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-burgundy"
+              className="rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-burgundy transition hover:bg-gold"
             >
-              Fai il quiz
+              Fai il Quiz Gratis
             </Link>
             <Link
               href={academyRoute}
-              className="rounded-full border border-cream/25 px-6 py-3 text-center text-sm font-semibold text-cream"
+              className="rounded-full border border-cream/25 px-6 py-3 text-center text-sm font-semibold text-cream transition hover:border-cream/60"
             >
               Vedi la Academy
             </Link>
+            <SommelierCTA
+              source="homepage_cta"
+              className="rounded-full border border-gold/40 px-6 py-3 text-center text-sm font-semibold text-gold transition hover:border-gold/80"
+            />
           </div>
         </div>
       </section>

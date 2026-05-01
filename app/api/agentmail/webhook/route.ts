@@ -84,7 +84,7 @@ async function handleWebhook(payload: AgentMailWebhookPayload) {
     lead_id: lead.leadId ?? null,
   });
 
-  const inboxId = process.env.AGENTMAIL_INBOX_ID ?? "";
+  const inboxId = (process.env.AGENTMAIL_INBOX_ID ?? "").trim();
 
   // 5. Human handoff — no AI, short reply + flag
   if (intent.intent === "human_help") {

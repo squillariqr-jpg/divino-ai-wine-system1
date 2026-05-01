@@ -334,10 +334,10 @@ function buildContentRecommendation(segment: SegmentId) {
 function buildPostQuizCta(segment: SegmentId): PostQuizCta {
   if (segment === "buyer-professionale") {
     return {
-      title: "Il tuo next step è la Wine Buyer Academy",
+      title: "Il tuo prossimo passo: acquistare con metodo",
       description:
-        "Qui il funnel smette di essere introduttivo e diventa professionale: criteri, metodo e decisioni di acquisto.",
-      primaryLabel: "Vedi la Academy",
+        "Hai il profilo di chi gestisce vino come business. La Wine Buyer Academy ti dà criteri, marginalità, selezione fornitori e un framework decisionale replicabile da subito.",
+      primaryLabel: "Migliora le tue decisioni di acquisto",
       primaryHref: "/academy",
       secondaryLabel: "Esplora Wine AI Mastery",
       secondaryHref: "/wine-ai-mastery"
@@ -346,12 +346,12 @@ function buildPostQuizCta(segment: SegmentId): PostQuizCta {
 
   if (segment === "builder-digitale") {
     return {
-      title: "Il tuo next step è Wine AI Mastery",
+      title: "Il tuo prossimo passo: costruire il sistema contenuti",
       description:
-        "Hai segnali forti di interesse per AI, business e sistemi commerciali applicati al vino.",
-      primaryLabel: "Vai a Wine AI Mastery",
+        "Hai il profilo di chi vuole trasformare il vino in contenuti, audience e vendite. Wine AI Mastery è il sistema per farlo — template, prompt e metodo già pronti.",
+      primaryLabel: "Costruisci il tuo sistema contenuti",
       primaryHref: "/wine-ai-mastery",
-      secondaryLabel: "Ricevi prima il lead magnet",
+      secondaryLabel: "Prima il lead magnet gratuito",
       secondaryHref: "/#ebook-lead-magnet"
     };
   }

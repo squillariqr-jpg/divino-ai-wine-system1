@@ -10,12 +10,15 @@ const tiers = [
   {
     name: "Access",
     price: "€19",
+    period: "/mese",
     desc: "Per iniziare a usare l'AI nel vino",
+    forWho: "Appassionati e curiosi che vogliono capire come l'AI può migliorare le loro scelte enologiche.",
     features: [
-      "Prompt base vino (10 template)",
-      "Prompt Engine — utilizzo base",
+      "10 template prompt pronti all'uso",
+      "Wine Prompt Engine — utilizzo base",
       "1 risorsa premium al mese",
-      "Libreria introduttiva",
+      "Libreria introduttiva sul vino",
+      "Aggiornamenti mensili",
     ],
     highlight: false,
     cta: "Inizia con Access",
@@ -23,12 +26,15 @@ const tiers = [
   {
     name: "Creator",
     price: "€49",
+    period: "/mese",
     desc: "Per creare contenuti vino che convertono",
+    forWho: "Content creator, wine blogger, appassionati che producono contenuti e vogliono distinguersi.",
     features: [
-      "Prompt avanzati per contenuti",
-      "Prompt Engine — accesso completo",
+      "Tutto di Access",
+      "Prompt avanzati per social, email e schede",
+      "Wine Prompt Engine — accesso completo",
       "Template social + email marketing",
-      "Archivio contenuti aggiornato",
+      "Archivio contenuti completo aggiornato",
       "Nuovi prompt ogni mese",
     ],
     highlight: true,
@@ -37,13 +43,16 @@ const tiers = [
   {
     name: "Professional",
     price: "€99",
+    period: "/mese",
     desc: "Per chi vende vino o lavora nel settore",
+    forWho: "Enoteche, agenti, consulenti e operatori wine che vogliono un vantaggio commerciale concreto.",
     features: [
       "Tutto di Creator",
-      "Toolkit business vino",
+      "Toolkit business vino completo",
       "Email marketing + funnel avanzati",
       "Materiali B2B e strategie vendita",
       "Schede tecniche professionali",
+      "Analisi posizionamento e concorrenza",
     ],
     highlight: false,
     cta: "Passa a Professional",
@@ -51,16 +60,46 @@ const tiers = [
   {
     name: "Master",
     price: "€199",
+    period: "/mese",
     desc: "Vantaggio competitivo reale nel vino",
+    forWho: "Buyer professionali, importatori, responsabili acquisti e figure con portafogli complessi.",
     features: [
       "Tutto di Professional",
       "Strategie buyer e investment vino",
-      "Use case reali e casi studio",
+      "Use case reali e casi studio settoriali",
       "Contenuti esclusivi Master",
       "Priorità supporto diretto",
+      "Accesso anticipato alle nuove funzionalità",
     ],
     highlight: false,
     cta: "Diventa Master",
+  },
+];
+
+const faq = [
+  {
+    q: "Posso cancellare quando voglio?",
+    a: "Sì, puoi cancellare in qualsiasi momento direttamente dal pannello account. Nessuna penale, nessun vincolo.",
+  },
+  {
+    q: "Cosa succede ai miei contenuti se cancello?",
+    a: "Tutto quello che hai scaricato rimane tuo. Perdi solo l'accesso ai nuovi contenuti futuri.",
+  },
+  {
+    q: "È adatto anche a chi parte da zero?",
+    a: "Sì. Il piano Access è pensato proprio per chi vuole iniziare ad usare l'AI nel vino senza esperienza tecnica.",
+  },
+  {
+    q: "Come ricevo i nuovi contenuti ogni mese?",
+    a: "Ogni mese trovi nuovi prompt, template e risorse nell'area riservata. Ricevi anche una notifica via email.",
+  },
+  {
+    q: "C'è una garanzia di rimborso?",
+    a: "Sì. Se entro 14 giorni dall'acquisto non sei soddisfatto, ti rimborsiamo senza domande.",
+  },
+  {
+    q: "Posso cambiare piano in seguito?",
+    a: "Sì. Puoi passare a un piano superiore (o inferiore) in qualsiasi momento. Il cambio è immediato.",
   },
 ];
 
@@ -104,7 +143,7 @@ export default function AbbonamentiPage() {
                   </div>
                 )}
 
-                <div className="mb-5">
+                <div className="mb-4">
                   <p
                     className={`text-xs uppercase tracking-[0.25em] ${
                       tier.highlight ? "text-gold/80" : "text-burgundy/70"
@@ -125,7 +164,7 @@ export default function AbbonamentiPage() {
                         tier.highlight ? "text-cream/60" : "text-ink/50"
                       }`}
                     >
-                      /mese
+                      {tier.period}
                     </span>
                   </div>
                   <p
@@ -135,6 +174,24 @@ export default function AbbonamentiPage() {
                   >
                     {tier.desc}
                   </p>
+                </div>
+
+                {/* Per chi è */}
+                <div
+                  className={`mb-4 rounded-xl px-4 py-3 text-xs leading-5 ${
+                    tier.highlight
+                      ? "bg-white/10 text-cream/70"
+                      : "bg-burgundy/5 text-ink/60"
+                  }`}
+                >
+                  <span
+                    className={`font-semibold uppercase tracking-wider text-[10px] ${
+                      tier.highlight ? "text-gold/70" : "text-burgundy/60"
+                    }`}
+                  >
+                    Per chi è
+                  </span>
+                  <p className="mt-1">{tier.forWho}</p>
                 </div>
 
                 <ul className="mb-8 flex-1 space-y-3">
@@ -170,9 +227,13 @@ export default function AbbonamentiPage() {
             ))}
           </div>
 
-          <p className="mt-10 text-center text-xs text-ink/40">
-            Puoi cancellare in qualsiasi momento. Nessun vincolo. Pagamento sicuro.
-          </p>
+          {/* Reassurance */}
+          <div className="mt-10 rounded-2xl border border-bottle/15 bg-bottle/5 px-6 py-5 text-center">
+            <p className="text-sm text-ink/65">
+              <strong className="text-ink/80">Nessun rischio.</strong>{" "}
+              Cancelli quando vuoi · Rimborso entro 14 giorni · Pagamento sicuro · Nessun vincolo di durata
+            </p>
+          </div>
         </div>
       </section>
 
@@ -189,7 +250,7 @@ export default function AbbonamentiPage() {
               {[
                 {
                   title: "Prompt pronti all'uso",
-                  body: "Template costruiti su casi reali del settore vino. Non generici.",
+                  body: "Template costruiti su casi reali del settore vino. Non generici, non teorici.",
                 },
                 {
                   title: "Prompt Engine",
@@ -197,12 +258,32 @@ export default function AbbonamentiPage() {
                 },
                 {
                   title: "Aggiornamenti continui",
-                  body: "Il settore evolve. Il toolkit si aggiorna ogni mese con nuovi casi d'uso.",
+                  body: "Il settore evolve. Il toolkit si aggiorna ogni mese con nuovi casi d'uso reali.",
                 },
               ].map((item) => (
                 <div key={item.title} className="card-surface p-6">
                   <p className="mb-2 font-semibold text-ink">{item.title}</p>
                   <p className="text-sm leading-6 text-ink/65">{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="border-t border-burgundy/10 py-20">
+        <div className="container-shell">
+          <div className="mx-auto max-w-2xl">
+            <p className="section-eyebrow mb-4 text-center">FAQ</p>
+            <h2 className="mb-10 text-center font-serif text-3xl text-ink">
+              Domande frequenti
+            </h2>
+            <div className="space-y-4">
+              {faq.map((item) => (
+                <div key={item.q} className="card-surface p-6">
+                  <p className="font-semibold text-ink">{item.q}</p>
+                  <p className="mt-2 text-sm leading-6 text-ink/65">{item.a}</p>
                 </div>
               ))}
             </div>

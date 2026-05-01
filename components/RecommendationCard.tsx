@@ -1,5 +1,9 @@
+"use client";
+
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
+import { SommelierCTA } from "@/components/SommelierCTA";
 import type { RecommendationResponse } from "@/lib/types";
+import { track } from "@/lib/track";
 
 type RecommendationCardProps = {
   result: RecommendationResponse;
@@ -27,19 +31,21 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
       </div>
 
       {/* 2 — CTA principale: subito dopo il profilo, massima visibilità */}
-      <article className="card-surface bg-burgundy p-6 sm:p-8 text-cream">
-        <p className="section-eyebrow text-gold/90">Il tuo prossimo passo</p>
-        <h3 className="mt-3 text-2xl sm:text-3xl">{result.postQuizCta.title}</h3>
+      <article className="rounded-[28px] bg-burgundy shadow-soft p-6 sm:p-8 text-cream">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold/90">Il tuo prossimo passo</p>
+        <h3 className="mt-3 text-2xl text-cream sm:text-3xl">{result.postQuizCta.title}</h3>
         <p className="mt-4 leading-7 text-cream/85">{result.postQuizCta.description}</p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <a
             href={result.postQuizCta.primaryHref}
+            onClick={() => track("quiz_result_cta_click", { cta: "primary", label: result.postQuizCta.primaryLabel, segment: result.segment })}
             className="rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-burgundy transition hover:bg-gold"
           >
             {result.postQuizCta.primaryLabel}
           </a>
           <a
             href={result.postQuizCta.secondaryHref}
+            onClick={() => track("quiz_result_cta_click", { cta: "secondary", label: result.postQuizCta.secondaryLabel, segment: result.segment })}
             className="rounded-full border border-cream/25 px-6 py-3 text-center text-sm font-semibold text-cream transition hover:border-cream/60"
           >
             {result.postQuizCta.secondaryLabel}
@@ -61,6 +67,7 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
         </p>
         <a
           href={`/${result.productRecommendation.slug}`}
+          onClick={() => track("quiz_result_cta_click", { cta: "product", label: result.productRecommendation.cta, product: result.productRecommendation.name, segment: result.segment })}
           className="mt-6 inline-flex rounded-full bg-burgundy px-6 py-3 text-sm font-semibold text-cream transition hover:bg-burgundy/85"
         >
           {result.productRecommendation.cta}
@@ -93,7 +100,23 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
         </div>
       </div>
 
-      {/* 5 — Lead capture */}
+      {/* 5 — Sommelier AI nudge */}
+      <div className="rounded-[24px] border border-burgundy/15 bg-white/70 p-6 sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-burgundy/70">
+          Non sei sicuro?
+        </p>
+        <h3 className="mt-2 text-xl text-ink">Scrivi direttamente al Sommelier AI</h3>
+        <p className="mt-3 leading-7 text-ink/65">
+          Descrivi il tuo caso in due righe — ricevi un consiglio personalizzato.
+          Intercettiamo le domande che il quiz non può rispondere.
+        </p>
+        <SommelierCTA
+          source="quiz_result"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-burgundy px-6 py-3 text-sm font-semibold text-cream transition hover:bg-burgundy/90"
+        />
+      </div>
+
+      {/* 6 — Lead capture */}
       <LeadCaptureForm
         title="Ricevi il percorso completo via email"
         description="Lascia la tua email: ti mando subito il lead magnet giusto per il tuo profilo e i prossimi step del percorso Divino."

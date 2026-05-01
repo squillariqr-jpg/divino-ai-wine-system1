@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@/lib/track";
+import { SommelierCTA } from "@/components/SommelierCTA";
 
 const GOALS = [
   { value: "social", label: "Post Social" },
@@ -98,30 +100,42 @@ function buildPrompt(form: {
   return parts.join("\n");
 }
 
-export default function PromptGeneratorPage() {
-  const [form, setForm] = useState({
-    goal: "",
-    wine: "",
-    region: "",
-    target: "",
-    style: "",
-    context: "",
-  });
+const EXAMPLE_FORM = {
+  goal: "social",
+  wine: "Barolo",
+  region: "Piemonte — La Morra",
+  target: "enthusiast",
+  style: "emozionale",
+  context: "Per un post Instagram, tono raffinato ma accessibile.",
+};
 
-  const [prompt, setPrompt] = useState("");
+export default function PromptGeneratorPage() {
+  const [form, setForm] = useState(EXAMPLE_FORM);
+  const [prompt, setPrompt] = useState(() => buildPrompt(EXAMPLE_FORM));
   const [copied, setCopied] = useState(false);
+  const [chatGptOpened, setChatGptOpened] = useState(false);
+  const [isExample, setIsExample] = useState(true);
 
   const handleGenerate = () => {
     if (!form.goal || !form.wine) return;
     const result = buildPrompt(form);
     setPrompt(result);
     setCopied(false);
+    setIsExample(false);
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(prompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleOpenChatGPT = () => {
+    navigator.clipboard.writeText(prompt);
+    setChatGptOpened(true);
+    track("prompt_engine_open_chatgpt", { goal: form.goal, wine: form.wine });
+    window.open("https://chat.openai.com/", "_blank");
+    setTimeout(() => setChatGptOpened(false), 3000);
   };
 
   const isReady = form.goal && form.wine;
@@ -276,14 +290,28 @@ export default function PromptGeneratorPage() {
                 Il tuo prompt
               </h2>
               {prompt && (
-                <button
-                  onClick={handleCopy}
-                  className="rounded-full border border-burgundy/30 px-4 py-1.5 text-xs font-semibold text-burgundy transition hover:bg-burgundy hover:text-cream"
-                >
-                  {copied ? "Copiato ✓" : "Copia"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopy}
+                    className="rounded-full border border-burgundy/30 px-4 py-1.5 text-xs font-semibold text-burgundy transition hover:bg-burgundy hover:text-cream"
+                  >
+                    {copied ? "Copiato ✓" : "Copia Prompt"}
+                  </button>
+                  <button
+                    onClick={handleOpenChatGPT}
+                    className="rounded-full bg-bottle px-4 py-1.5 text-xs font-semibold text-cream transition hover:bg-bottle/85"
+                  >
+                    {chatGptOpened ? "Aperto ✓" : "Apri in ChatGPT"}
+                  </button>
+                </div>
               )}
             </div>
+
+            {isExample && prompt && (
+              <div className="mb-3 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-xs text-ink/65">
+                <strong className="text-ink/80">Esempio pronto all&apos;uso</strong> — questo prompt è già compilato con un caso reale (Barolo, post social, tono emozionale). Modificalo o genera il tuo.
+              </div>
+            )}
 
             {prompt ? (
               <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded-xl bg-ink/5 p-5 text-xs leading-6 text-ink/80">
@@ -300,11 +328,21 @@ export default function PromptGeneratorPage() {
 
             {prompt && (
               <div className="mt-4 rounded-xl border border-gold/30 bg-gold/8 p-4 text-xs text-ink/60">
-                <strong className="text-ink/80">Come usarlo:</strong> copia il prompt e incollalo in
-                ChatGPT, Claude, o qualsiasi AI. Per risultati migliori aggiungi eventuali
-                dettagli specifici dopo aver incollato.
+                <strong className="text-ink/80">Come usarlo:</strong> clicca &quot;Apri in ChatGPT&quot; — il prompt viene copiato automaticamente. Incollalo nella chat e aggiungi dettagli specifici.
               </div>
             )}
+
+            {/* Sommelier AI CTA */}
+            <div className="mt-5 rounded-xl border border-burgundy/15 bg-burgundy/5 px-5 py-4">
+              <p className="text-sm font-semibold text-ink/80">Vuoi un consiglio più preciso?</p>
+              <p className="mt-1 text-xs text-ink/55">
+                Descrivi direttamente cosa cerchi e il Sommelier AI ti risponde.
+              </p>
+              <SommelierCTA
+                source="prompt_engine"
+                className="mt-3 inline-flex items-center gap-2 rounded-full border border-burgundy/30 px-4 py-2 text-xs font-semibold text-burgundy transition hover:bg-burgundy hover:text-cream"
+              />
+            </div>
           </div>
         </div>
       </div>
