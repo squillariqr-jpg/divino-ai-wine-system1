@@ -2,21 +2,38 @@
 
 import { useEffect, useState } from "react";
 
-import { RecommendationCard } from "@/components/RecommendationCard";
 import { track } from "@/lib/track";
 import type { QuizAnswers, RecommendationResponse } from "@/lib/types";
 
 type BusinessFocus = "creator" | "buyer";
+type BusinessSystemId = "acquisition" | "retention" | "automation" | "content";
 
 type BusinessQuizAnswers = {
-  role:
-    | "creator-formatore"
+  businessType:
+    | "creator-media"
     | "cantina-enoteca"
-    | "consulente-brand"
-    | "buyer-horeca";
-  priority: "contenuti" | "lead" | "vendite" | "selezione";
-  stage: "base" | "attivo" | "scala" | "premium";
-  approach: QuizAnswers["journey"];
+    | "horeca-buyer"
+    | "consulenza-distribuzione";
+  mainProblem:
+    | "acquisizione-instabile"
+    | "clienti-non-ritornano"
+    | "processi-manuali"
+    | "contenuti-incostanti";
+  systemLevel:
+    | "nessun-sistema"
+    | "parziale"
+    | "frammentato"
+    | "strutturato";
+  toolsUsed:
+    | "manuale"
+    | "contenuti-base"
+    | "crm-automation"
+    | "stack-misto";
+  mainGoal:
+    | "piu-lead"
+    | "piu-riacquisti"
+    | "piu-automazione"
+    | "piu-contenuti";
 };
 
 type BusinessStepKey = keyof BusinessQuizAnswers;
@@ -33,238 +50,464 @@ type BusinessStepDefinition<T extends BusinessStepKey> = {
   options: BusinessStepOption<T>[];
 };
 
+type BusinessSystemScoreMap = Record<BusinessSystemId, number>;
+
+type BusinessDiagnosticResult = {
+  system: BusinessSystemId;
+  systemName: string;
+  diagnosisSentence: string;
+  problemExplanation: string;
+  features: string[];
+  benefits: string[];
+  accentClass: string;
+  accentTextClass: string;
+  targetLabel: string;
+  targetHref: string;
+  targetPrice: string;
+};
+
+const BUSINESS_TYPE_LABELS: Record<
+  BusinessQuizAnswers["businessType"],
+  string
+> = {
+  "creator-media": "creator o progetto editoriale wine",
+  "cantina-enoteca": "cantina, enoteca o wine shop",
+  "horeca-buyer": "realtà horeca o funzione buyer",
+  "consulenza-distribuzione": "consulenza, distribuzione o progetto commerciale"
+};
+
+const MAIN_PROBLEM_LABELS: Record<
+  BusinessQuizAnswers["mainProblem"],
+  string
+> = {
+  "acquisizione-instabile": "acquisizione discontinua",
+  "clienti-non-ritornano": "ritorno clienti troppo debole",
+  "processi-manuali": "processi ancora troppo manuali",
+  "contenuti-incostanti": "contenuti discontinui e poco collegati alla vendita"
+};
+
+const SYSTEM_LEVEL_LABELS: Record<
+  BusinessQuizAnswers["systemLevel"],
+  string
+> = {
+  "nessun-sistema": "quasi assente",
+  parziale: "solo parziale",
+  frammentato: "frammentato",
+  strutturato: "già strutturato ma ottimizzabile"
+};
+
+const TOOLS_LABELS: Record<BusinessQuizAnswers["toolsUsed"], string> = {
+  manuale: "manuali o sparsi tra chat e fogli",
+  "contenuti-base": "centrati su contenuti ma con poca orchestrazione",
+  "crm-automation": "già orientati a CRM e automazioni",
+  "stack-misto": "numerosi ma non ancora coordinati"
+};
+
+const MAIN_GOAL_LABELS: Record<BusinessQuizAnswers["mainGoal"], string> = {
+  "piu-lead": "più lead qualificati",
+  "piu-riacquisti": "più riacquisti e continuità",
+  "piu-automazione": "più automazione operativa",
+  "piu-contenuti": "più contenuti che convertono"
+};
+
 const steps: BusinessStepDefinition<BusinessStepKey>[] = [
   {
-    key: "role",
-    label: "Che tipo di progetto o ruolo hai oggi?",
+    key: "businessType",
+    label: "Che tipo di business wine stai guidando?",
     description:
-      "Questa risposta ci dice da quale lato del business del vino stai operando davvero.",
+      "Partiamo dalla struttura reale del business, non dal ruolo ideale che vorresti avere.",
     options: [
-      { value: "creator-formatore", label: "Creator, formatore o progetto media wine" },
+      { value: "creator-media", label: "Creator, media o formazione wine" },
       { value: "cantina-enoteca", label: "Cantina, enoteca o wine shop" },
-      { value: "consulente-brand", label: "Consulenza, brand o progetto commerciale" },
-      { value: "buyer-horeca", label: "Buyer, horeca o selezione professionale" }
+      { value: "horeca-buyer", label: "Horeca, buyer o gestione selezione" },
+      { value: "consulenza-distribuzione", label: "Consulenza, distribuzione o brand commerciale" }
     ]
   },
   {
-    key: "priority",
-    label: "Qual è la priorità più urgente?",
+    key: "mainProblem",
+    label: "Qual è il problema che oggi ti sta rallentando di più?",
     description:
-      "Così il quiz capisce se il collo di bottiglia è contenuto, acquisizione, conversione o selezione.",
+      "Qui individuiamo il collo di bottiglia operativo che ti impedisce di scalare bene.",
     options: [
-      { value: "contenuti", label: "Produrre contenuti migliori e più veloci" },
-      { value: "lead", label: "Generare più lead e richieste" },
-      { value: "vendite", label: "Vendere con un sistema più chiaro" },
-      { value: "selezione", label: "Migliorare selezione, acquisti e marginalità" }
+      { value: "acquisizione-instabile", label: "Entrano poche richieste o in modo irregolare" },
+      { value: "clienti-non-ritornano", label: "I clienti comprano ma non ritornano abbastanza" },
+      { value: "processi-manuali", label: "Segui tutto a mano e perdi tempo operativo" },
+      { value: "contenuti-incostanti", label: "I contenuti escono male o troppo lentamente" }
     ]
   },
   {
-    key: "stage",
-    label: "Quanto è strutturato oggi il tuo business?",
+    key: "systemLevel",
+    label: "A che livello è oggi il tuo sistema?",
     description:
-      "Serve a capire se hai bisogno di partire da un impianto snello o da un framework più avanzato.",
+      "Così capiamo se devi costruire una base, ordinare un sistema frammentato o ottimizzare uno già esistente.",
     options: [
-      { value: "base", label: "Sto costruendo la base" },
-      { value: "attivo", label: "Ho già un'attività o un pubblico attivo" },
-      { value: "scala", label: "Voglio scalare un sistema già funzionante" },
-      { value: "premium", label: "Gestisco già decisioni o budget rilevanti" }
+      { value: "nessun-sistema", label: "Non c'è ancora un vero sistema" },
+      { value: "parziale", label: "Esiste qualcosa ma funziona solo a tratti" },
+      { value: "frammentato", label: "Ci sono pezzi utili ma non lavorano insieme" },
+      { value: "strutturato", label: "Esiste già un sistema ma va reso più profittevole" }
     ]
   },
   {
-    key: "approach",
-    label: "Che tipo di percorso cerchi?",
+    key: "toolsUsed",
+    label: "Quali strumenti usi davvero oggi?",
     description:
-      "L'ultimo segnale ci aiuta a capire tono, profondità e stile della soluzione migliore.",
+      "Il punto non è quanti tool hai, ma quanto sono collegati a un flusso commerciale coerente.",
     options: [
-      { value: "semplice-pratico", label: "Snello e pratico" },
-      { value: "creativo-moderno", label: "Creativo e moderno" },
-      { value: "professionale-tecnico", label: "Professionale e tecnico" },
-      { value: "esclusivo-approfondito", label: "Premium e approfondito" }
+      { value: "manuale", label: "Chat, note, fogli e molta gestione manuale" },
+      { value: "contenuti-base", label: "Social, newsletter o contenuti base" },
+      { value: "crm-automation", label: "CRM, email o automazioni già impostate" },
+      { value: "stack-misto", label: "Uno stack misto con tool non del tutto integrati" }
+    ]
+  },
+  {
+    key: "mainGoal",
+    label: "Qual è l'obiettivo più importante dei prossimi mesi?",
+    description:
+      "L'ultima risposta trasforma la diagnosi in una direzione di crescita chiara.",
+    options: [
+      { value: "piu-lead", label: "Aumentare i lead qualificati" },
+      { value: "piu-riacquisti", label: "Far tornare clienti e richieste con più continuità" },
+      { value: "piu-automazione", label: "Ridurre il lavoro manuale con più automazioni" },
+      { value: "piu-contenuti", label: "Produrre contenuti migliori che portano vendite" }
     ]
   }
-];
+] as const;
+
+const SYSTEM_LIBRARY: Record<
+  BusinessSystemId,
+  {
+    systemName: string;
+    diagnosisSentence: string;
+    features: string[];
+    benefits: string[];
+    accentClass: string;
+    accentTextClass: string;
+  }
+> = {
+  acquisition: {
+    systemName: "Acquisition System",
+    diagnosisSentence:
+      "La diagnosi è netta: il tuo business wine ha bisogno prima di tutto di un sistema di acquisizione.",
+    features: [
+      "Lead magnet e CTA collegati a una promessa chiara",
+      "Landing e raccolta contatti orientate alla conversione",
+      "Sequenza iniziale per trasformare interesse in richiesta",
+      "Allineamento tra traffico, contenuti e primo follow-up"
+    ],
+    benefits: [
+      "Più lead qualificati e meno dipendenza dal caso",
+      "Messaggio commerciale più leggibile",
+      "Crescita più stabile delle opportunità in ingresso"
+    ],
+    accentClass: "bg-burgundy",
+    accentTextClass: "text-cream"
+  },
+  retention: {
+    systemName: "Retention System",
+    diagnosisSentence:
+      "La tua crescita passa dalla continuità: oggi ti serve soprattutto un sistema di retention.",
+    features: [
+      "Segmentazione clienti e follow-up post acquisto",
+      "Sequenze di riattivazione e ritorno cliente",
+      "Calendario offerte e momenti di contatto ricorrenti",
+      "Messaggi coerenti per aumentare frequenza e valore"
+    ],
+    benefits: [
+      "Più riacquisti con meno dispersione commerciale",
+      "Relazione più forte con i clienti già esistenti",
+      "Maggiore valore per cliente nel medio periodo"
+    ],
+    accentClass: "bg-bottle",
+    accentTextClass: "text-cream"
+  },
+  automation: {
+    systemName: "Automation System",
+    diagnosisSentence:
+      "Il tuo limite oggi non è il mercato: è la quantità di energia che sprechi in processi manuali.",
+    features: [
+      "Workflow chiari per lead, richieste e follow-up",
+      "Automazioni su email, reminder e passaggi operativi",
+      "Priorità commerciali più leggibili per il team",
+      "Riduzione dei punti morti tra interesse e azione"
+    ],
+    benefits: [
+      "Meno lavoro ripetitivo e più tempo strategico",
+      "Follow-up più veloci e coerenti",
+      "Sistema più scalabile senza aumentare il caos"
+    ],
+    accentClass: "bg-ink",
+    accentTextClass: "text-cream"
+  },
+  content: {
+    systemName: "Content System",
+    diagnosisSentence:
+      "Il problema non è pubblicare di più: è avere un sistema contenuti che porta davvero business.",
+    features: [
+      "Prompt, format e workflow editoriali replicabili",
+      "Calendario contenuti con obiettivi commerciali chiari",
+      "Riutilizzo intelligente di contenuti per più canali",
+      "Ponte tra contenuto, lead generation e vendita"
+    ],
+    benefits: [
+      "Più contenuti utili in meno tempo",
+      "Autorevolezza più alta senza improvvisazione",
+      "Migliore conversione dai contenuti alle richieste"
+    ],
+    accentClass: "bg-bottle",
+    accentTextClass: "text-cream"
+  }
+};
+
+const SYSTEM_ORDER_BY_GOAL: Record<
+  BusinessQuizAnswers["mainGoal"],
+  BusinessSystemId[]
+> = {
+  "piu-lead": ["acquisition", "content", "automation", "retention"],
+  "piu-riacquisti": ["retention", "automation", "acquisition", "content"],
+  "piu-automazione": ["automation", "retention", "content", "acquisition"],
+  "piu-contenuti": ["content", "acquisition", "automation", "retention"]
+};
 
 function getInitialAnswers(focus?: BusinessFocus): BusinessQuizAnswers {
   if (focus === "buyer") {
     return {
-      role: "buyer-horeca",
-      priority: "selezione",
-      stage: "premium",
-      approach: "professionale-tecnico"
+      businessType: "horeca-buyer",
+      mainProblem: "processi-manuali",
+      systemLevel: "frammentato",
+      toolsUsed: "manuale",
+      mainGoal: "piu-riacquisti"
     };
   }
 
   if (focus === "creator") {
     return {
-      role: "creator-formatore",
-      priority: "contenuti",
-      stage: "attivo",
-      approach: "creativo-moderno"
+      businessType: "creator-media",
+      mainProblem: "contenuti-incostanti",
+      systemLevel: "parziale",
+      toolsUsed: "contenuti-base",
+      mainGoal: "piu-contenuti"
     };
   }
 
   return {
-    role: "cantina-enoteca",
-    priority: "lead",
-    stage: "attivo",
-    approach: "semplice-pratico"
+    businessType: "cantina-enoteca",
+    mainProblem: "acquisizione-instabile",
+    systemLevel: "parziale",
+    toolsUsed: "contenuti-base",
+    mainGoal: "piu-lead"
   };
 }
 
-function mapBusinessQuizToQuizAnswers(
-  answers: BusinessQuizAnswers
-): QuizAnswers {
+function createSystemScores(): BusinessSystemScoreMap {
+  return {
+    acquisition: 0,
+    retention: 0,
+    automation: 0,
+    content: 0
+  };
+}
+
+function detectBusinessSystem(answers: BusinessQuizAnswers): BusinessSystemId {
+  const scores = createSystemScores();
+
+  const weights: Record<
+    BusinessStepKey,
+    Record<string, Partial<BusinessSystemScoreMap>>
+  > = {
+    businessType: {
+      "creator-media": { content: 3, acquisition: 1 },
+      "cantina-enoteca": { acquisition: 2, retention: 2, automation: 1 },
+      "horeca-buyer": { retention: 2, automation: 1, acquisition: 1 },
+      "consulenza-distribuzione": { automation: 2, acquisition: 2, content: 1 }
+    },
+    mainProblem: {
+      "acquisizione-instabile": { acquisition: 6 },
+      "clienti-non-ritornano": { retention: 6 },
+      "processi-manuali": { automation: 6 },
+      "contenuti-incostanti": { content: 6 }
+    },
+    systemLevel: {
+      "nessun-sistema": { acquisition: 2, content: 2 },
+      parziale: { acquisition: 1, content: 1, retention: 1 },
+      frammentato: { automation: 3, retention: 1 },
+      strutturato: { retention: 2, automation: 2 }
+    },
+    toolsUsed: {
+      manuale: { automation: 3, acquisition: 1 },
+      "contenuti-base": { content: 3, acquisition: 1 },
+      "crm-automation": { retention: 2, automation: 2 },
+      "stack-misto": { automation: 3, retention: 1 }
+    },
+    mainGoal: {
+      "piu-lead": { acquisition: 5 },
+      "piu-riacquisti": { retention: 5 },
+      "piu-automazione": { automation: 5 },
+      "piu-contenuti": { content: 5 }
+    }
+  };
+
+  (Object.keys(weights) as BusinessStepKey[]).forEach((key) => {
+    const stepWeights = weights[key][answers[key]];
+
+    Object.entries(stepWeights).forEach(([system, value]) => {
+      scores[system as BusinessSystemId] += value ?? 0;
+    });
+  });
+
+  const maxScore = Math.max(...Object.values(scores));
+  return (
+    SYSTEM_ORDER_BY_GOAL[answers.mainGoal].find(
+      (system) => scores[system] === maxScore
+    ) ?? "acquisition"
+  );
+}
+
+function mapBusinessQuizToQuizAnswers(answers: BusinessQuizAnswers): QuizAnswers {
   const mapped: QuizAnswers = {
     level: "intermedio",
     goal: "business-crescita",
     taste: "esploratore",
     budget: "medio",
-    journey: answers.approach
+    journey: "semplice-pratico"
   };
 
-  if (answers.role === "creator-formatore") {
+  if (answers.businessType === "creator-media") {
     mapped.level = "intermedio";
     mapped.goal = "business-ai";
     mapped.taste = "esploratore";
-    mapped.budget = "medio";
+    mapped.journey = "creativo-moderno";
   }
 
-  if (answers.role === "cantina-enoteca") {
+  if (answers.businessType === "cantina-enoteca") {
     mapped.level = "professionista";
     mapped.goal = "business-crescita";
     mapped.taste = "strutturato";
     mapped.budget = "alto";
+    mapped.journey = "semplice-pratico";
   }
 
-  if (answers.role === "consulente-brand") {
-    mapped.level = "intermedio";
-    mapped.goal = "business-crescita";
-    mapped.taste = "elegante";
-    mapped.budget = "medio";
-  }
-
-  if (answers.role === "buyer-horeca") {
+  if (answers.businessType === "horeca-buyer") {
     mapped.level = "professionista";
     mapped.goal = "acquisto-professionale";
     mapped.taste = "elegante";
     mapped.budget = "alto";
+    mapped.journey = "professionale-tecnico";
   }
 
-  if (answers.priority === "contenuti") {
+  if (answers.businessType === "consulenza-distribuzione") {
+    mapped.level = "esperto";
+    mapped.goal = "business-crescita";
+    mapped.taste = "elegante";
+    mapped.budget = "alto";
+    mapped.journey = "professionale-tecnico";
+  }
+
+  if (answers.mainProblem === "contenuti-incostanti") {
     mapped.goal = "business-ai";
     mapped.taste = "esploratore";
+    mapped.journey = "creativo-moderno";
   }
 
-  if (answers.priority === "lead") {
+  if (answers.mainProblem === "processi-manuali") {
+    mapped.goal = "business-ai";
+    mapped.journey = "professionale-tecnico";
+  }
+
+  if (answers.mainProblem === "clienti-non-ritornano") {
     mapped.goal = "business-crescita";
-    mapped.taste =
-      answers.role === "creator-formatore" ? "esploratore" : "elegante";
+    mapped.taste = "morbido";
   }
 
-  if (answers.priority === "vendite") {
+  if (answers.mainProblem === "acquisizione-instabile") {
     mapped.goal = "business-crescita";
-    mapped.taste = "strutturato";
-    mapped.budget = "alto";
+    mapped.taste = "fresco";
   }
 
-  if (answers.priority === "selezione") {
-    mapped.goal = "acquisto-professionale";
-    mapped.level = "professionista";
-    mapped.taste = "elegante";
-    mapped.budget = "alto";
-  }
-
-  if (answers.stage === "base") {
+  if (answers.systemLevel === "nessun-sistema") {
     mapped.level = "intermedio";
     mapped.budget = "medio";
   }
 
-  if (answers.stage === "scala") {
+  if (answers.systemLevel === "frammentato") {
     mapped.level = "professionista";
-    mapped.budget = "alto";
   }
 
-  if (answers.stage === "premium") {
+  if (answers.systemLevel === "strutturato") {
     mapped.level = "esperto";
     mapped.budget = "molto-alto";
+  }
+
+  if (answers.toolsUsed === "crm-automation") {
+    mapped.level = mapped.level === "intermedio" ? "professionista" : mapped.level;
+    mapped.journey = "professionale-tecnico";
+  }
+
+  if (answers.toolsUsed === "stack-misto") {
+    mapped.level = "esperto";
+    mapped.journey = "esclusivo-approfondito";
+  }
+
+  if (answers.mainGoal === "piu-lead") {
+    mapped.goal = "business-crescita";
+  }
+
+  if (answers.mainGoal === "piu-riacquisti") {
+    mapped.goal =
+      answers.businessType === "horeca-buyer"
+        ? "acquisto-professionale"
+        : "business-crescita";
+    mapped.taste = "elegante";
+  }
+
+  if (answers.mainGoal === "piu-automazione") {
+    mapped.goal = "business-ai";
+    mapped.journey = "professionale-tecnico";
+  }
+
+  if (answers.mainGoal === "piu-contenuti") {
+    mapped.goal = "business-ai";
+    mapped.journey = "creativo-moderno";
+    mapped.taste = "esploratore";
   }
 
   return mapped;
 }
 
-type BusinessPreviewKind = "neutral" | "creator" | "commerciale" | "buyer";
+function buildBusinessDiagnosticResult(
+  answers: BusinessQuizAnswers,
+  recommendation: RecommendationResponse
+): BusinessDiagnosticResult {
+  const system = detectBusinessSystem(answers);
+  const systemConfig = SYSTEM_LIBRARY[system];
+  const isBuyerTrack = recommendation.segment === "buyer-professionale";
+  const targetLabel = isBuyerTrack
+    ? "Wine Buyer Academy"
+    : recommendation.productRecommendation.name;
+  const targetHref = isBuyerTrack ? "/academy" : "/wine-ai-mastery";
+  const targetPrice = isBuyerTrack ? "€1.490" : "€249";
 
-function detectBusinessPreview(answers: BusinessQuizAnswers): BusinessPreviewKind {
-  if (answers.role === "buyer-horeca" || answers.priority === "selezione") {
-    return "buyer";
-  }
-
-  if (
-    answers.role === "creator-formatore" ||
-    answers.priority === "contenuti" ||
-    answers.approach === "creativo-moderno"
-  ) {
-    return "creator";
-  }
-
-  if (
-    answers.priority === "lead" ||
-    answers.priority === "vendite" ||
-    answers.role === "cantina-enoteca" ||
-    answers.role === "consulente-brand"
-  ) {
-    return "commerciale";
-  }
-
-  return "neutral";
+  return {
+    system,
+    systemName: systemConfig.systemName,
+    diagnosisSentence: systemConfig.diagnosisSentence,
+    problemExplanation: `Oggi operi come ${
+      BUSINESS_TYPE_LABELS[answers.businessType]
+    }, con un sistema ${
+      SYSTEM_LEVEL_LABELS[answers.systemLevel]
+    } e strumenti ${TOOLS_LABELS[answers.toolsUsed]}. Il nodo più evidente è ${
+      MAIN_PROBLEM_LABELS[answers.mainProblem]
+    }, mentre il tuo obiettivo più forte resta ${
+      MAIN_GOAL_LABELS[answers.mainGoal]
+    }. Questo è esattamente il punto in cui un ${systemConfig.systemName} crea più leva.`,
+    features: systemConfig.features,
+    benefits: systemConfig.benefits,
+    accentClass: systemConfig.accentClass,
+    accentTextClass: systemConfig.accentTextClass,
+    targetLabel,
+    targetHref,
+    targetPrice
+  };
 }
-
-const PREVIEW_CONTENT: Record<
-  BusinessPreviewKind,
-  {
-    eyebrow: string;
-    title: string;
-    description: string;
-    accentClass: string;
-    offerLabel?: string;
-    offerPrice?: string;
-  }
-> = {
-  neutral: {
-    eyebrow: "Diagnosi business",
-    title: "Qui vedrai il percorso business più adatto",
-    description:
-      "Il quiz distingue tra crescita contenuti, crescita commerciale e decisione buyer, poi ti indirizza all’offerta più coerente.",
-    accentClass: "bg-white/70"
-  },
-  creator: {
-    eyebrow: "Preview percorso",
-    title: "Creator & AI",
-    description:
-      "Stai segnalando bisogno di contenuti migliori, sistemi più veloci e un impianto editoriale che converte.",
-    accentClass: "bg-bottle text-cream",
-    offerLabel: "Wine AI Mastery",
-    offerPrice: "€249"
-  },
-  commerciale: {
-    eyebrow: "Preview percorso",
-    title: "Business Growth",
-    description:
-      "Il tuo caso sembra commerciale: lead, vendite, posizionamento e chiarezza di offerta contano più della semplice produzione contenuti.",
-    accentClass: "bg-burgundy text-cream",
-    offerLabel: "Wine AI Mastery",
-    offerPrice: "€249"
-  },
-  buyer: {
-    eyebrow: "Preview percorso",
-    title: "Buyer Premium",
-    description:
-      "Il tuo profilo richiede un framework più tecnico: selezione, marginalità, acquisti e metodo decisionale.",
-    accentClass: "bg-ink text-cream",
-    offerLabel: "Wine Buyer Academy",
-    offerPrice: "€1.490"
-  }
-};
 
 function BusinessPreviewPanel({
   answers,
@@ -273,22 +516,27 @@ function BusinessPreviewPanel({
   answers: BusinessQuizAnswers;
   hasInteracted: boolean;
 }) {
-  const preview = hasInteracted ? detectBusinessPreview(answers) : "neutral";
-  const content = PREVIEW_CONTENT[preview];
+  const system = hasInteracted ? detectBusinessSystem(answers) : null;
+  const preview = system ? SYSTEM_LIBRARY[system] : null;
 
-  if (preview === "neutral") {
+  if (!preview) {
     return (
-      <div className="card-surface flex h-full min-h-[430px] flex-col justify-center p-8">
-        <p className="section-eyebrow">{content.eyebrow}</p>
-        <h3 className="mt-4 text-3xl text-ink">{content.title}</h3>
+      <div className="card-surface flex h-full min-h-[450px] flex-col justify-center p-8">
+        <p className="section-eyebrow">Diagnosi business</p>
+        <h3 className="mt-4 text-3xl text-ink">
+          Qui vedrai il sistema che oggi manca davvero al tuo business wine.
+        </h3>
         <p className="mt-4 max-w-xl leading-7 text-ink/75">
-          {content.description}
+          La diagnosi non ti dirà solo “chi sei”, ma quale impianto devi
+          costruire per far crescere contenuti, clienti e vendite in modo più
+          ordinato.
         </p>
         <div className="mt-8 grid gap-3">
           {[
-            "Creator & AI",
-            "Business Growth",
-            "Buyer Premium"
+            "Acquisition System",
+            "Retention System",
+            "Automation System",
+            "Content System"
           ].map((item) => (
             <div
               key={item}
@@ -303,22 +551,105 @@ function BusinessPreviewPanel({
   }
 
   return (
-    <div className="card-surface flex h-full min-h-[430px] flex-col justify-between overflow-hidden p-0">
+    <div className="card-surface flex h-full min-h-[450px] flex-col justify-between overflow-hidden p-0">
       <div className="flex-1 p-8">
-        <p className="section-eyebrow">{content.eyebrow}</p>
-        <h3 className="mt-4 text-4xl font-bold text-ink">{content.title}</h3>
-        <p className="mt-4 leading-7 text-ink/75">{content.description}</p>
+        <p className="section-eyebrow">Preview diagnosi</p>
+        <h3 className="mt-4 text-4xl font-bold text-ink">{preview.systemName}</h3>
+        <p className="mt-4 leading-7 text-ink/75">{preview.diagnosisSentence}</p>
       </div>
-      <div className={`${content.accentClass} px-8 py-6`}>
+      <div className={`${preview.accentClass} ${preview.accentTextClass} px-8 py-6`}>
         <p className="text-xs uppercase tracking-[0.22em] text-gold/85">
-          Offerta più probabile
+          Probabile priorità di sistema
         </p>
-        <div className="mt-2 flex items-baseline gap-3">
-          <span className="text-xl font-semibold">{content.offerLabel}</span>
-          <span className="text-2xl font-bold text-gold">{content.offerPrice}</span>
-        </div>
+        <p className="mt-2 text-lg font-semibold">
+          {MAIN_GOAL_LABELS[answers.mainGoal]}
+        </p>
       </div>
     </div>
+  );
+}
+
+function BusinessDiagnosisResult({
+  recommendation,
+  diagnosis
+}: {
+  recommendation: RecommendationResponse;
+  diagnosis: BusinessDiagnosticResult;
+}) {
+  return (
+    <section className="space-y-6">
+      <div className={`${diagnosis.accentClass} ${diagnosis.accentTextClass} rounded-[28px] p-6 shadow-soft sm:p-8`}>
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold/90">
+          Diagnosi completata
+        </p>
+        <h2 className="mt-3 text-3xl sm:text-4xl">{diagnosis.systemName}</h2>
+        <p className="mt-4 max-w-3xl text-lg leading-8 opacity-90">
+          {diagnosis.diagnosisSentence}
+        </p>
+        <div className="mt-6 inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold">
+          Destinazione consigliata: {diagnosis.targetLabel} · {diagnosis.targetPrice}
+        </div>
+      </div>
+
+      <div className="card-surface p-6 sm:p-8">
+        <p className="section-eyebrow">Perché questa diagnosi</p>
+        <p className="mt-4 leading-8 text-ink/75">{diagnosis.problemExplanation}</p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <article className="card-surface p-6 sm:p-8">
+          <p className="section-eyebrow">Sistema consigliato</p>
+          <h3 className="mt-3 text-2xl text-ink">{diagnosis.systemName}</h3>
+          <div className="mt-6 space-y-3">
+            {diagnosis.features.map((feature) => (
+              <div
+                key={feature}
+                className="rounded-2xl border border-burgundy/10 bg-cream/50 px-4 py-4 text-sm leading-6 text-ink/75"
+              >
+                {feature}
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="card-surface p-6 sm:p-8">
+          <p className="section-eyebrow">Benefici</p>
+          <ul className="mt-6 space-y-4">
+            {diagnosis.benefits.map((benefit) => (
+              <li
+                key={benefit}
+                className="rounded-2xl border border-bottle/10 bg-bottle/5 px-4 py-4 leading-6 text-ink/75"
+              >
+                {benefit}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 rounded-[24px] bg-burgundy p-6 text-cream">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold/90">
+              Next best step
+            </p>
+            <h4 className="mt-3 text-2xl">{recommendation.productRecommendation.name}</h4>
+            <p className="mt-3 leading-7 text-cream/82">
+              {recommendation.postQuizCta.description}
+            </p>
+            <a
+              href={diagnosis.targetHref}
+              onClick={() =>
+                track("quiz_business_activate_system_click", {
+                  system: diagnosis.system,
+                  destination: diagnosis.targetLabel,
+                  segment: recommendation.segment
+                })
+              }
+              className="mt-6 inline-flex w-full justify-center rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-burgundy transition hover:bg-gold sm:w-auto"
+            >
+              Attiva il tuo sistema
+            </a>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -328,6 +659,7 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
     getInitialAnswers(focus)
   );
   const [result, setResult] = useState<RecommendationResponse | null>(null);
+  const [diagnosis, setDiagnosis] = useState<BusinessDiagnosticResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasInteracted, setHasInteracted] = useState(Boolean(focus));
@@ -338,6 +670,7 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
     setAnswers(getInitialAnswers(focus));
     setCurrentStep(0);
     setResult(null);
+    setDiagnosis(null);
     setError(null);
     setHasInteracted(Boolean(focus));
   }, [focus]);
@@ -348,6 +681,8 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
 
   function updateAnswer(value: BusinessQuizAnswers[BusinessStepKey]) {
     setHasInteracted(true);
+    setResult(null);
+    setDiagnosis(null);
     setAnswers((prev) => ({
       ...prev,
       [step.key]: value
@@ -370,14 +705,18 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
       });
 
       if (!response.ok) {
-        throw new Error("Impossibile generare la raccomandazione business.");
+        throw new Error("Impossibile generare la diagnosi business.");
       }
 
       const data = (await response.json()) as RecommendationResponse;
+      const diagnosticResult = buildBusinessDiagnosticResult(answers, data);
+
       setResult(data);
+      setDiagnosis(diagnosticResult);
       track("quiz_business_completed", {
         focus: focus ?? "generic",
         resultSegment: data.segment,
+        system: diagnosticResult.system,
         answers
       });
     } catch (submissionError) {
@@ -465,7 +804,7 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
               disabled={isSubmitting}
               className="rounded-full bg-bottle px-5 py-3 text-sm font-semibold text-cream disabled:opacity-60"
             >
-              {isSubmitting ? "Sto preparando la diagnosi..." : "Vedi la diagnosi business"}
+              {isSubmitting ? "Sto preparando la diagnosi..." : "Vedi la diagnosi"}
             </button>
           )}
         </div>
@@ -474,8 +813,8 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
       </section>
 
       <div>
-        {result ? (
-          <RecommendationCard result={result} />
+        {result && diagnosis ? (
+          <BusinessDiagnosisResult recommendation={result} diagnosis={diagnosis} />
         ) : (
           <BusinessPreviewPanel answers={answers} hasInteracted={hasInteracted} />
         )}

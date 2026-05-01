@@ -18,15 +18,14 @@ export default function QuizBusinessPage({
     <section className="container-shell py-14 sm:py-20">
       <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_0.86fr] lg:items-end">
         <div className="max-w-3xl">
-          <p className="section-eyebrow">Quiz business</p>
+          <p className="section-eyebrow">Diagnosi business</p>
           <h1 className="mt-3 text-4xl text-ink sm:text-5xl">
-            Scopri quale percorso business wine ti fa crescere davvero.
+            Scopri quale sistema manca davvero al tuo business wine.
           </h1>
           <p className="mt-4 leading-8 text-ink/75">
-            Questo quiz è pensato per creator, cantine, enoteche, consulenti,
-            buyer e horeca. In pochi step capisce se il tuo prossimo passo è un
-            sistema contenuti più forte o un framework più tecnico di acquisto e
-            selezione.
+            Questa diagnosi è pensata per creator, cantine, enoteche, buyer,
+            horeca e consulenti. In pochi step individua il collo di bottiglia
+            principale e ti porta al sistema più utile da attivare adesso.
           </p>
         </div>
 
@@ -35,9 +34,9 @@ export default function QuizBusinessPage({
             Output atteso
           </p>
           <ul className="mt-5 space-y-3 leading-7 text-cream/86">
-            <li>Diagnosi del profilo business</li>
-            <li>Raccomandazione chiara tra Wine AI Mastery e Academy</li>
-            <li>CTA coerenti con fase, priorità e stile operativo</li>
+            <li>Diagnosi del problema più costoso da risolvere</li>
+            <li>Sistema consigliato tra acquisition, retention, automation e content</li>
+            <li>Direzione finale chiara verso il percorso più adatto</li>
           </ul>
         </div>
       </div>
