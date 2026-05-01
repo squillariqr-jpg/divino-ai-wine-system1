@@ -160,7 +160,7 @@ export default function AcademyPage() {
                 href="/quiz"
                 className="rounded-full bg-cream px-7 py-3.5 text-center text-sm font-semibold text-burgundy transition hover:bg-gold"
               >
-                Fai il Quiz Gratis
+                Scopri il tuo percorso
               </Link>
               <a
                 href="#programma"

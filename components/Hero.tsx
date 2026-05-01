@@ -37,7 +37,7 @@ export function Hero() {
               href="/academy"
               className="rounded-full border border-burgundy/15 px-7 py-3.5 text-center text-sm font-semibold text-ink transition hover:bg-white/70"
             >
-              Percorso Buyer
+              Percorso Professionale
             </Link>
           </div>
           <div className="flex items-center gap-3 pt-1">

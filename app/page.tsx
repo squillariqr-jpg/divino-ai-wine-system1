@@ -73,7 +73,7 @@ export default function HomePage() {
             href={quizRoute}
             className="rounded-full border border-burgundy/15 px-5 py-3 text-sm font-semibold text-burgundy transition hover:bg-burgundy hover:text-cream"
           >
-            Trova il tuo percorso
+            Scopri il tuo percorso
           </Link>
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -103,7 +103,7 @@ export default function HomePage() {
           "Raccolta lead collegata al backend placeholder",
           "Punto di ingresso ideale per traffico freddo e social"
         ]}
-        ctaLabel="Vai al quiz"
+        ctaLabel="Scopri il tuo percorso"
         ctaHref="/quiz"
         accent="burgundy"
       >
@@ -126,7 +126,7 @@ export default function HomePage() {
           "Ponte naturale verso il corso introduttivo",
           "Utile sia per principianti sia per profili pratici"
         ]}
-        ctaLabel="Fai il quiz e scopri se fa per te"
+        ctaLabel="Scopri il tuo percorso"
         ctaHref="/quiz"
         accent="bottle"
         reverse
@@ -142,7 +142,7 @@ export default function HomePage() {
           "Base formativa ordinata per lessico, degustazione e acquisto",
           "Primo snodo commerciale dopo lead magnet e Cantina Minima"
         ]}
-        ctaLabel="Scopri il tuo fit con il quiz"
+        ctaLabel="Scopri il tuo percorso"
         ctaHref="/quiz"
         accent="burgundy"
         priceTag="€79"
@@ -175,7 +175,7 @@ export default function HomePage() {
           "Può diventare anche output di workflow qualificati in futuro",
           "È la destinazione più alta del funnel attuale"
         ]}
-        ctaLabel="Vedi la Academy"
+        ctaLabel="Percorso Professionale"
         ctaHref="/academy"
         accent="burgundy"
         priceTag="€1.490"
@@ -199,7 +199,7 @@ export default function HomePage() {
                   href={quizRoute}
                   className="rounded-full bg-burgundy px-6 py-3 text-sm font-semibold text-cream"
                 >
-                  Avvia il quiz
+                  Scopri il tuo percorso
                 </Link>
               </div>
             </div>
@@ -230,13 +230,13 @@ export default function HomePage() {
               href={quizRoute}
               className="rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-burgundy transition hover:bg-gold"
             >
-              Fai il Quiz Gratis
+              Scopri il tuo percorso
             </Link>
             <Link
               href={academyRoute}
               className="rounded-full border border-cream/25 px-6 py-3 text-center text-sm font-semibold text-cream transition hover:border-cream/60"
             >
-              Vedi la Academy
+              Percorso Professionale
             </Link>
             <SommelierCTA
               source="homepage_cta"

@@ -135,7 +135,7 @@ export function ThreePathwaysSection() {
               </div>
               <Link
                 href={pathway.href}
-                className={`mt-8 inline-flex rounded-full px-6 py-3 text-sm font-semibold transition ${theme.cta}`}
+                className={`mt-8 inline-flex w-full justify-center rounded-full px-6 py-3 text-center text-sm font-semibold transition sm:w-auto ${theme.cta}`}
               >
                 {pathway.cta}
               </Link>

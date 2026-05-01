@@ -59,7 +59,7 @@ export default function RootLayout({
                 href="/quiz"
                 className="hidden rounded-full bg-burgundy px-5 py-2.5 text-xs font-semibold text-cream transition hover:bg-burgundy/90 md:inline-block"
               >
-                Fai il Quiz
+                Scopri il tuo percorso
               </Link>
             </div>
           </header>

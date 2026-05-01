@@ -374,13 +374,13 @@ export default function AgentiPage() {
               href={"/quiz" as Route}
               className="rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-ink transition hover:bg-gold"
             >
-              Fai il Quiz Gratis
+              Scopri il tuo percorso
             </Link>
             <Link
               href={"/academy" as Route}
               className="rounded-full border border-cream/20 px-6 py-3 text-center text-sm font-semibold text-cream transition hover:border-cream/50"
             >
-              Vedi la Academy
+              Percorso Professionale
             </Link>
           </div>
         </div>
