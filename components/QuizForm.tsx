@@ -6,7 +6,7 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import type {
   RecommendApiResponse,
   RecommendRequestPayload
-} from "@/lib/agents/types";
+} from "@/lib/hermes/types";
 import type { QuizAnswers } from "@/lib/types";
 import { track } from "@/lib/track";
 

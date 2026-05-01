@@ -2,7 +2,7 @@
 
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { SommelierCTA } from "@/components/SommelierCTA";
-import type { RecommendApiResponse } from "@/lib/agents/types";
+import type { RecommendApiResponse } from "@/lib/hermes/types";
 import { track } from "@/lib/track";
 
 type RecommendationCardProps = {
@@ -32,8 +32,21 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
 
       <article className="card-surface p-6 sm:p-8">
         <p className="section-eyebrow">Guida AI attiva</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em]">
+          <span className="rounded-full bg-burgundy/8 px-3 py-1 text-burgundy">
+            Hermes Orchestrator
+          </span>
+          <span className="rounded-full bg-bottle/10 px-3 py-1 text-bottle">
+            {result.agentDecision.agentName}
+          </span>
+        </div>
         <h3 className="mt-3 text-2xl text-ink">{result.agentDecision.profileLabel}</h3>
         <p className="mt-4 leading-7 text-ink/75">{result.agentDecision.diagnosis}</p>
+        {result.agentDecision.supportingAgents.length > 0 ? (
+          <p className="mt-4 text-sm leading-6 text-ink/60">
+            Agenti di supporto: {result.agentDecision.supportingAgents.join(" · ")}
+          </p>
+        ) : null}
         <div className="mt-5 rounded-[20px] border border-bottle/15 bg-bottle/5 px-5 py-4">
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-bottle/80">
             Prossima azione suggerita

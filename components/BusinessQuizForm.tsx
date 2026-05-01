@@ -4,46 +4,26 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 
 import type {
+  BusinessQuizAnswers,
   RecommendApiResponse,
   RecommendRequestPayload
-} from "@/lib/agents/types";
+} from "@/lib/hermes/types";
+import {
+  BUSINESS_TYPE_LABELS,
+  detectBusinessSystem,
+  MAIN_GOAL_LABELS,
+  MAIN_PROBLEM_LABELS,
+  SYSTEM_LEVEL_LABELS,
+  TOOLS_LABELS
+} from "@/lib/hermes/agents/business-agent";
 import { track } from "@/lib/track";
 import type {
   LeadCapturePayload,
   LeadCaptureResponse,
   QuizAnswers
 } from "@/lib/types";
-
 type BusinessFocus = "creator" | "buyer";
 type BusinessSystemId = "acquisition" | "retention" | "automation" | "content";
-
-type BusinessQuizAnswers = {
-  businessType:
-    | "creator-media"
-    | "cantina-enoteca"
-    | "horeca-buyer"
-    | "consulenza-distribuzione";
-  mainProblem:
-    | "acquisizione-instabile"
-    | "clienti-non-ritornano"
-    | "processi-manuali"
-    | "contenuti-incostanti";
-  systemLevel:
-    | "nessun-sistema"
-    | "parziale"
-    | "frammentato"
-    | "strutturato";
-  toolsUsed:
-    | "manuale"
-    | "contenuti-base"
-    | "crm-automation"
-    | "stack-misto";
-  mainGoal:
-    | "piu-lead"
-    | "piu-riacquisti"
-    | "piu-automazione"
-    | "piu-contenuti";
-};
 
 type BusinessStepKey = keyof BusinessQuizAnswers;
 
@@ -58,8 +38,6 @@ type BusinessStepDefinition<T extends BusinessStepKey> = {
   description: string;
   options: BusinessStepOption<T>[];
 };
-
-type BusinessSystemScoreMap = Record<BusinessSystemId, number>;
 
 type BusinessDiagnosticResult = {
   system: BusinessSystemId;
@@ -79,50 +57,6 @@ type BusinessLeadCaptureCardProps = {
   businessTypeLabel: string;
   diagnosis: BusinessDiagnosticResult;
   recommendation: RecommendApiResponse;
-};
-
-const BUSINESS_TYPE_LABELS: Record<
-  BusinessQuizAnswers["businessType"],
-  string
-> = {
-  "creator-media": "creator o progetto editoriale wine",
-  "cantina-enoteca": "cantina, enoteca o wine shop",
-  "horeca-buyer": "realtà horeca o funzione buyer",
-  "consulenza-distribuzione": "consulenza, distribuzione o progetto commerciale"
-};
-
-const MAIN_PROBLEM_LABELS: Record<
-  BusinessQuizAnswers["mainProblem"],
-  string
-> = {
-  "acquisizione-instabile": "acquisizione discontinua",
-  "clienti-non-ritornano": "ritorno clienti troppo debole",
-  "processi-manuali": "processi ancora troppo manuali",
-  "contenuti-incostanti": "contenuti discontinui e poco collegati alla vendita"
-};
-
-const SYSTEM_LEVEL_LABELS: Record<
-  BusinessQuizAnswers["systemLevel"],
-  string
-> = {
-  "nessun-sistema": "quasi assente",
-  parziale: "solo parziale",
-  frammentato: "frammentato",
-  strutturato: "già strutturato ma ottimizzabile"
-};
-
-const TOOLS_LABELS: Record<BusinessQuizAnswers["toolsUsed"], string> = {
-  manuale: "manuali o sparsi tra chat e fogli",
-  "contenuti-base": "centrati su contenuti ma con poca orchestrazione",
-  "crm-automation": "già orientati a CRM e automazioni",
-  "stack-misto": "numerosi ma non ancora coordinati"
-};
-
-const MAIN_GOAL_LABELS: Record<BusinessQuizAnswers["mainGoal"], string> = {
-  "piu-lead": "più lead qualificati",
-  "piu-riacquisti": "più riacquisti e continuità",
-  "piu-automazione": "più automazione operativa",
-  "piu-contenuti": "più contenuti che convertono"
 };
 
 const steps: BusinessStepDefinition<BusinessStepKey>[] = [
@@ -273,16 +207,6 @@ const SYSTEM_LIBRARY: Record<
   }
 };
 
-const SYSTEM_ORDER_BY_GOAL: Record<
-  BusinessQuizAnswers["mainGoal"],
-  BusinessSystemId[]
-> = {
-  "piu-lead": ["acquisition", "content", "automation", "retention"],
-  "piu-riacquisti": ["retention", "automation", "acquisition", "content"],
-  "piu-automazione": ["automation", "retention", "content", "acquisition"],
-  "piu-contenuti": ["content", "acquisition", "automation", "retention"]
-};
-
 function getInitialAnswers(focus?: BusinessFocus): BusinessQuizAnswers {
   if (focus === "buyer") {
     return {
@@ -311,70 +235,6 @@ function getInitialAnswers(focus?: BusinessFocus): BusinessQuizAnswers {
     toolsUsed: "contenuti-base",
     mainGoal: "piu-lead"
   };
-}
-
-function createSystemScores(): BusinessSystemScoreMap {
-  return {
-    acquisition: 0,
-    retention: 0,
-    automation: 0,
-    content: 0
-  };
-}
-
-function detectBusinessSystem(answers: BusinessQuizAnswers): BusinessSystemId {
-  const scores = createSystemScores();
-
-  const weights: Record<
-    BusinessStepKey,
-    Record<string, Partial<BusinessSystemScoreMap>>
-  > = {
-    businessType: {
-      "creator-media": { content: 3, acquisition: 1 },
-      "cantina-enoteca": { acquisition: 2, retention: 2, automation: 1 },
-      "horeca-buyer": { retention: 2, automation: 1, acquisition: 1 },
-      "consulenza-distribuzione": { automation: 2, acquisition: 2, content: 1 }
-    },
-    mainProblem: {
-      "acquisizione-instabile": { acquisition: 6 },
-      "clienti-non-ritornano": { retention: 6 },
-      "processi-manuali": { automation: 6 },
-      "contenuti-incostanti": { content: 6 }
-    },
-    systemLevel: {
-      "nessun-sistema": { acquisition: 2, content: 2 },
-      parziale: { acquisition: 1, content: 1, retention: 1 },
-      frammentato: { automation: 3, retention: 1 },
-      strutturato: { retention: 2, automation: 2 }
-    },
-    toolsUsed: {
-      manuale: { automation: 3, acquisition: 1 },
-      "contenuti-base": { content: 3, acquisition: 1 },
-      "crm-automation": { retention: 2, automation: 2 },
-      "stack-misto": { automation: 3, retention: 1 }
-    },
-    mainGoal: {
-      "piu-lead": { acquisition: 5 },
-      "piu-riacquisti": { retention: 5 },
-      "piu-automazione": { automation: 5 },
-      "piu-contenuti": { content: 5 }
-    }
-  };
-
-  (Object.keys(weights) as BusinessStepKey[]).forEach((key) => {
-    const stepWeights = weights[key][answers[key]];
-
-    Object.entries(stepWeights).forEach(([system, value]) => {
-      scores[system as BusinessSystemId] += value ?? 0;
-    });
-  });
-
-  const maxScore = Math.max(...Object.values(scores));
-  return (
-    SYSTEM_ORDER_BY_GOAL[answers.mainGoal].find(
-      (system) => scores[system] === maxScore
-    ) ?? "acquisition"
-  );
 }
 
 function mapBusinessQuizToQuizAnswers(answers: BusinessQuizAnswers): QuizAnswers {

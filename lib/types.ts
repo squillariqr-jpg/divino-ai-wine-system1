@@ -1,4 +1,4 @@
-import type { AgentDecision, AgentName } from "@/lib/agents/types";
+import type { AgentDecision, AgentName } from "@/lib/hermes/types";
 
 export type Wine = {
   id: string;

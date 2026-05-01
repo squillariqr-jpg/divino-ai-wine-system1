@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { routeAgentDecision } from "@/lib/agents/router";
+import { routeHermesDecision } from "@/lib/hermes/orchestrator";
 import type {
   RecommendApiResponse,
   RecommendRequestPayload
-} from "@/lib/agents/types";
+} from "@/lib/hermes/types";
 import { buildRecommendation } from "@/lib/recommendation";
 import type { QuizAnswers } from "@/lib/types";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   } as QuizAnswers;
 
   const result = buildRecommendation(answers);
-  const agentDecision = routeAgentDecision({
+  const agentDecision = routeHermesDecision({
     answers,
     recommendation: result,
     context: body.context,

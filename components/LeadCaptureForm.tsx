@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
-import type { AgentDecision } from "@/lib/agents/types";
+import type { AgentDecision } from "@/lib/hermes/types";
 import type {
   LeadCapturePayload,
   LeadCaptureResponse,

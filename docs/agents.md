@@ -1,16 +1,21 @@
-# Divino AI Wine System — Agent Layer
+# Divino AI Wine System — Hermes Orchestrator
 
 ## Obiettivo
 
-Il funnel ora espone un layer di orchestrazione deterministico che decide quale agente deve prendere in carico il lead dopo il quiz o la diagnosi business.
+Il funnel ora espone un layer di orchestrazione deterministico chiamato `Hermes Orchestrator`, che decide quale agente deve prendere in carico il lead dopo il quiz o la diagnosi business.
 
 Il sistema non usa ancora LLM in produzione: la logica resta rule-based e leggibile, cosi possiamo far girare la v1 localmente e sostituire i nodi in seguito senza rompere i contratti.
 
-## Agent Router
+## Struttura Hermes
 
-File principale: `lib/agents/router.ts`
+File principali:
 
-Input del router:
+- `lib/hermes/orchestrator.ts`
+- `lib/hermes/types.ts`
+- `lib/hermes/memory.ts`
+- `lib/hermes/agents/*`
+
+Input dell'orchestratore:
 
 - risposte quiz normalizzate
 - segmento prodotto da `lib/recommendation.ts`
@@ -19,16 +24,22 @@ Input del router:
 
 Ordine decisionale attuale:
 
-1. se il flow e business, usa `business_agent`
-2. se l'intento e buyer/professionale, usa `buyer_agent`
-3. se il segmento e builder digitale con focus contenuti, usa `content_agent`
-4. se il segmento e builder digitale con focus crescita commerciale, usa `sales_agent`
-5. se il profilo e avanzato sul gusto, usa `sommelier_agent`
-6. fallback su `consumer_agent`
+1. `segment_agent` capisce se l'utente e `appassionato`, `business` o `buyer`
+2. `sommelier_agent` gestisce il percorso appassionato
+3. `business_agent` gestisce la diagnosi business principale
+4. `content_agent` interviene quando la leva critica sono contenuti e asset editoriali
+5. `sales_agent` interviene quando la leva critica e conversione, CTA e follow-up
+6. `buyer_agent` gestisce buyer e professionisti
+7. `memory_agent` salva profilo, preferenze, storico e prossime azioni
 
 ## Responsabilita Agenti
 
-### `consumer_agent`
+### `segment_agent`
+
+- classifica l'utente in uno dei 3 percorsi principali
+- aggiunge una rationale esplicita che il resto del sistema puo usare
+
+### `sommelier_agent`
 
 - interpreta il profilo wine consumer
 - produce sintesi stile vino
@@ -38,6 +49,7 @@ Ordine decisionale attuale:
 
 ### `business_agent`
 
+- lavora per enoteche, ristoranti, ecommerce e aziende vino
 - riceve il risultato del quiz business
 - classifica il sistema mancante:
   - Acquisition System
@@ -46,33 +58,34 @@ Ordine decisionale attuale:
   - Content System
 - produce diagnosi, sistema consigliato, benefici e follow-up copy
 
-### `buyer_agent`
-
-- gestisce intenti buyer e professionali
-- qualifica lead Academy
-- genera next step, email subject/body e nota interna
-
 ### `content_agent`
 
+- genera newsletter, post, schede vino e QR card
 - gestisce creator e builder digitali
 - porta il lead verso un sistema contenuti e `Wine AI Mastery`
 
 ### `sales_agent`
 
-- gestisce esigenze di crescita e conversione
+- gestisce CTA, offerte, follow-up e lead conversion
 - orienta verso diagnosi business e sistema di vendita
 
-### `sommelier_agent`
+### `buyer_agent`
 
-- gestisce profili piu evoluti lato gusto
-- mantiene un tono piu selettivo e meno introduttivo
+- orienta professionisti e buyer
+- qualifica lead Academy
+- genera next step, email subject/body e nota interna
+
+### `memory_agent`
+
+- salva profilo, preferenze, storico e prossime azioni
+- prepara il funnel per future memorie persistenti in Supabase o CRM
 
 ## API Flow
 
 ### `POST /api/recommend`
 
 - costruisce la recommendation base con `lib/recommendation.ts`
-- passa risultato + contesto al router
+- passa risultato + contesto all'orchestratore Hermes
 - restituisce:
   - `recommendation`
   - `agentDecision`
@@ -86,6 +99,7 @@ Ordine decisionale attuale:
   - agent name
   - next action
   - agentDecision completo
+-  memoria sintetica del profilo
 - prova poi a sincronizzare anche su Supabase in best-effort
 
 ## Admin Placeholder
@@ -124,7 +138,7 @@ Non c'e ancora autenticazione reale.
 
 ### OpenClaw / OpenAI / Anthropic / LangChain
 
-- sostituzione del router deterministico con una policy piu adattiva
+- sostituzione dell'orchestratore deterministico con una policy piu adattiva
 - generazione di follow-up piu personalizzati
 - re-ranking di vini, contenuti e offerte
 

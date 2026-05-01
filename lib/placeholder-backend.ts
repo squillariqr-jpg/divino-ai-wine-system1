@@ -1,4 +1,4 @@
-import type { AgentDecision, AgentName } from "@/lib/agents/types";
+import type { AgentDecision, AgentName } from "@/lib/hermes/types";
 import type { LeadCapturePayload, SegmentId } from "@/lib/types";
 
 export type PlaceholderLeadRecord = {
@@ -61,12 +61,19 @@ const starterLeads: PlaceholderLeadRecord[] = [
   createStarterLead({
     source: "quiz-risultato",
     segment: "novizio-curioso",
-    agentName: "consumer_agent",
+    agentName: "sommelier_agent",
     nextStep:
       "Inviare ebook introduttivo e nudging verso il corso in 5 lezioni.",
     agentDecision: {
-      agentName: "consumer_agent",
-      task: "educate_consumer",
+      orchestrator: "hermes_orchestrator",
+      agentName: "sommelier_agent",
+      supportingAgents: ["segment_agent", "memory_agent"],
+      task: "diagnose_wine_profile",
+      userSegment: "appassionato",
+      segmentRationale: [
+        "Lead orientato al gusto e alla scoperta.",
+        "Serve accompagnamento educativo prima della vendita."
+      ],
       segment: "novizio-curioso",
       profileLabel: "Novizio curioso",
       diagnosis:
@@ -82,7 +89,17 @@ const starterLeads: PlaceholderLeadRecord[] = [
       },
       nextAction: "Inviare asset gratuito e poi corso introduttivo.",
       nextActionLabel: "Scopri il tuo percorso",
-      nextActionHref: "/quiz"
+      nextActionHref: "/quiz",
+      memory: {
+        profileTag: "Novizio curioso",
+        preferences: ["Livello: principiante", "Obiettivo: imparare"],
+        history: ["Source: quiz-risultato", "Agente primario: sommelier_agent"],
+        nextActions: [
+          "Inviare asset gratuito e poi corso introduttivo.",
+          "Scopri il tuo percorso"
+        ],
+        lastUpdatedAt: new Date().toISOString()
+      }
     },
     payload: {
       name: "Marta",
@@ -90,7 +107,7 @@ const starterLeads: PlaceholderLeadRecord[] = [
       source: "quiz-risultato",
       segment: "novizio-curioso",
       interest: "Corso Introduttivo in 5 Lezioni",
-      agentName: "consumer_agent",
+      agentName: "sommelier_agent",
       nextAction: "Inviare asset gratuito e poi corso introduttivo."
     }
   }),
@@ -101,8 +118,15 @@ const starterLeads: PlaceholderLeadRecord[] = [
     nextStep:
       "Aprire follow-up commerciale su Content System e portare verso Wine AI Mastery.",
     agentDecision: {
+      orchestrator: "hermes_orchestrator",
       agentName: "business_agent",
-      task: "diagnose_business",
+      supportingAgents: ["segment_agent", "memory_agent", "content_agent"],
+      task: "diagnose_business_growth",
+      userSegment: "business",
+      segmentRationale: [
+        "Lead business con problema di contenuti e conversione.",
+        "Serve diagnosi di sistema prima del follow-up commerciale."
+      ],
       segment: "builder-digitale",
       profileLabel: "creator o progetto editoriale wine",
       diagnosis:
@@ -130,7 +154,23 @@ const starterLeads: PlaceholderLeadRecord[] = [
       nextAction:
         "Attivare Content System e portare il lead verso Wine AI Mastery.",
       nextActionLabel: "Attiva il tuo sistema",
-      nextActionHref: "/wine-ai-mastery"
+      nextActionHref: "/wine-ai-mastery",
+      memory: {
+        profileTag: "creator o progetto editoriale wine",
+        preferences: [
+          "Tipo business: creator-media",
+          "Goal business: piu-contenuti"
+        ],
+        history: [
+          "Source: quiz-business-result",
+          "Agente primario: business_agent"
+        ],
+        nextActions: [
+          "Attivare Content System e portare il lead verso Wine AI Mastery.",
+          "Attiva il tuo sistema"
+        ],
+        lastUpdatedAt: new Date().toISOString()
+      }
     },
     payload: {
       name: "Giulia",
@@ -152,8 +192,15 @@ const starterLeads: PlaceholderLeadRecord[] = [
     nextStep:
       "Inviare briefing Academy e proposta call per criterio acquisti.",
     agentDecision: {
+      orchestrator: "hermes_orchestrator",
       agentName: "buyer_agent",
-      task: "qualify_buyer",
+      supportingAgents: ["segment_agent", "memory_agent"],
+      task: "orient_buyer",
+      userSegment: "buyer",
+      segmentRationale: [
+        "Lead con intento professionale.",
+        "Richiede percorso Academy e gestione premium."
+      ],
       segment: "buyer-professionale",
       profileLabel: "Buyer e decision maker wine",
       diagnosis:
@@ -166,7 +213,19 @@ const starterLeads: PlaceholderLeadRecord[] = [
       nextAction:
         "Inviare briefing premium e accompagnare verso Wine Buyer Academy.",
       nextActionLabel: "Percorso Professionale",
-      nextActionHref: "/academy"
+      nextActionHref: "/academy",
+      memory: {
+        profileTag: "Buyer e decision maker wine",
+        preferences: [
+          "Segmento recommendation: buyer-professionale"
+        ],
+        history: ["Source: academy-page", "Agente primario: buyer_agent"],
+        nextActions: [
+          "Inviare briefing premium e accompagnare verso Wine Buyer Academy.",
+          "Percorso Professionale"
+        ],
+        lastUpdatedAt: new Date().toISOString()
+      }
     },
     payload: {
       name: "Lorenzo",

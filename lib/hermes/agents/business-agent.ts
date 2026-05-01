@@ -3,7 +3,7 @@ import type {
   BusinessQuizAnswers,
   BusinessSystemId,
   LeadProfile
-} from "@/lib/agents/types";
+} from "@/lib/hermes/types";
 import type { RecommendationResponse } from "@/lib/types";
 
 type BusinessSystemConfig = {
@@ -11,8 +11,6 @@ type BusinessSystemConfig = {
   diagnosisSentence: string;
   features: string[];
   benefits: string[];
-  accentClass: string;
-  accentTextClass: string;
 };
 
 export const BUSINESS_TYPE_LABELS: Record<
@@ -43,27 +41,24 @@ export const SYSTEM_LEVEL_LABELS: Record<
   "nessun-sistema": "quasi assente",
   parziale: "solo parziale",
   frammentato: "frammentato",
-  strutturato: "gia strutturato ma ottimizzabile"
+  strutturato: "già strutturato ma ottimizzabile"
 };
 
 export const TOOLS_LABELS: Record<BusinessQuizAnswers["toolsUsed"], string> = {
   manuale: "manuali o sparsi tra chat e fogli",
   "contenuti-base": "centrati su contenuti ma con poca orchestrazione",
-  "crm-automation": "gia orientati a CRM e automazioni",
+  "crm-automation": "già orientati a CRM e automazioni",
   "stack-misto": "numerosi ma non ancora coordinati"
 };
 
 export const MAIN_GOAL_LABELS: Record<BusinessQuizAnswers["mainGoal"], string> = {
-  "piu-lead": "piu lead qualificati",
-  "piu-riacquisti": "piu riacquisti e continuita",
-  "piu-automazione": "piu automazione operativa",
-  "piu-contenuti": "piu contenuti che convertono"
+  "piu-lead": "più lead qualificati",
+  "piu-riacquisti": "più riacquisti e continuità",
+  "piu-automazione": "più automazione operativa",
+  "piu-contenuti": "più contenuti che convertono"
 };
 
-export const BUSINESS_SYSTEM_LIBRARY: Record<
-  BusinessSystemId,
-  BusinessSystemConfig
-> = {
+const BUSINESS_SYSTEM_LIBRARY: Record<BusinessSystemId, BusinessSystemConfig> = {
   acquisition: {
     systemName: "Acquisition System",
     diagnosisSentence:
@@ -75,17 +70,15 @@ export const BUSINESS_SYSTEM_LIBRARY: Record<
       "Allineamento tra traffico, contenuti e primo follow-up"
     ],
     benefits: [
-      "Piu lead qualificati e meno dipendenza dal caso",
-      "Messaggio commerciale piu leggibile",
-      "Crescita piu stabile delle opportunita in ingresso"
-    ],
-    accentClass: "bg-burgundy",
-    accentTextClass: "text-cream"
+      "Più lead qualificati e meno dipendenza dal caso",
+      "Messaggio commerciale più leggibile",
+      "Crescita più stabile delle opportunità in ingresso"
+    ]
   },
   retention: {
     systemName: "Retention System",
     diagnosisSentence:
-      "La tua crescita passa dalla continuita: oggi ti serve soprattutto un sistema di retention.",
+      "La tua crescita passa dalla continuità: oggi ti serve soprattutto un sistema di retention.",
     features: [
       "Segmentazione clienti e follow-up post acquisto",
       "Sequenze di riattivazione e ritorno cliente",
@@ -93,48 +86,42 @@ export const BUSINESS_SYSTEM_LIBRARY: Record<
       "Messaggi coerenti per aumentare frequenza e valore"
     ],
     benefits: [
-      "Piu riacquisti con meno dispersione commerciale",
-      "Relazione piu forte con i clienti gia esistenti",
+      "Più riacquisti con meno dispersione commerciale",
+      "Relazione più forte con i clienti già esistenti",
       "Maggiore valore per cliente nel medio periodo"
-    ],
-    accentClass: "bg-bottle",
-    accentTextClass: "text-cream"
+    ]
   },
   automation: {
     systemName: "Automation System",
     diagnosisSentence:
-      "Il tuo limite oggi non e il mercato: e la quantita di energia che sprechi in processi manuali.",
+      "Il tuo limite oggi non è il mercato: è la quantità di energia che sprechi in processi manuali.",
     features: [
       "Workflow chiari per lead, richieste e follow-up",
       "Automazioni su email, reminder e passaggi operativi",
-      "Priorita commerciali piu leggibili per il team",
+      "Priorità commerciali più leggibili per il team",
       "Riduzione dei punti morti tra interesse e azione"
     ],
     benefits: [
-      "Meno lavoro ripetitivo e piu tempo strategico",
-      "Follow-up piu veloci e coerenti",
-      "Sistema piu scalabile senza aumentare il caos"
-    ],
-    accentClass: "bg-ink",
-    accentTextClass: "text-cream"
+      "Meno lavoro ripetitivo e più tempo strategico",
+      "Follow-up più veloci e coerenti",
+      "Sistema più scalabile senza aumentare il caos"
+    ]
   },
   content: {
     systemName: "Content System",
     diagnosisSentence:
-      "Il problema non e pubblicare di piu: e avere un sistema contenuti che porta davvero business.",
+      "Il problema non è pubblicare di più: è avere un sistema contenuti che porta davvero business.",
     features: [
       "Prompt, format e workflow editoriali replicabili",
       "Calendario contenuti con obiettivi commerciali chiari",
-      "Riutilizzo intelligente di contenuti per piu canali",
+      "Riutilizzo intelligente di contenuti per più canali",
       "Ponte tra contenuto, lead generation e vendita"
     ],
     benefits: [
-      "Piu contenuti utili in meno tempo",
-      "Autorevolezza piu alta senza improvvisazione",
+      "Più contenuti utili in meno tempo",
+      "Autorevolezza più alta senza improvvisazione",
       "Migliore conversione dai contenuti alle richieste"
-    ],
-    accentClass: "bg-bottle",
-    accentTextClass: "text-cream"
+    ]
   }
 };
 
@@ -215,7 +202,7 @@ export function detectBusinessSystem(
 }
 
 function buildProblemExplanation(answers: BusinessQuizAnswers, systemName: string) {
-  return `Oggi operi come ${BUSINESS_TYPE_LABELS[answers.businessType]}, con un sistema ${SYSTEM_LEVEL_LABELS[answers.systemLevel]} e strumenti ${TOOLS_LABELS[answers.toolsUsed]}. Il nodo piu evidente e ${MAIN_PROBLEM_LABELS[answers.mainProblem]}, mentre il tuo obiettivo piu forte resta ${MAIN_GOAL_LABELS[answers.mainGoal]}. Questo e il punto in cui un ${systemName} crea piu leva.`;
+  return `Oggi operi come ${BUSINESS_TYPE_LABELS[answers.businessType]}, con un sistema ${SYSTEM_LEVEL_LABELS[answers.systemLevel]} e strumenti ${TOOLS_LABELS[answers.toolsUsed]}. Il nodo più evidente è ${MAIN_PROBLEM_LABELS[answers.mainProblem]}, mentre il tuo obiettivo più forte resta ${MAIN_GOAL_LABELS[answers.mainGoal]}. Questo è il punto in cui un ${systemName} crea più leva.`;
 }
 
 function resolveTarget(
@@ -245,8 +232,9 @@ export function runBusinessAgent(input: {
   answers: BusinessQuizAnswers;
   recommendation: RecommendationResponse;
   leadProfile: LeadProfile;
+  segmentRationale: string[];
 }): AgentDecision {
-  const { answers, recommendation } = input;
+  const { answers, recommendation, segmentRationale } = input;
   const system = detectBusinessSystem(answers);
   const systemConfig = BUSINESS_SYSTEM_LIBRARY[system];
   const target = resolveTarget(answers, recommendation);
@@ -256,8 +244,12 @@ export function runBusinessAgent(input: {
   );
 
   return {
+    orchestrator: "hermes_orchestrator",
     agentName: "business_agent",
-    task: "diagnose_business",
+    supportingAgents: [],
+    task: "diagnose_business_growth",
+    userSegment: "business",
+    segmentRationale,
     segment: recommendation.segment,
     profileLabel: BUSINESS_TYPE_LABELS[answers.businessType],
     diagnosis: systemConfig.diagnosisSentence,
@@ -277,7 +269,7 @@ export function runBusinessAgent(input: {
     nextActionLabel: "Attiva il tuo sistema",
     nextActionHref: target.href,
     followUpEmailSubject: `Divino AI | Diagnosi pronta: ${systemConfig.systemName}`,
-    followUpEmailBody: `Ciao, abbiamo completato la tua diagnosi business. Il punto di leva piu chiaro e ${systemConfig.systemName}: ${MAIN_PROBLEM_LABELS[answers.mainProblem]} sta rallentando la crescita, mentre l'obiettivo rimane ${MAIN_GOAL_LABELS[answers.mainGoal]}. Il prossimo passo consigliato e ${target.label}. Se vuoi, partiamo da qui e costruiamo il sistema piu adatto al tuo business del vino.`,
+    followUpEmailBody: `Ciao, abbiamo completato la tua diagnosi business. Il punto di leva più chiaro è ${systemConfig.systemName}: ${MAIN_PROBLEM_LABELS[answers.mainProblem]} sta rallentando la crescita, mentre l'obiettivo rimane ${MAIN_GOAL_LABELS[answers.mainGoal]}. Il prossimo passo consigliato è ${target.label}. Se vuoi, partiamo da qui e costruiamo il sistema più adatto al tuo business del vino.`,
     internalNote: `Lead business (${BUSINESS_TYPE_LABELS[answers.businessType]}). Diagnosi: ${systemConfig.systemName}. Next action: ${target.label}.`
   };
 }

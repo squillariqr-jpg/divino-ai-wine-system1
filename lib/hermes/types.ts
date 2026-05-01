@@ -6,20 +6,24 @@ import type {
 } from "@/lib/types";
 
 export type AgentName =
-  | "consumer_agent"
-  | "business_agent"
-  | "buyer_agent"
+  | "segment_agent"
   | "sommelier_agent"
+  | "business_agent"
   | "content_agent"
-  | "sales_agent";
+  | "sales_agent"
+  | "buyer_agent"
+  | "memory_agent";
 
 export type AgentTask =
-  | "educate_consumer"
-  | "diagnose_business"
-  | "qualify_buyer"
-  | "guide_sommelier"
-  | "orchestrate_content"
-  | "activate_sales";
+  | "segment_user"
+  | "diagnose_wine_profile"
+  | "diagnose_business_growth"
+  | "generate_content"
+  | "convert_lead"
+  | "orient_buyer"
+  | "persist_memory";
+
+export type HermesSegment = "appassionato" | "business" | "buyer";
 
 export type BusinessSystemId =
   | "acquisition"
@@ -94,9 +98,26 @@ export type AgentSystemRecommendation = {
   benefits?: string[];
 };
 
+export type MemorySnapshot = {
+  profileTag: string;
+  preferences: string[];
+  history: string[];
+  nextActions: string[];
+  lastUpdatedAt: string;
+};
+
+export type SegmentAgentOutput = {
+  userSegment: HermesSegment;
+  rationale: string[];
+};
+
 export type AgentDecision = {
+  orchestrator: "hermes_orchestrator";
   agentName: AgentName;
+  supportingAgents: AgentName[];
   task: AgentTask;
+  userSegment: HermesSegment;
+  segmentRationale: string[];
   segment?: SegmentId;
   profileLabel: string;
   diagnosis: string;
@@ -114,13 +135,14 @@ export type AgentDecision = {
   followUpEmailSubject?: string;
   followUpEmailBody?: string;
   internalNote?: string;
+  memory?: MemorySnapshot;
 };
 
 export type RecommendApiResponse = RecommendationResponse & {
   agentDecision: AgentDecision;
 };
 
-export type AgentRouterInput = {
+export type HermesInput = {
   answers: QuizAnswers;
   recommendation: RecommendationResponse;
   context?: RecommendRequestContext;
