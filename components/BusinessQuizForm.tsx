@@ -1,9 +1,15 @@
 "use client";
 
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 
 import { track } from "@/lib/track";
-import type { QuizAnswers, RecommendationResponse } from "@/lib/types";
+import type {
+  LeadCapturePayload,
+  LeadCaptureResponse,
+  QuizAnswers,
+  RecommendationResponse
+} from "@/lib/types";
 
 type BusinessFocus = "creator" | "buyer";
 type BusinessSystemId = "acquisition" | "retention" | "automation" | "content";
@@ -64,6 +70,12 @@ type BusinessDiagnosticResult = {
   targetLabel: string;
   targetHref: string;
   targetPrice: string;
+};
+
+type BusinessLeadCaptureCardProps = {
+  businessTypeLabel: string;
+  diagnosis: BusinessDiagnosticResult;
+  recommendation: RecommendationResponse;
 };
 
 const BUSINESS_TYPE_LABELS: Record<
@@ -570,12 +582,17 @@ function BusinessPreviewPanel({
 }
 
 function BusinessDiagnosisResult({
+  answers,
   recommendation,
   diagnosis
 }: {
+  answers: BusinessQuizAnswers;
   recommendation: RecommendationResponse;
   diagnosis: BusinessDiagnosticResult;
 }) {
+  const [showLeadForm, setShowLeadForm] = useState(false);
+  const businessTypeLabel = BUSINESS_TYPE_LABELS[answers.businessType];
+
   return (
     <section className="space-y-6">
       <div className={`${diagnosis.accentClass} ${diagnosis.accentTextClass} rounded-[28px] p-6 shadow-soft sm:p-8`}>
@@ -633,23 +650,180 @@ function BusinessDiagnosisResult({
             <p className="mt-3 leading-7 text-cream/82">
               {recommendation.postQuizCta.description}
             </p>
-            <a
-              href={diagnosis.targetHref}
-              onClick={() =>
+            <button
+              type="button"
+              onClick={() => {
+                setShowLeadForm(true);
                 track("quiz_business_activate_system_click", {
                   system: diagnosis.system,
                   destination: diagnosis.targetLabel,
                   segment: recommendation.segment
-                })
-              }
+                });
+              }}
               className="mt-6 inline-flex w-full justify-center rounded-full bg-cream px-6 py-3 text-center text-sm font-semibold text-burgundy transition hover:bg-gold sm:w-auto"
             >
               Attiva il tuo sistema
-            </a>
+            </button>
           </div>
         </article>
       </div>
+
+      {showLeadForm ? (
+        <BusinessLeadCaptureCard
+          businessTypeLabel={businessTypeLabel}
+          diagnosis={diagnosis}
+          recommendation={recommendation}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function BusinessLeadCaptureCard({
+  businessTypeLabel,
+  diagnosis,
+  recommendation
+}: BusinessLeadCaptureCardProps) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<LeadCaptureResponse | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const quizResultLabel = `${diagnosis.systemName} → ${diagnosis.targetLabel}`;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setStatus(null);
+
+    const payload: LeadCapturePayload = {
+      name,
+      email,
+      source: "quiz-business-result",
+      segment: recommendation.segment,
+      interest: quizResultLabel,
+      businessType: businessTypeLabel,
+      quizResult: quizResultLabel,
+      message: message || undefined,
+      notes: message || undefined
+    };
+
+    try {
+      const response = await fetch("/api/lead", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = (await response.json()) as LeadCaptureResponse;
+
+      if (!response.ok) {
+        setStatus(result);
+        return;
+      }
+
+      setStatus({
+        success: true,
+        message:
+          "Richiesta ricevuta. Ti ricontatteremo per costruire il sistema più adatto al tuo business del vino."
+      });
+      track("business_lead_submitted", {
+        system: diagnosis.system,
+        destination: diagnosis.targetLabel,
+        segment: recommendation.segment,
+        businessType: businessTypeLabel
+      });
+      setName("");
+      setEmail("");
+      setMessage("");
+    } catch {
+      setStatus({
+        success: false,
+        message: "Invio non riuscito. Riprova tra un momento."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="card-surface p-6 sm:p-8">
+      <p className="section-eyebrow">Attivazione sistema</p>
+      <h3 className="mt-3 text-2xl text-ink">
+        Lascia i dati e costruiamo il sistema giusto
+      </h3>
+      <p className="mt-3 max-w-3xl leading-7 text-ink/75">
+        Ti ricontattiamo partendo dalla diagnosi che hai appena ottenuto, senza
+        farti ripetere tutto da capo.
+      </p>
+
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Nome"
+            required
+            className="w-full rounded-2xl border border-burgundy/10 bg-cream/55 px-4 py-3 text-sm text-ink outline-none transition focus:border-burgundy"
+          />
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="Email"
+            required
+            className="w-full rounded-2xl border border-burgundy/10 bg-cream/55 px-4 py-3 text-sm text-ink outline-none transition focus:border-burgundy"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-burgundy/10 bg-white/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-burgundy/70">
+              Tipo attivita
+            </p>
+            <p className="mt-2 text-sm text-ink/80">{businessTypeLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-burgundy/10 bg-white/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-burgundy/70">
+              Risultato quiz / sistema consigliato
+            </p>
+            <p className="mt-2 text-sm text-ink/80">{quizResultLabel}</p>
+          </div>
+        </div>
+
+        <textarea
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder="Messaggio opzionale"
+          rows={4}
+          className="w-full rounded-2xl border border-burgundy/10 bg-cream/55 px-4 py-3 text-sm text-ink outline-none transition focus:border-burgundy"
+        />
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex w-full justify-center rounded-full bg-burgundy px-6 py-3 text-center text-sm font-semibold text-cream transition hover:bg-burgundy/90 disabled:opacity-60 sm:w-auto"
+        >
+          {isSubmitting ? "Invio in corso..." : "Attiva il tuo sistema"}
+        </button>
+      </form>
+
+      {status ? (
+        <div
+          className={`mt-4 rounded-2xl px-4 py-4 text-sm leading-6 ${
+            status.success
+              ? "bg-bottle/10 text-bottle"
+              : "bg-burgundy/10 text-burgundy"
+          }`}
+        >
+          <p className="font-semibold">{status.message}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -713,7 +887,7 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
 
       setResult(data);
       setDiagnosis(diagnosticResult);
-      track("quiz_business_completed", {
+      track("business_quiz_completed", {
         focus: focus ?? "generic",
         resultSegment: data.segment,
         system: diagnosticResult.system,
@@ -814,7 +988,11 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
 
       <div>
         {result && diagnosis ? (
-          <BusinessDiagnosisResult recommendation={result} diagnosis={diagnosis} />
+          <BusinessDiagnosisResult
+            answers={answers}
+            recommendation={result}
+            diagnosis={diagnosis}
+          />
         ) : (
           <BusinessPreviewPanel answers={answers} hasInteracted={hasInteracted} />
         )}

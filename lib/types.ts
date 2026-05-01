@@ -105,6 +105,9 @@ export type LeadCapturePayload = {
   source: string;
   segment?: SegmentId;
   interest?: string;
+  businessType?: string;
+  quizResult?: string;
+  message?: string;
   notes?: string;
 };
 
