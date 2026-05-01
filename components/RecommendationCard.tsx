@@ -2,11 +2,11 @@
 
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { SommelierCTA } from "@/components/SommelierCTA";
-import type { RecommendationResponse } from "@/lib/types";
+import type { RecommendApiResponse } from "@/lib/agents/types";
 import { track } from "@/lib/track";
 
 type RecommendationCardProps = {
-  result: RecommendationResponse;
+  result: RecommendApiResponse;
 };
 
 export function RecommendationCard({ result }: RecommendationCardProps) {
@@ -29,6 +29,18 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
           </div>
         ) : null}
       </div>
+
+      <article className="card-surface p-6 sm:p-8">
+        <p className="section-eyebrow">Guida AI attiva</p>
+        <h3 className="mt-3 text-2xl text-ink">{result.agentDecision.profileLabel}</h3>
+        <p className="mt-4 leading-7 text-ink/75">{result.agentDecision.diagnosis}</p>
+        <div className="mt-5 rounded-[20px] border border-bottle/15 bg-bottle/5 px-5 py-4">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-bottle/80">
+            Prossima azione suggerita
+          </p>
+          <p className="mt-2 leading-7 text-ink/80">{result.agentDecision.nextAction}</p>
+        </div>
+      </article>
 
       {/* 2 — CTA principale: subito dopo il profilo, massima visibilità */}
       <article className="rounded-[28px] bg-burgundy shadow-soft p-6 sm:p-8 text-cream">
@@ -124,6 +136,7 @@ export function RecommendationCard({ result }: RecommendationCardProps) {
         source="quiz-risultato"
         segment={result.segment}
         interest={result.productRecommendation.name}
+        agentDecision={result.agentDecision}
       />
     </section>
   );

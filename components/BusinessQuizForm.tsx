@@ -3,12 +3,15 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 
+import type {
+  RecommendApiResponse,
+  RecommendRequestPayload
+} from "@/lib/agents/types";
 import { track } from "@/lib/track";
 import type {
   LeadCapturePayload,
   LeadCaptureResponse,
-  QuizAnswers,
-  RecommendationResponse
+  QuizAnswers
 } from "@/lib/types";
 
 type BusinessFocus = "creator" | "buyer";
@@ -75,7 +78,7 @@ type BusinessDiagnosticResult = {
 type BusinessLeadCaptureCardProps = {
   businessTypeLabel: string;
   diagnosis: BusinessDiagnosticResult;
-  recommendation: RecommendationResponse;
+  recommendation: RecommendApiResponse;
 };
 
 const BUSINESS_TYPE_LABELS: Record<
@@ -487,10 +490,11 @@ function mapBusinessQuizToQuizAnswers(answers: BusinessQuizAnswers): QuizAnswers
 
 function buildBusinessDiagnosticResult(
   answers: BusinessQuizAnswers,
-  recommendation: RecommendationResponse
+  recommendation: RecommendApiResponse
 ): BusinessDiagnosticResult {
   const system = detectBusinessSystem(answers);
   const systemConfig = SYSTEM_LIBRARY[system];
+  const recommendedSystem = recommendation.agentDecision.recommendedSystem;
   const isBuyerTrack = recommendation.segment === "buyer-professionale";
   const targetLabel = isBuyerTrack
     ? "Wine Buyer Academy"
@@ -500,9 +504,12 @@ function buildBusinessDiagnosticResult(
 
   return {
     system,
-    systemName: systemConfig.systemName,
-    diagnosisSentence: systemConfig.diagnosisSentence,
-    problemExplanation: `Oggi operi come ${
+    systemName: recommendedSystem?.name ?? systemConfig.systemName,
+    diagnosisSentence:
+      recommendation.agentDecision.diagnosis ?? systemConfig.diagnosisSentence,
+    problemExplanation:
+      recommendedSystem?.summary ??
+      `Oggi operi come ${
       BUSINESS_TYPE_LABELS[answers.businessType]
     }, con un sistema ${
       SYSTEM_LEVEL_LABELS[answers.systemLevel]
@@ -511,8 +518,8 @@ function buildBusinessDiagnosticResult(
     }, mentre il tuo obiettivo più forte resta ${
       MAIN_GOAL_LABELS[answers.mainGoal]
     }. Questo è esattamente il punto in cui un ${systemConfig.systemName} crea più leva.`,
-    features: systemConfig.features,
-    benefits: systemConfig.benefits,
+    features: recommendedSystem?.features ?? systemConfig.features,
+    benefits: recommendedSystem?.benefits ?? systemConfig.benefits,
     accentClass: systemConfig.accentClass,
     accentTextClass: systemConfig.accentTextClass,
     targetLabel,
@@ -587,7 +594,7 @@ function BusinessDiagnosisResult({
   diagnosis
 }: {
   answers: BusinessQuizAnswers;
-  recommendation: RecommendationResponse;
+  recommendation: RecommendApiResponse;
   diagnosis: BusinessDiagnosticResult;
 }) {
   const [showLeadForm, setShowLeadForm] = useState(false);
@@ -646,9 +653,9 @@ function BusinessDiagnosisResult({
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold/90">
               Next best step
             </p>
-            <h4 className="mt-3 text-2xl">{recommendation.productRecommendation.name}</h4>
+            <h4 className="mt-3 text-2xl">{diagnosis.targetLabel}</h4>
             <p className="mt-3 leading-7 text-cream/82">
-              {recommendation.postQuizCta.description}
+              {recommendation.agentDecision.nextAction}
             </p>
             <button
               type="button"
@@ -706,7 +713,10 @@ function BusinessLeadCaptureCard({
       businessType: businessTypeLabel,
       quizResult: quizResultLabel,
       message: message || undefined,
-      notes: message || undefined
+      notes: message || undefined,
+      agentName: recommendation.agentDecision.agentName,
+      nextAction: recommendation.agentDecision.nextAction,
+      agentDecision: recommendation.agentDecision
     };
 
     try {
@@ -832,7 +842,7 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
   const [answers, setAnswers] = useState<BusinessQuizAnswers>(
     getInitialAnswers(focus)
   );
-  const [result, setResult] = useState<RecommendationResponse | null>(null);
+  const [result, setResult] = useState<RecommendApiResponse | null>(null);
   const [diagnosis, setDiagnosis] = useState<BusinessDiagnosticResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -870,19 +880,28 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
     const payload = mapBusinessQuizToQuizAnswers(answers);
 
     try {
+      const requestBody: RecommendRequestPayload = {
+        ...payload,
+        context: {
+          flow: "business",
+          source: "quiz-business",
+          businessQuizAnswers: answers
+        }
+      };
+
       const response = await fetch("/api/recommend", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         throw new Error("Impossibile generare la diagnosi business.");
       }
 
-      const data = (await response.json()) as RecommendationResponse;
+      const data = (await response.json()) as RecommendApiResponse;
       const diagnosticResult = buildBusinessDiagnosticResult(answers, data);
 
       setResult(data);
@@ -890,6 +909,7 @@ export function BusinessQuizForm({ focus }: { focus?: BusinessFocus }) {
       track("business_quiz_completed", {
         focus: focus ?? "generic",
         resultSegment: data.segment,
+        agent: data.agentDecision.agentName,
         system: diagnosticResult.system,
         answers
       });

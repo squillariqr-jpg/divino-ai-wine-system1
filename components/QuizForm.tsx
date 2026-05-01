@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 
 import { RecommendationCard } from "@/components/RecommendationCard";
-import type { QuizAnswers, RecommendationResponse } from "@/lib/types";
+import type {
+  RecommendApiResponse,
+  RecommendRequestPayload
+} from "@/lib/agents/types";
+import type { QuizAnswers } from "@/lib/types";
 import { track } from "@/lib/track";
 
 type StepKey = keyof QuizAnswers;
@@ -192,7 +196,7 @@ function QuizPreviewPanel({ answers }: { answers: QuizAnswers }) {
 export function QuizForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers);
-  const [result, setResult] = useState<RecommendationResponse | null>(null);
+  const [result, setResult] = useState<RecommendApiResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -214,21 +218,33 @@ export function QuizForm() {
     setError(null);
 
     try {
+      const requestBody: RecommendRequestPayload = {
+        ...answers,
+        context: {
+          flow: "consumer",
+          source: "quiz"
+        }
+      };
+
       const response = await fetch("/api/recommend", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(answers)
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         throw new Error("Impossibile generare la raccomandazione.");
       }
 
-      const payload = (await response.json()) as RecommendationResponse;
+      const payload = (await response.json()) as RecommendApiResponse;
       setResult(payload);
-      track("quiz_completed", { segment: payload.segment, answers });
+      track("quiz_completed", {
+        segment: payload.segment,
+        agent: payload.agentDecision.agentName,
+        answers
+      });
     } catch (submissionError) {
       setError(
         submissionError instanceof Error

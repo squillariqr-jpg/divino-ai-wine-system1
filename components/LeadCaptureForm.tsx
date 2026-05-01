@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
+import type { AgentDecision } from "@/lib/agents/types";
 import type {
   LeadCapturePayload,
   LeadCaptureResponse,
@@ -16,6 +17,7 @@ type LeadCaptureFormProps = {
   source: string;
   segment?: SegmentId;
   interest?: string;
+  agentDecision?: AgentDecision;
 };
 
 export function LeadCaptureForm({
@@ -24,7 +26,8 @@ export function LeadCaptureForm({
   buttonLabel,
   source,
   segment,
-  interest
+  interest,
+  agentDecision
 }: LeadCaptureFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,7 +45,10 @@ export function LeadCaptureForm({
       email,
       source,
       segment,
-      interest
+      interest,
+      agentName: agentDecision?.agentName,
+      nextAction: agentDecision?.nextAction,
+      agentDecision
     };
 
     try {

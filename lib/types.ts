@@ -1,3 +1,5 @@
+import type { AgentDecision, AgentName } from "@/lib/agents/types";
+
 export type Wine = {
   id: string;
   name: string;
@@ -109,6 +111,9 @@ export type LeadCapturePayload = {
   quizResult?: string;
   message?: string;
   notes?: string;
+  agentName?: AgentName;
+  nextAction?: string;
+  agentDecision?: AgentDecision;
 };
 
 export type LeadCaptureResponse = {
@@ -117,4 +122,5 @@ export type LeadCaptureResponse = {
   leadId?: string;
   destination?: string;
   nextStep?: string;
+  agentName?: AgentName;
 };
