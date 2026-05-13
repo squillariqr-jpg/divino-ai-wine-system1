@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sipuò — Codice del Gusto</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Lato',Helvetica,Arial,sans-serif;background-color:#e5e7eb;color:#374151}
+.wine-page{width:794px;min-height:1123px;position:relative;page-break-after:always;border:4px solid #1d3a8a;margin:28px auto;background:white;overflow:hidden}
+.wine-page-inner{display:grid;grid-template-columns:293px 1fr;min-height:1000px;padding:53px 0}
+.wine-bottle-col{padding:27px 0 27px 53px;display:flex;align-items:flex-start;justify-content:flex-start}
+.wine-image{max-width:220pt;max-height:560pt;width:auto;height:auto;object-fit:contain;display:block}
+.wine-content-col{padding:0 40px 0 20px}
+.wine-logo{width:120pt;max-height:60pt;object-fit:contain;margin-bottom:40pt;display:block}
+.wine-title{font-family:'Playfair Display','Times New Roman',serif;font-size:22pt;font-weight:700;color:#111827;margin-bottom:8pt;line-height:1.1}
+.wine-denomination{font-size:10pt;color:#6b7280;margin-bottom:28pt;line-height:1.3}
+.wine-section{margin-bottom:16pt}
+.wine-section-label{font-weight:700;font-size:10pt;color:#111827;margin-bottom:5pt;display:block}
+.wine-section-text{font-size:10pt;color:#374151;line-height:1.4}
+.wine-navigation{position:absolute;bottom:80px;left:293px;right:0;text-align:center;padding:0 40px}
+.discover-more{font-size:10pt;color:#6b7280;margin-bottom:16pt}
+.nav-link{display:block;color:#1d3a8a;text-decoration:none;font-weight:700;font-size:11pt;margin-bottom:14pt;text-align:center}
+.nav-link:hover{text-decoration:underline}
+.internal-page{width:794px;min-height:1123px;position:relative;page-break-after:always;border:4px solid #1d3a8a;padding:53px;margin:28px auto;background:white}
+.page-title{font-family:'Playfair Display','Times New Roman',serif;font-size:22pt;font-weight:700;color:#c51f3d;text-align:center;margin-bottom:20pt}
+.page-divider{border-top:1px solid #d1d5db;margin:0 0 32pt 0}
+.tech-item{margin-bottom:20pt}
+.tech-label{font-weight:700;font-size:11pt;color:#111827;display:block;margin-bottom:5pt}
+.tech-value{font-size:11pt;color:#374151;line-height:1.5}
+.recipe-item{margin-bottom:24pt}
+.recipe-title-text{font-weight:700;font-size:11pt;color:#111827;display:block;margin-bottom:6pt;font-style:italic}
+.recipe-body{font-size:11pt;color:#374151;line-height:1.55}
+.section-header{font-weight:700;font-size:11pt;color:#111827;margin-top:20pt;margin-bottom:8pt;display:block}
+.external-link{color:#1d3a8a;font-weight:700;text-decoration:none;display:block;margin:10pt 0;font-size:11pt}
+.external-link:hover{text-decoration:underline}
+.text-content{font-size:11pt;color:#374151;line-height:1.5;margin:8pt 0}
+.video-thumb-restored{width:200pt;height:auto;max-height:113pt;object-fit:cover;display:block;margin:8pt 0 4pt 0;border:1px solid #d1d5db}
+.magnum-footer{position:absolute;bottom:53px;left:53px;right:53px;border-top:1px solid #d1d5db;padding-top:10pt;font-size:8pt;color:#6b7280;line-height:1.6;display:flex;justify-content:space-between;align-items:flex-end}
+.magnum-footer a{color:#1d3a8a;text-decoration:none}
+.qr-footer-restored{text-align:right;margin-top:16pt}
+.qr-img-restored{width:90pt;height:90pt;border:1px solid #d1d5db;display:inline-block;vertical-align:bottom}
+.qr-label-restored{font-size:7pt;color:#6b7280;margin-top:4pt;letter-spacing:.5pt;text-transform:uppercase}
+.back-link{position:absolute;bottom:53px;left:53px;color:#1d3a8a;text-decoration:none;font-weight:700;font-size:10pt}
+.back-link:hover{text-decoration:underline}
+@media print{body{background:white}.wine-page,.internal-page{width:595.28pt;min-height:841.89pt;margin:0;border:3pt solid #1d3a8a}}
+@media(max-width:840px){.wine-page,.internal-page{width:auto;min-height:auto;margin:12px;border-width:3px}.wine-page-inner{grid-template-columns:1fr;min-height:auto;padding:24px 0}.wine-bottle-col{padding:20px 20px 0;justify-content:center}.wine-image{max-width:180px;max-height:320px;margin:0 auto}.wine-content-col{padding:20px 20px 80px}.wine-navigation{position:static;padding:20px;border-top:1px solid #d1d5db;margin-top:16px}.internal-page{padding:28px 24px 64px}.back-link,.magnum-footer{position:static;margin-top:20px}.magnum-footer{flex-direction:column;gap:8px}.qr-footer-restored{text-align:left}.video-thumb-restored{width:100%;max-height:none}}
+</style>
+</head>
+<body>
+<div class="wine-page" id="wine-sipu-">
+  <div class="wine-page-inner">
+    <div class="wine-bottle-col">
+      <img class="wine-image" src="https://raw.githubusercontent.com/squillariqr-jpg/divino-ai-wine-system1/main/public/belisario/assets/bottiglie/Sipuo%27.jpg" alt="Sipuò" onerror="this.style.opacity='.08'">
+    </div>
+    <div class="wine-content-col">
+      <img class="wine-logo" src="https://i.imgur.com/mtTvUhH.png" alt="Logo" onerror="this.style.display='none'">
+      <div class="wine-title">Sipuò</div>
+      <div class="wine-denomination">Bianco Italiano 9,5%</div>
+      <div class="wine-section">
+        <span class="wine-section-label">Note di Degustazione:</span>
+        <div class="wine-section-text">Bianco leggero e fresco, pensato per un consumo semplice, moderno e immediato.</div>
+      </div>
+      <div class="wine-section">
+        <span class="wine-section-label">Abbinamenti Consigliati:</span>
+        <div class="wine-section-text">Aperitivi, piatti leggeri, insalate, verdure e preparazioni estive.</div>
+      </div>
+      <div class="wine-section">
+        <span class="wine-section-label">Servizio:</span>
+        <div class="wine-section-text">Servire a 8°C.</div>
+      </div>
+    </div>
+  </div>
+  <div class="wine-navigation">
+    <div class="discover-more">Scopri di più</div>
+    <a href="#scheda-sipu-" class="nav-link">» Scheda Tecnica</a>
+    <a href="#ricette-sipu-" class="nav-link">» Ricette Gourmet</a>
+    <a href="#risorse-sipu-" class="nav-link">» Link e Risorse Utili</a>
+  </div>
+</div>
+<div class="internal-page" id="scheda-sipu-">
+  <div class="page-title">Scheda Tecnica</div>
+  <div class="page-divider"></div>
+  <div class="tech-item"><span class="tech-label">Zona di Produzione:</span><div class="tech-value">Marche</div></div><div class="tech-item"><span class="tech-label">Altitudine:</span><div class="tech-value">N/D</div></div><div class="tech-item"><span class="tech-label">Suolo:</span><div class="tech-value">N/D</div></div><div class="tech-item"><span class="tech-label">Affinamento:</span><div class="tech-value">N/D</div></div><div class="tech-item"><span class="tech-label">Gradazione Alcolica:</span><div class="tech-value">N/D</div></div><div class="tech-item"><span class="tech-label">pH / Acidità:</span><div class="tech-value">N/D</div></div>
+  <a href="#wine-sipu-" class="back-link">← Torna all'inizio</a>
+</div>
+<div class="internal-page" id="ricette-sipu-">
+  <div class="page-title">Ricette Gourmet</div>
+  <div class="page-divider"></div>
+  <div class="recipe-item"><span class="recipe-title-text">Abbinamento gastronomico consigliato</span><div class="recipe-body">Aperitivi, piatti leggeri, insalate, verdure e preparazioni estive.</div></div>
+  <div class="recipe-item"><span class="recipe-title-text">Abbinamento gastronomico consigliato</span><div class="recipe-body">Ideale per aperitivi e momenti conviviali in enoteca.</div></div>
+  <a href="#wine-sipu-" class="back-link">← Torna all'inizio</a>
+</div>
+<div class="internal-page" id="risorse-sipu-">
+  <div class="page-title">Link e Risorse Utili</div>
+  <div class="page-divider"></div>
+
+  <span class="section-header">Video dell'Azienda</span>
+  
+  <span class="text-content" style="color:#9ca3af;font-style:italic;">Video non ancora disponibile.</span>
+
+  <span class="section-header">Musica d'Abbinamento</span>
+  <div class="text-content"><em>Aperitivo Marchigiano</em></div>
+  <span class="text-content" style="color:#9ca3af;font-style:italic;">Playlist in preparazione.</span>
+
+  <span class="section-header">Partecipa alle Degustazioni Gratuite</span>
+  <div class="text-content">Lascia i tuoi dati per partecipare ai prossimi eventi Squillari.</div>
+  <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_g1qpjMBhN2K8EnslCnSvFDb35l5UTV3Y7Y4WiWQT_qmc8w/viewform?usp=header_link" class="external-link" target="_blank">» Clicca qui per iscriverti</a>
+
+  <span class="section-header">Informativa Privacy</span>
+  <a href="https://www.enotecasquillari.it/privacy-policy" class="external-link" target="_blank">» Leggi l'informativa completa</a>
+
+  <div class="qr-footer-restored">
+    <img class="qr-img-restored" src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https%3A%2F%2Fsquillariqr-jpg.github.io%2Fdivino-ai-wine-system1%2Fbelisario%2Fcards%2F2111030-sipu.html&color=1d3a8a" alt="QR Code Sipuò">
+    <div class="qr-label-restored">Scansiona per riaprire questa scheda</div>
+  </div>
+
+  <div class="magnum-footer">
+    <div>
+      <strong>MAGNUM SRL</strong> &middot; Via Castel Morrone 15D/1, 16161 Genova<br>
+      <a href="mailto:info@enotecasquillari.it">info@enotecasquillari.it</a>
+      &ensp;&middot;&ensp;
+      <a href="https://www.enotecasquillari.it" target="_blank">enotecasquillari.it</a>
+    </div>
+    <div>Codice del Gusto &middot; Squillari</div>
+  </div>
+
+  <a href="#wine-sipu-" class="back-link">← Torna all'inizio</a>
+</div>
+</body>
+</html>
