@@ -1,0 +1,30 @@
+[
+  {
+    "id": "novizio-curioso",
+    "label": "Beginner Explorer",
+    "summary": "Stai iniziando il tuo percorso nel vino e vuoi farlo bene fin dall'inizio — senza gergo inutile, con metodo pratico. Il Corso Introduttivo in 5 Lezioni è fatto esattamente per te.",
+    "bestFor": "Corso Introduttivo in 5 Lezioni",
+    "whyRight": "Hai bisogno di basi solide prima di tutto. Il corso ti dà un metodo chiaro, due vini didattici da esplorare subito e un percorso che puoi seguire anche senza esperienza."
+  },
+  {
+    "id": "appassionato-pratico",
+    "label": "Enthusiast & Collector",
+    "summary": "Sei già nel vino — per passione, curiosità o collezione. Cerchi strumenti per scegliere con più criterio, scoprire etichette nuove e costruire una cantina che abbia senso.",
+    "bestFor": "Wine AI Mastery",
+    "whyRight": "Il tuo livello chiede più della teoria base. Wine AI Mastery ti porta dentro la scelta consapevole, l'uso dell'AI come strumento e le logiche dietro ogni selezione premium."
+  },
+  {
+    "id": "builder-digitale",
+    "label": "AI Wine Creator",
+    "summary": "Crei contenuti wine — o vorresti crearli — ma non hai ancora un sistema. Pubblichi, scrivi, produci... ma fatichi a crescere e a convertire. Wine AI Mastery ti dà il sistema che manca.",
+    "bestFor": "Wine AI Mastery",
+    "whyRight": "Passi da 'non so cosa pubblicare' a un sistema editoriale che converte. Template pronti, prompt già strutturati, metodo per trasformare contenuti in vendite — tutto calibrato sul vino."
+  },
+  {
+    "id": "buyer-professionale",
+    "label": "Wine Business Professional",
+    "summary": "Gestisci vino come business: enoteca, ristorante, buyer, distribuzione. Ogni scelta sbagliata ha un costo diretto sul margine. Hai bisogno di metodo decisionale, non di intuizione.",
+    "bestFor": "Wine Buyer Academy",
+    "whyRight": "Passi da 'scelgo a sensazione' a un sistema decisionale replicabile. Criteri di selezione, logica di margine, gestione fornitori, carta vini che vende — tutto applicabile da subito."
+  }
+]

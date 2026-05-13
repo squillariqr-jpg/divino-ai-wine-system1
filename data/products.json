@@ -1,0 +1,46 @@
+[
+  {
+    "id": "cantina-minima",
+    "name": "Cantina Minima + Ebook",
+    "slug": "cantina-minima",
+    "type": "free",
+    "price": "Gratuito",
+    "audience": "Nuovi iscritti e curiosi del vino",
+    "description": "Contenuto d'ingresso per costruire subito una base elegante e pratica sulla scelta del vino.",
+    "cta": "Scarica e inizia",
+    "highlight": "Entry point"
+  },
+  {
+    "id": "corso-5-lezioni",
+    "name": "Corso Introduttivo in 5 Lezioni",
+    "slug": "corso-5-lezioni",
+    "type": "course",
+    "price": "€79",
+    "audience": "Principianti che vogliono metodo",
+    "description": "Percorso chiaro e ordinato per imparare basi di degustazione, acquisto e abbinamento.",
+    "cta": "Entra nel corso",
+    "highlight": "Per iniziare bene"
+  },
+  {
+    "id": "wine-ai-mastery",
+    "name": "Wine AI Mastery",
+    "slug": "wine-ai-mastery",
+    "type": "digital",
+    "price": "€249",
+    "audience": "Creator, consulenti, enoteche e business digitali",
+    "description": "Metodo digitale per usare AI, contenuti e funnel nel mondo vino con casi pratici e template.",
+    "cta": "Scopri Mastery",
+    "highlight": "Digital product"
+  },
+  {
+    "id": "wine-buyer-academy",
+    "name": "Wine Buyer Academy",
+    "slug": "wine-buyer-academy",
+    "type": "premium",
+    "price": "€1.490",
+    "audience": "Buyer, professionisti horeca e operatori",
+    "description": "Training premium per selezionare, acquistare e valorizzare il vino in ottica business.",
+    "cta": "Prenota una call",
+    "highlight": "Percorso premium"
+  }
+]
