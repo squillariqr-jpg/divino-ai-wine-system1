@@ -1,308 +1,252 @@
-/* WOW RANGE - Brand Identity CSS */
-/* SCULPTED / LETTERPRESS AESTHETIC */
+/* 
+  WOW RANGE - Editorial Premium Aesthetic
+  Reference: Aesop, Rimowa, Apple, Contemporary Editorial Design
+*/
 
 :root {
-  /* Colori Metallici di Lusso per Effetto Scavato */
-  --wow-gold: #c49c48;
-  --wow-copper: #b87333;
-  --wow-silver: #9ca3af;
-  --wow-black: #1a1816;
+  --paper-bg: #F9F8F6; /* Warm off-white */
+  --ink-black: #1A1A1A; /* Not pure black */
+  --ink-gray: #666666; /* Subdued text */
+  --ink-light: #A3A3A3; /* For extremely subtle dividers */
   
-  --wow-off-white: #f5f2eb;
-  --wow-soft-bg: rgba(0,0,0,0.02);
+  --font-serif: 'Playfair Display', 'Times New Roman', serif;
+  --font-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   
-  /* Deboss variables for reuse */
-  --deboss-shadow: inset 2px 2px 5px rgba(0,0,0,0.08), inset -1px -1px 3px rgba(255,255,255,0.9);
-  --emboss-shadow: 2px 2px 5px rgba(0,0,0,0.06), -1px -1px 3px rgba(255,255,255,0.8);
+  /* The "Impressed" deboss effect for the logo only */
+  --deboss-shadow: -1px -1px 0px rgba(0,0,0,0.05), 1px 1px 0px rgba(255,255,255,0.8);
 }
 
-/* ── UNIVERSAL LETTERPRESS EFFECT ── */
-/* Questo fonde perfettamente tutti i testi con la texture della carta e crea l'incavo */
-h1, h2, h3, h4, h5, h6, p, span, div,
-.denomination, .detail-label, .detail-text, .why-chosen-title, .why-chosen-text,
-.vote-title, .vote-desc, .tech-val, .music-title, .music-mood, .video-title, .video-desc, .trial-info {
-  /* Fonde il colore del testo con la grana della carta */
-  mix-blend-mode: multiply;
-  /* Ombra interna scura in alto/sinistra + Luce in basso/destra per sembrare scavato */
-  text-shadow: -1px -1px 0px rgba(0,0,0,0.15), 1px 1px 0px rgba(255,255,255,0.85);
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
-
-/* Escludi l'effetto dai bottoni che devono essere in rilievo e leggibili */
-.vote-cta, .music-cta, .service-pill, .brand-bar-wow {
-  mix-blend-mode: normal !important;
-  text-shadow: none !important;
-}
-
 
 body {
-  background-color: var(--wow-off-white) !important;
+  background-color: var(--paper-bg);
+  color: var(--ink-black);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  /* subtle noise/texture if desired, or keep it pure clean paper */
+  background-image: url('texture-cotton-paper.jpg');
+  background-size: 400px;
+  background-repeat: repeat;
+  background-blend-mode: multiply; /* Fuses paper color with texture */
 }
 
-.page {
-  background: var(--wow-off-white) url('texture-cotton-paper.jpg') !important;
-  background-size: 100% auto !important; /* Fits width, repeats vertically for scrolling */
-  background-repeat: repeat-y !important;
-  /* Gioco di volumi: Ombra profonda esterna + Spessore interno (luce in alto, ombra in basso) */
-  box-shadow: 
-    0 25px 60px rgba(0,0,0,0.18), 
-    inset 1px 1px 2px rgba(255,255,255,0.9), 
-    inset -1px -1px 2px rgba(0,0,0,0.05) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px; /* Slight rounding for a thick cardboard feel */
+/* ── LAYOUT ── */
+.curator-card {
+  max-width: 1000px;
+  margin: 60px auto;
+  padding: 40px;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 80px;
+  background: transparent; /* No heavy boxes */
 }
 
-/* Volume per la Bottiglia */
-.bottle {
-  filter: drop-shadow(10px 20px 25px rgba(0,0,0,0.25));
-  transition: transform 0.3s ease;
-}
-.bottle:hover {
-  transform: scale(1.02);
-}
-
-/* Badge WOW RANGE (Debossed) */
-.music-cta {
-  display: inline-block;
-  background: transparent;
-  color: var(--wow-gold-dark);
-  border: 1px solid var(--wow-gold);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 10px 24px;
-  border-radius: 24px;
-  text-decoration: none;
-  box-shadow: var(--emboss-shadow);
-  transition: all 0.2s ease;
-}
-.music-cta:hover {
-  background: var(--wow-gold);
-  color: #fff;
-  text-shadow: none;
+/* ── LOGO (Piccolo, scavato, non protagonista) ── */
+.wow-logo-mark {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  width: 60px;
+  mix-blend-mode: multiply;
+  opacity: 0.6;
+  filter: drop-shadow(1px 1px 0px rgba(255,255,255,0.9)); /* Deboss effect */
 }
 
-/* Section "Perché è stato scelto" */
-.why-chosen-box {
-  background: var(--wow-soft-bg);
-  padding: 24px;
-  border-radius: 8px;
-  margin-top: 32px;
-  box-shadow: var(--deboss-shadow);
-}
-
-.why-chosen-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px;
-  color: var(--wow-copper); /* RAME */
-  margin: 0 0 10px;
-  text-shadow: -1px -1px 1px rgba(0,0,0,0.15), 1px 1px 1px rgba(255,255,255,0.8);
-}
-.music-mood {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.why-chosen-text {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--wow-black); /* NERO */
-  font-style: italic;
-  text-shadow: 1px 1px 0px rgba(255,255,255,0.6);
-}
-
-/* Extra Volumes for inner sections */
-.tech-cell, .music-box, .video-box {
-  background: var(--wow-soft-bg);
-  box-shadow: var(--deboss-shadow);
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.02);
-}
-
-/* Section "Votalo" */
-.vote-section {
-  background: var(--wow-soft-bg);
-  border-radius: 12px;
-  padding: 32px;
-  text-align: center;
-  margin-top: 40px;
-  box-shadow: var(--deboss-shadow);
-}
-
-.vote-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 24px;
-  color: var(--wow-gold); /* ORO */
-  margin-bottom: 8px;
-  text-shadow: -1px -1px 1px rgba(0,0,0,0.2), 1px 1px 1px rgba(255,255,255,0.9);
-}
-
-.vote-desc {
-  font-size: 15px;
-  color: var(--wow-black); /* NERO */
-  margin-bottom: 24px;
-}
-
-/* The Vote CTA Button - Elegant Letterpress Style */
-.vote-cta {
-  display: inline-block;
-  background: var(--wow-gold);
-  color: #fff;
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 18px 48px;
-  border-radius: 30px;
-  text-decoration: none;
-  box-shadow: var(--emboss-shadow), 0 5px 15px rgba(179, 140, 54, 0.4);
-  transition: transform 0.2s ease;
-  border: 1px solid var(--wow-gold-light);
-  /* Oro inciso per il testo del bottone */
-  text-shadow: -1px -1px 0px rgba(0,0,0,0.2);
-}
-.vote-cta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(179, 140, 54, 0.5);
-}
-
-/* Enoteche List */
-.stores-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 24px;
-}
-
-.store-item {
-  background: transparent;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  color: var(--wow-black);
-  font-weight: 600;
-  box-shadow: var(--deboss-shadow);
-}
-
-/* Premium Sculpted Brand Bar */
-.brand-bar-wow {
-  background: transparent;
-  padding: 32px 16px 16px;
-  text-align: center;
-  border-bottom: none;
-  box-shadow: none;
+/* ── HERO (Bottiglia grande) ── */
+.bottle-display {
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 20px;
 }
-
-/* The Image Blend - This merges the image paper perfectly */
-.sculpted-logo {
-  width: 280px;
-  max-width: 90%;
+.bottle-img {
+  width: 100%;
+  max-width: 280px;
   height: auto;
-  display: block;
-  margin: 0 auto;
+  object-fit: contain;
+  /* Minimal shadow to ground it, nothing aggressive */
+  filter: drop-shadow(10px 20px 30px rgba(0,0,0,0.1));
+}
+
+/* ── CONTENT TYPOGRAPHY ── */
+.editorial-content {
+  padding-top: 40px;
+  padding-bottom: 80px;
+  max-width: 480px;
+}
+
+.producer, .wine-title, .wine-meta, .block-title, .block-text, .spec-lbl, .spec-val, .exp-lbl, .exp-val, .qr-text {
+  /* Questo fonde perfettamente l'inchiostro con la grana della carta */
   mix-blend-mode: multiply;
-  opacity: 0.9; /* Slight softening */
+  /* Leggera sbavatura per simulare la stampa tipografica */
+  text-shadow: 0px 0px 1px rgba(0,0,0,0.05);
 }
 
-/* Fallback / Subtitles */
-.brand-wow-subtitle {
-  font-family: 'Lato', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: #5c5851;
+.producer {
+  font-family: var(--font-sans);
   text-transform: uppercase;
-  margin-top: 8px;
-}
-
-/* System Link */
-.system-link-box {
-  text-align: center;
-  margin-top: 12px;
-}
-
-.system-link {
-  color: var(--wow-gold);
-  font-size: 12px;
-  text-decoration: none;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(0,0,0,0.2);
-}
-
-h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: 34px;
-  line-height: 1.1;
-  margin: 0 0 6px;
-  color: var(--wow-gold); /* ORO */
-  /* Oro Scavato (Engraved Gold) */
-  text-shadow: 
-    -1px -1px 1px rgba(0, 0, 0, 0.3),
-    1px 1px 1px rgba(255, 255, 255, 0.9);
-}
-
-.denomination {
-  font-size: 13px;
-  color: var(--wow-copper); /* RAME */
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  border-bottom: 2px solid var(--wow-copper);
-  padding-bottom: 16px;
-  margin-bottom: 24px;
-  text-shadow: 1px 1px 0px rgba(255,255,255,0.8);
-}
-
-.detail-label {
-  font-weight: 700;
+  letter-spacing: 2px;
   font-size: 11px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--wow-silver); /* ARGENTO */
-  margin: 16px 0 4px;
-  /* Effetto letterpress leggero sui sottotitoli */
-  text-shadow: -1px -1px 0px rgba(0,0,0,0.1), 1px 1px 0px rgba(255,255,255,0.8);
-  display: block;
+  font-weight: 600;
+  color: var(--ink-gray);
+  margin-bottom: 12px;
 }
 
-.detail-text {
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--wow-black); /* NERO */
-  margin: 0;
-  text-shadow: 1px 1px 0px rgba(255,255,255,0.6);
+.wine-title {
+  font-family: var(--font-serif);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--ink-black);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
 }
 
-/* Trial Info Refined */
-.trial-info {
+.wine-meta {
+  font-family: var(--font-sans);
   font-size: 13px;
-  color: var(--wow-black);
-  font-weight: 700;
+  color: var(--ink-gray);
+  margin-bottom: 60px;
+}
+
+/* ── EDITORIAL BLOCKS ── */
+.editorial-block {
+  margin-bottom: 48px;
+}
+
+.block-title {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--ink-light);
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  padding-bottom: 8px;
+}
+
+.block-text {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-black);
+}
+
+/* ── ARCHIVE SPECIFICATIONS ── */
+.archive-specs {
+  margin-bottom: 48px;
+}
+.spec-list {
+  list-style: none;
+}
+.spec-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+.spec-lbl {
+  color: var(--ink-gray);
+}
+.spec-val {
+  color: var(--ink-black);
+  font-weight: 500;
+  text-align: right;
+  max-width: 60%;
+}
+
+/* ── WOW EXPERIENCE (Vote & Details) ── */
+.wow-experience {
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.exp-data {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.exp-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.exp-lbl {
+  font-family: var(--font-sans);
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-top: 4px;
-  display: block;
+  color: var(--ink-gray);
+}
+.exp-val {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: var(--ink-black);
 }
 
-/* Bottom Banner Sculpted */
-.bottom-banner-wow {
-  background: transparent;
-  padding: 24px 16px;
-  text-align: center;
-  border-top: none;
-  margin-top: auto;
+.qr-vote-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }
-
-.sculpted-logo-small {
-  width: 200px;
-  max-width: 80%;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  mix-blend-mode: multiply;
+.qr-code {
+  width: 90px;
+  height: 90px;
+  mix-blend-mode: multiply; /* Blends QR seamlessly into paper */
   opacity: 0.9;
+}
+.qr-text {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--ink-black);
+  font-weight: 600;
+}
+
+/* ── RESPONSIVE & PRINT ── */
+@media (max-width: 768px) {
+  .curator-card {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 30px 20px;
+    margin: 0;
+  }
+  .bottle-display {
+    padding-top: 40px;
+  }
+  .bottle-img {
+    max-width: 220px;
+  }
+  .wow-logo-mark {
+    top: 20px;
+    right: 20px;
+    width: 45px;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .curator-card {
+    margin: 0;
+    padding: 20px;
+    max-width: none;
+  }
 }
