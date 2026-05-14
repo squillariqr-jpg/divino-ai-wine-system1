@@ -1,0 +1,278 @@
+/* WOW RANGE - Brand Identity CSS */
+/* SCULPTED / LETTERPRESS AESTHETIC */
+
+:root {
+  /* Colori per Effetto Scavato e Oro di Lusso */
+  --wow-gold-light: #dfc27d;
+  --wow-gold: #b38c36;
+  --wow-gold-dark: #82621c;
+  
+  --wow-off-white: #f5f2eb;
+  --wow-dark: #2a2825;
+  --wow-soft-bg: #ece9df;
+  
+  /* Deboss variables for reuse */
+  --deboss-shadow: inset 2px 2px 5px rgba(0,0,0,0.08), inset -1px -1px 3px rgba(255,255,255,0.9);
+  --emboss-shadow: 2px 2px 5px rgba(0,0,0,0.06), -1px -1px 3px rgba(255,255,255,0.8);
+}
+
+body {
+  background-color: var(--wow-off-white) !important;
+}
+
+.page {
+  background: var(--wow-off-white) url('texture-paper.png') !important;
+  background-size: cover !important;
+  /* Gioco di volumi: Ombra profonda esterna + Spessore interno (luce in alto, ombra in basso) */
+  box-shadow: 
+    0 25px 60px rgba(0,0,0,0.18), 
+    inset 1px 1px 2px rgba(255,255,255,0.9), 
+    inset -1px -1px 2px rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px; /* Slight rounding for a thick cardboard feel */
+}
+
+/* Volume per la Bottiglia */
+.bottle {
+  filter: drop-shadow(10px 20px 25px rgba(0,0,0,0.25));
+  transition: transform 0.3s ease;
+}
+.bottle:hover {
+  transform: scale(1.02);
+}
+
+/* Badge WOW RANGE (Debossed) */
+.music-cta {
+  display: inline-block;
+  background: transparent;
+  color: var(--wow-gold-dark);
+  border: 1px solid var(--wow-gold);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  border-radius: 24px;
+  text-decoration: none;
+  box-shadow: var(--emboss-shadow);
+  transition: all 0.2s ease;
+}
+.music-cta:hover {
+  background: var(--wow-gold);
+  color: #fff;
+  text-shadow: none;
+}
+
+/* Section "Perché è stato scelto" */
+.why-chosen-box {
+  background: var(--wow-soft-bg);
+  padding: 24px;
+  border-radius: 8px;
+  margin-top: 32px;
+  box-shadow: var(--deboss-shadow);
+}
+
+.why-chosen-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  color: var(--wow-gold-dark);
+  margin: 0 0 10px;
+  text-shadow: -1px -1px 1px rgba(0,0,0,0.15), 1px 1px 1px rgba(255,255,255,0.8);
+}
+.music-mood {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.why-chosen-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4a4742;
+  font-style: italic;
+}
+
+/* Extra Volumes for inner sections */
+.tech-cell, .music-box, .video-box {
+  background: var(--wow-soft-bg);
+  box-shadow: var(--deboss-shadow);
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.02);
+}
+
+/* Section "Votalo" */
+.vote-section {
+  background: var(--wow-soft-bg);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  margin-top: 40px;
+  box-shadow: var(--deboss-shadow);
+}
+
+.vote-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  color: var(--wow-black);
+  margin-bottom: 8px;
+}
+
+.vote-desc {
+  font-size: 15px;
+  color: #5c5851;
+  margin-bottom: 24px;
+}
+
+/* The Vote CTA Button - Elegant Letterpress Style */
+.vote-cta {
+  display: inline-block;
+  background: var(--wow-gold);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 18px 48px;
+  border-radius: 30px;
+  text-decoration: none;
+  box-shadow: var(--emboss-shadow), 0 5px 15px rgba(179, 140, 54, 0.4);
+  transition: transform 0.2s ease;
+  border: 1px solid var(--wow-gold-light);
+  /* Oro inciso per il testo del bottone */
+  text-shadow: -1px -1px 0px rgba(0,0,0,0.2);
+}
+.vote-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(179, 140, 54, 0.5);
+}
+
+/* Enoteche List */
+.stores-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.store-item {
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--wow-black);
+  font-weight: 600;
+  box-shadow: var(--deboss-shadow);
+}
+
+/* Premium Sculpted Brand Bar */
+.brand-bar-wow {
+  background: transparent;
+  padding: 32px 16px 16px;
+  text-align: center;
+  border-bottom: none;
+  box-shadow: none;
+  position: relative;
+}
+
+/* The Image Blend - This merges the image paper perfectly */
+.sculpted-logo {
+  width: 280px;
+  max-width: 90%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  mix-blend-mode: multiply;
+  opacity: 0.9; /* Slight softening */
+}
+
+/* Fallback / Subtitles */
+.brand-wow-subtitle {
+  font-family: 'Lato', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #5c5851;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* System Link */
+.system-link-box {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.system-link {
+  color: var(--wow-gold);
+  font-size: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 34px;
+  line-height: 1.1;
+  margin: 0 0 6px;
+  color: var(--wow-gold);
+  /* Oro Scavato (Engraved Gold) */
+  text-shadow: 
+    -1px -1px 1px rgba(0, 0, 0, 0.3),
+    1px 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+.denomination {
+  font-size: 13px;
+  color: var(--wow-dark);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--wow-gold-light);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.detail-label {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--wow-gold-dark);
+  margin: 16px 0 4px;
+  /* Effetto letterpress leggero sui sottotitoli */
+  text-shadow: 1px 1px 0px rgba(255,255,255,0.7);
+  display: block;
+}
+
+/* Trial Info Refined */
+.trial-info {
+  font-size: 13px;
+  color: var(--wow-black);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Bottom Banner Sculpted */
+.bottom-banner-wow {
+  background: transparent;
+  padding: 24px 16px;
+  text-align: center;
+  border-top: none;
+  margin-top: auto;
+}
+
+.sculpted-logo-small {
+  width: 200px;
+  max-width: 80%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{wine_name}} | WOW RANGE Experience Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/wow-range.css">
+<style>
+:root {
+  --copper: #b45c2a;
+  --gold: #b8860b;
+  --paper: #faf9f6; /* Bianco sporco */
+  --bg: #f5f1ea;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #d1d5db;
+  --blue: #000; /* We used black for brand bars */
+}
+
+html { scroll-behavior:smooth; }
+
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Lato', sans-serif;
+}
+
+/* ── PAGINA ─────────────────────────────────── */
+.page {
+  width:794px;
+  min-height:1123px;
+  margin:28px auto;
+  background:var(--paper);
+  box-shadow:0 4px 32px rgba(0,0,0,.18);
+  box-sizing:border-box;
+  position:relative;
+  page-break-after:always;
+  overflow:hidden;
+}
+
+/* ── BRAND BAR ──────────────────────────────── */
+.brand-bar {
+  background:var(--blue);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 36px;
+  font-size:11px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+.brand-bar .cdg {
+  font-family:'Playfair Display', serif;
+  font-size:13px;
+  letter-spacing:3px;
+}
+.brand-bar .squillari {
+  opacity:.75;
+  font-size:10px;
+}
+
+/* ── HERO PAGE 1 ────────────────────────────── */
+.hero-inner {
+  display:grid;
+  grid-template-columns:280px 1fr;
+  gap:0;
+  min-height:calc(1123px - 46px - 56px);
+}
+.hero-bottle-col {
+  background:linear-gradient(160deg, #f7f3ee 60%, #e8e0d4);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 24px;
+  border-right:1px solid var(--border);
+}
+.bottle {
+  max-width:220px;
+  max-height:580px;
+  object-fit:contain;
+  filter:drop-shadow(4px 8px 16px rgba(0,0,0,.22));
+}
+.hero-info-col {
+  padding:40px 44px 100px;
+  display:flex;
+  flex-direction:column;
+}
+.logo {
+  max-width:140px;
+  max-height:70px;
+  object-fit:contain;
+  margin-bottom:28px;
+}
+h1 {
+  font-family:'Playfair Display', serif;
+  font-size:30px;
+  line-height:1.1;
+  margin:0 0 6px;
+  color:var(--blue);
+}
+.denomination {
+  font-size:13px;
+  color:var(--muted);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  border-bottom:2px solid var(--copper);
+  padding-bottom:16px;
+  margin-bottom:24px;
+}
+.detail-label {
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--blue);
+  margin:16px 0 4px;
+}
+.detail-text {
+  font-size:15px;
+  line-height:1.55;
+  color:#374151;
+  margin:0;
+}
+.service-pill {
+  display:inline-block;
+  background:#f0f4ff;
+  border:1px solid #c7d2f5;
+  color:var(--blue);
+  font-weight:700;
+  font-size:13px;
+  border-radius:20px;
+  padding:4px 14px;
+  margin-top:4px;
+}
+
+/* ── NAV PIEDE ──────────────────────────────── */
+.page-nav {
+  position:absolute;
+  bottom:0;
+  left:280px;
+  right:0;
+  background:var(--blue);
+  padding:14px 44px;
+  display:flex;
+  gap:0;
+  justify-content:space-around;
+}
+.page-nav a {
+  color:#fff;
+  text-decoration:none;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  opacity:.85;
+  transition:opacity .2s;
+}
+.page-nav a:hover { opacity:1; }
+
+/* ── PAGINE INTERNE ─────────────────────────── */
+.inner-page {
+  padding:52px 52px 80px;
+  min-height:calc(1123px - 46px - 46px);
+  box-sizing:border-box;
+}
+
+.page-title {
+  font-family:'Playfair Display', serif;
+  font-size:28px;
+  color:var(--blue);
+  margin:0 0 8px;
+}
+.page-title-underline {
+  height:3px;
+  background:linear-gradient(90deg, var(--copper), transparent);
+  margin-bottom:36px;
+  border:none;
+}
+
+/* ── SCHEDA TECNICA ─────────────────────────── */
+.tech-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+}
+.tech-cell {
+  padding:18px 22px;
+  border-bottom:1px solid var(--border);
+}
+.tech-cell:nth-child(odd) { background:#f9fafb; }
+.tech-cell:nth-child(even) { background:#fff; }
+.tech-cell:nth-last-child(-n+2) { border-bottom:none; }
+.tech-key {
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:1.2px;
+  color:var(--blue);
+  margin-bottom:4px;
+}
+.tech-val {
+  font-size:15px;
+  color:var(--text);
+  line-height:1.4;
+}
+
+/* ── MUSICA ─────────────────────────────────── */
+.music-box {
+  border:1px solid #d4c5e8;
+  border-radius:12px;
+  padding:28px 32px;
+  margin-bottom:28px;
+  background:linear-gradient(135deg, #faf7ff 0%, #f0eaff 100%);
+  position:relative;
+  overflow:hidden;
+}
+.music-box::before {
+  content:"♪";
+  position:absolute;
+  right:20px;
+  top:10px;
+  font-size:80px;
+  opacity:.06;
+  color:var(--copper);
+}
+.music-title {
+  font-family:'Playfair Display', serif;
+  font-size:20px;
+  color:var(--copper);
+  margin:0 0 10px;
+}
+.music-mood {
+  font-size:14px;
+  color:#555;
+  line-height:1.5;
+  margin:0 0 18px;
+}
+.music-cta {
+  display:inline-block;
+  background:var(--copper);
+  color:#fff;
+  font-weight:700;
+  font-size:13px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:10px 24px;
+  border-radius:24px;
+  text-decoration:none;
+}
+.music-cta-disabled {
+  display:inline-block;
+  background:#d1d5db;
+  color:#9ca3af;
+  font-size:13px;
+  padding:10px 24px;
+  border-radius:24px;
+}
+
+/* ── VIDEO ──────────────────────────────────── */
+.video-box {
+  border:1px solid #d1d5db;
+  border-radius:12px;
+  padding:28px 32px;
+  margin-bottom:28px;
+  background:#fff;
+  display:flex;
+  gap:28px;
+  align-items:center;
+}
+.video-thumb-wrap {
+  position:relative;
+  flex-shrink:0;
+}
+.video-no-thumb {
+  width:180px;
+  height:101px;
+  background:#f3f4f6;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:32px;
+}
+.video-info {
+  flex:1;
+}
+.video-title {
+  font-family:'Playfair Display', serif;
+  font-size:18px;
+  color:var(--blue);
+  margin:0 0 8px;
+}
+.video-desc {
+  font-size:14px;
+  color:var(--muted);
+  margin:0 0 14px;
+}
+.video-cta {
+  display:inline-block;
+  background:var(--copper);
+  color:#fff;
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:8px 20px;
+  border-radius:20px;
+  text-decoration:none;
+}
+
+/* ── PRINT ──────────────────────────────────── */
+@media print {
+  body { background:#fff; }
+  .page {
+    width:210mm;
+    min-height:297mm;
+    margin:0;
+    box-shadow:none;
+    border-radius:0;
+  }
+  .page-nav { position:fixed; bottom:0; }
+}
+
+/* ── MOBILE ─────────────────────────────────── */
+@media(max-width:860px) {
+  .page { width:auto; min-height:auto; margin:12px; }
+  .hero-inner { grid-template-columns:1fr; }
+  .hero-bottle-col { border-right:none; border-bottom:1px solid var(--border); padding:28px; }
+  .bottle { max-height:300px; }
+  .hero-info-col { padding:28px 24px 100px; }
+  .page-nav { left:0; flex-wrap:wrap; gap:8px; }
+  .inner-page { padding:32px 24px 80px; }
+  .tech-grid { grid-template-columns:1fr; }
+  .video-box { flex-direction:column; }
+  .back-link, .page-footer { position:static; display:block; margin-top:16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  PAGINA 1 — HERO                           -->
+<!-- ═══════════════════════════════════════════ -->
+<section class="page" id="inizio">
+
+  <div class="hero-inner">
+
+    <!-- Colonna sinistra: bottiglia -->
+    <div class="hero-bottle-col">
+      <img class="bottle" src="{{wine_image_url}}" alt="{{wine_name}}" onerror="this.style.display='none'">
+    </div>
+
+    <!-- Colonna destra: info vino -->
+    <div class="hero-info-col">
+      <img class="logo sculpted-logo" src="../assets/logo-wow-embossed.png" alt="WOW RANGE Logo" onerror="this.style.display='none'">
+      <div class="wow-badge">WOW RANGE</div>
+      <span class="trial-info">Vino in prova nelle Enoteche Squillari</span>
+
+      <h1>{{wine_name}}</h1>
+      <div class="denomination">{{wine_denomination}}</div>
+
+      <div class="detail-label">Note di Degustazione</div>
+      <p class="detail-text">{{wine_tasting}}</p>
+
+      <div class="detail-label">Abbinamenti Consigliati</div>
+      <p class="detail-text">{{wine_pairing}}</p>
+
+      <div class="detail-label">Temperatura di Servizio</div>
+      <span class="service-pill">🌡 {{wine_service}}</span>
+
+      <!-- Nuova Sezione: Perché è stato scelto -->
+      <div class="why-chosen-box">
+        <h3 class="why-chosen-title">✨ Perché è stato scelto</h3>
+        <p class="why-chosen-text">{{wine_storytelling}}</p>
+      </div>
+    </div>
+
+  </div><!-- /hero-inner -->
+
+  <nav class="page-nav">
+    <a href="#tecnica">▸ Scheda Tecnica</a>
+    <a href="#esperienze">▸ Musica &amp; Video</a>
+    <a href="#vota">▸ Vota il Vino</a>
+  </nav>
+
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  PAGINA 2 — SCHEDA TECNICA                 -->
+<!-- ═══════════════════════════════════════════ -->
+<section class="page" id="tecnica">
+  <div class="inner-page">
+    <h2 class="page-title">Dettagli Tecnici</h2>
+    <hr class="page-title-underline">
+
+    <div class="tech-grid">
+      <div class="tech-cell">
+        <div class="tech-key">Zona di Produzione</div>
+        <div class="tech-val">{{tech_zone}}</div>
+      </div>
+      <div class="tech-cell">
+        <div class="tech-key">Altitudine</div>
+        <div class="tech-val">{{tech_altitude}}</div>
+      </div>
+      <div class="tech-cell">
+        <div class="tech-key">Tipologia Suolo</div>
+        <div class="tech-val">{{tech_soil}}</div>
+      </div>
+      <div class="tech-cell">
+        <div class="tech-key">Affinamento</div>
+        <div class="tech-val">{{tech_aging}}</div>
+      </div>
+      <div class="tech-cell">
+        <div class="tech-key">Gradazione Alcolica</div>
+        <div class="tech-val">{{tech_alcohol}}</div>
+      </div>
+      <div class="tech-cell">
+        <div class="tech-key">Codice Prodotto</div>
+        <div class="tech-val">{{wine_code}}</div>
+      </div>
+    </div>
+
+    <!-- Spazio Territorio -->
+    <div class="detail-label" style="margin-top:40px;">Il Territorio</div>
+    <p class="detail-text">{{wine_territory}}</p>
+  </div>
+
+  <nav class="page-nav">
+    <a href="#inizio">↩ Inizio</a>
+    <a href="#esperienze">▸ Musica &amp; Video</a>
+    <a href="#vota">▸ Vota</a>
+  </nav>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  PAGINA 3 — ESPERIENZA & VOTO              -->
+<!-- ═══════════════════════════════════════════ -->
+<section class="page" id="esperienze">
+  <div class="inner-page">
+    <h2 class="page-title">Musica &amp; Video</h2>
+    <hr class="page-title-underline">
+
+    <!-- Box Musica -->
+    <div class="music-box">
+      <h3 class="music-title">♪ Colonna Sonora Suggerita</h3>
+      <p class="music-mood">{{music_desc}}</p>
+      <a href="{{music_link}}" class="music-cta" target="_blank">Ascolta su Spotify</a>
+    </div>
+
+    <!-- Box Video -->
+    <div class="video-box">
+      <div class="video-thumb-wrap">
+        <div class="video-no-thumb">📹</div>
+      </div>
+      <div class="video-info">
+        <h3 class="video-title">Video WOW</h3>
+        <p class="video-desc">Un viaggio visivo nel cuore della produzione.</p>
+        <a href="{{video_link}}" class="video-cta" target="_blank">Guarda il Video</a>
+      </div>
+    </div>
+
+    <!-- SEZIONE VOTA IL VINO -->
+    <div id="vota" class="vote-section">
+      <h2 class="vote-title">Ti è piaciuto questo vino?</h2>
+      <p class="vote-desc">Il tuo parere è fondamentale per decidere se questo vino entrerà a far parte del nostro assortimento permanente.</p>
+      
+      <a href="{{vote_link}}" class="vote-cta">VOTA QUESTO VINO</a>
+
+      <div class="system-link-box">
+        <a href="../index.html" class="system-link">Scopri come funziona il sistema WOW RANGE</a>
+      </div>
+
+      <div class="detail-label" style="margin-top:32px;">Disponibile per la prova in:</div>
+      <div class="stores-list">
+        <span class="store-item">Malta</span>
+        <span class="store-item">Sestri</span>
+        <span class="store-item">Cantore</span>
+        <span class="store-item">Trento</span>
+        <span class="store-item">De Ferrari</span>
+      </div>
+    </div>
+
+  </div>
+
+  <nav class="page-nav">
+    <a href="#inizio">↩ Inizio</a>
+    <a href="#tecnica">▸ Tecnica</a>
+    <span style="color:#fff; opacity:0.5; font-size:10px; align-self:center;">Squillari WOW RANGE</span>
+  </nav>
+</section>
+
+</body>
+</html>
