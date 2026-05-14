@@ -64,9 +64,9 @@ body {
 .giant-watermark {
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%; /* Scaled down so the entire logo fits perfectly inside the paper */
+  left: 45%;
+  transform: translate(-50%, -50%) rotate(-5deg);
+  width: 95%; /* Small enough to be fully readable, but keeping the original off-center tilted placement */
   
   /* The physical impression effect */
   mix-blend-mode: multiply;
