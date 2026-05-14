@@ -9,7 +9,7 @@
 
   /* Paper Material */
   --ink-primary: #1A1816; /* Warm deep black ink */
-  --ink-secondary: #5E5B58; /* Faded ink for metadata */
+  --ink-secondary: #4A4845; /* Darkened faded ink for metadata to ensure readability */
   --ink-faint: #D6D2CC; /* Super faint ink for subtle lines */
   
   --font-serif: 'Playfair Display', 'Times New Roman', serif;
@@ -65,7 +65,7 @@ body {
   position: absolute;
   /* The physical impression effect */
   mix-blend-mode: multiply;
-  opacity: 0.35; /* Clearly visible */
+  opacity: 0.15; /* Lowered from 0.35 to not interfere with text reading */
   filter: contrast(120%) drop-shadow(2px 2px 0px rgba(255,255,255,0.9));
   
   pointer-events: none;
@@ -146,9 +146,8 @@ body {
 /* ── INK BLEND EFFECT ── */
 /* Makes all typography look printed INTO the paper texture */
 .producer-name, .wine-title, .block-label, .block-copy, .spec-key, .spec-val, .qr-lbl, .qr-sub, .seal-text {
-  mix-blend-mode: multiply;
-  /* Ink bleed simulation */
-  text-shadow: 0px 0px 1px rgba(0,0,0,0.03);
+  /* Removed mix-blend-mode: multiply because it destroys readability on some screens */
+  text-shadow: 0px 0px 1px rgba(0,0,0,0.03); /* Keep slight bleed simulation */
 }
 
 /* ── TYPOGRAPHY ── */
