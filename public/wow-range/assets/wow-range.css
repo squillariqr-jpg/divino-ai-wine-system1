@@ -66,12 +66,12 @@ body {
   top: 50%;
   left: 45%;
   transform: translate(-50%, -50%) rotate(-5deg);
-  width: 180%; /* ENORMOUS */
+  width: 160%; /* ENORMOUS, slightly reduced to fit better */
   
   /* The physical impression effect */
   mix-blend-mode: multiply;
-  opacity: 0.08; /* Extremely subtle */
-  filter: drop-shadow(2px 2px 0px rgba(255,255,255,0.9)); /* Highlights the edges of the deboss */
+  opacity: 0.35; /* Increased significantly so it is clearly visible */
+  filter: contrast(120%) drop-shadow(2px 2px 0px rgba(255,255,255,0.9)); /* Enhanced the deboss contrast */
   
   pointer-events: none;
   z-index: 1; /* Below the text */
