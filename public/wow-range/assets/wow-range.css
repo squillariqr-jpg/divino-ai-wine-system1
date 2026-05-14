@@ -104,23 +104,36 @@ body {
   height: 100%;
 }
 
-/* ── LEFT COLUMN (BOTTLE) ── */
+/* ── LEFT COLUMN (BOTTLE IN NICHE) ── */
 .bottle-column {
   display: flex;
   justify-content: center;
-  align-items: center;
-  /* Very faint vertical separator line */
-  border-right: 1px solid var(--ink-faint);
-  padding-right: 15mm;
+  align-items: flex-end; /* Bottle sits at the bottom */
+  
+  /* Architectural Arch Niche */
+  border-radius: 120px 120px 0 0; 
+  padding: 40px 20px 20px 20px;
+  
+  /* Deep inset shadow to simulate carving into the material */
+  box-shadow: 
+    inset 0 15px 40px rgba(0,0,0,0.08), 
+    inset 0 4px 15px rgba(0,0,0,0.04),
+    0 1px 1px rgba(255,255,255,0.9); /* Subtle highlight on the outside lip */
+  
+  /* Slightly darker inside the niche to simulate depth and shadow */
+  background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.01) 100%);
+  
+  /* Remove the old faint line */
+  border-right: none;
 }
 
 .bottle-img {
   width: 100%;
-  max-width: 240px;
+  max-width: 220px;
   height: auto;
   object-fit: contain;
-  /* Minimal soft grounding shadow */
-  filter: drop-shadow(15px 30px 40px rgba(0,0,0,0.12));
+  /* Shadow adjusted so it falls on the back wall of the niche */
+  filter: drop-shadow(0px 20px 30px rgba(0,0,0,0.25));
 }
 
 /* ── RIGHT COLUMN (CONTENT) ── */
