@@ -16,6 +16,24 @@
   --emboss-shadow: 2px 2px 5px rgba(0,0,0,0.06), -1px -1px 3px rgba(255,255,255,0.8);
 }
 
+/* ── UNIVERSAL LETTERPRESS EFFECT ── */
+/* Questo fonde perfettamente tutti i testi con la texture della carta e crea l'incavo */
+h1, h2, h3, h4, h5, h6, p, span, div,
+.denomination, .detail-label, .detail-text, .why-chosen-title, .why-chosen-text,
+.vote-title, .vote-desc, .tech-val, .music-title, .music-mood, .video-title, .video-desc, .trial-info {
+  /* Fonde il colore del testo con la grana della carta */
+  mix-blend-mode: multiply;
+  /* Ombra interna scura in alto/sinistra + Luce in basso/destra per sembrare scavato */
+  text-shadow: -1px -1px 0px rgba(0,0,0,0.15), 1px 1px 0px rgba(255,255,255,0.85);
+}
+
+/* Escludi l'effetto dai bottoni che devono essere in rilievo e leggibili */
+.vote-cta, .music-cta, .service-pill, .brand-bar-wow {
+  mix-blend-mode: normal !important;
+  text-shadow: none !important;
+}
+
+
 body {
   background-color: var(--wow-off-white) !important;
 }
