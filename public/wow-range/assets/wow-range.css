@@ -8,7 +8,8 @@
   --wow-gold-dark: #82621c;
   
   --wow-off-white: #f5f2eb;
-  --wow-dark: #2a2825;
+  /* Colore Font No-Ink (Ombra interna): Marrone fango tenue per sembrare ombra sulla carta beige */
+  --wow-dark: #7a6f62; 
   --wow-soft-bg: #ece9df;
   
   /* Deboss variables for reuse */
@@ -88,8 +89,9 @@ body {
 .why-chosen-text {
   font-size: 15px;
   line-height: 1.6;
-  color: #4a4742;
+  color: #7a6f62; /* Uniformed to muddy brown */
   font-style: italic;
+  text-shadow: 1px 1px 0px rgba(255,255,255,0.6); /* Slight letterpress */
 }
 
 /* Extra Volumes for inner sections */
@@ -119,7 +121,7 @@ body {
 
 .vote-desc {
   font-size: 15px;
-  color: #5c5851;
+  color: #7a6f62;
   margin-bottom: 24px;
 }
 
