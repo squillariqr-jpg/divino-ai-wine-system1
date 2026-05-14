@@ -22,8 +22,9 @@ body {
 }
 
 .page {
-  background: var(--wow-off-white) url('texture-paper.png') !important;
-  background-size: cover !important;
+  background: var(--wow-off-white) url('texture-cotton-paper.png') !important;
+  background-size: 100% auto !important; /* Fits width, repeats vertically for scrolling */
+  background-repeat: repeat-y !important;
   /* Gioco di volumi: Ombra profonda esterna + Spessore interno (luce in alto, ombra in basso) */
   box-shadow: 
     0 25px 60px rgba(0,0,0,0.18), 
