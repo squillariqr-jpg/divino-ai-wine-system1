@@ -64,14 +64,14 @@ body {
 .giant-watermark {
   position: absolute;
   top: 50%;
-  left: 45%;
-  transform: translate(-50%, -50%) rotate(-5deg);
-  width: 160%; /* ENORMOUS, slightly reduced to fit better */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%; /* Scaled down so the entire logo fits perfectly inside the paper */
   
   /* The physical impression effect */
   mix-blend-mode: multiply;
-  opacity: 0.35; /* Increased significantly so it is clearly visible */
-  filter: contrast(120%) drop-shadow(2px 2px 0px rgba(255,255,255,0.9)); /* Enhanced the deboss contrast */
+  opacity: 0.35; /* Clearly visible */
+  filter: contrast(120%) drop-shadow(2px 2px 0px rgba(255,255,255,0.9));
   
   pointer-events: none;
   z-index: 1; /* Below the text */
