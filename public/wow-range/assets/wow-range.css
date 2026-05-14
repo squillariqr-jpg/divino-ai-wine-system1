@@ -63,11 +63,6 @@ body {
 /* ── GIANT DEBOSSED WATERMARK ── */
 .giant-watermark {
   position: absolute;
-  top: 50%;
-  left: 45%;
-  transform: translate(-50%, -50%) rotate(-5deg);
-  width: 95%; /* Small enough to be fully readable, but keeping the original off-center tilted placement */
-  
   /* The physical impression effect */
   mix-blend-mode: multiply;
   opacity: 0.35; /* Clearly visible */
@@ -75,6 +70,28 @@ body {
   
   pointer-events: none;
   z-index: 1; /* Below the text */
+}
+
+/* Three distinct impressions down the page */
+.mark-1 {
+  top: 18%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  width: 85%;
+}
+
+.mark-2 {
+  top: 50%;
+  left: 45%;
+  transform: translate(-50%, -50%) rotate(4deg);
+  width: 90%;
+}
+
+.mark-3 {
+  top: 82%;
+  left: 55%;
+  transform: translate(-50%, -50%) rotate(-2deg);
+  width: 85%;
 }
 
 /* ── EDITORIAL GRID ── */
