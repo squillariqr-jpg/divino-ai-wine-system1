@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOW RANGE — Selezione Curator Cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #e9ddc8; --paper-dark: #d4c8aa;
+      --ink: #0e0804; --ink-mid: #1e1208; --ink-light: #3a2410;
+      --gold: #8c6f24; --gold-mid: #b8923a;
+      --rule: rgba(90,70,35,0.30);
+      --f-display: 'Playfair Display', Georgia, serif;
+      --f-body: 'Cormorant Garamond', Georgia, serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #b0a898;
+      font-family: var(--f-body);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 40px 24px 60px;
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .page-header svg { width: 320px; max-width: 90vw; display: block; margin: 0 auto 8px; }
+    .range-row {
+      display: flex; align-items: center; gap: 10px;
+      width: 320px; max-width: 90vw; margin: 0 auto 16px;
+    }
+    .range-dec { flex:1; height:1px; background: var(--gold); opacity: 0.4; }
+    .range-label {
+      font-family: var(--f-display); font-size: 14px; letter-spacing: 0.5em;
+      color: var(--gold); text-transform: uppercase;
+    }
+    .subtitle {
+      font-family: var(--f-body); font-size: 13px; letter-spacing: 0.15em;
+      color: var(--ink-light); text-transform: uppercase;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .wine-card {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      padding: 24px 20px 20px;
+      text-decoration: none;
+      color: var(--ink);
+      display: flex; flex-direction: column; gap: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      cursor: pointer;
+    }
+    .wine-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+    }
+    .card-producer {
+      font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--gold-mid); font-weight: 600;
+    }
+    .card-wine {
+      font-family: var(--f-display); font-size: 21px; font-style: italic;
+      font-weight: 700; line-height: 1.2; color: var(--ink);
+    }
+    .card-denom {
+      font-size: 13px; color: var(--ink-light); letter-spacing: 0.04em; font-weight: 500;
+    }
+    .card-rule { height: 0.5px; background: var(--rule); }
+    .card-note {
+      font-size: 13px; font-style: italic; color: var(--ink-mid);
+      line-height: 1.55; flex: 1; font-weight: 500;
+    }
+    .card-footer-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 4px;
+    }
+    .card-sku {
+      font-size: 11px; color: var(--ink-light); letter-spacing: 0.06em; font-weight: 500;
+    }
+    .card-status {
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 2px 6px;
+    }
+    .card-status.ok { color: #3a6b2a; border: 0.5px solid #3a6b2a; }
+    .card-status.review { color: var(--gold); border: 0.5px solid var(--gold); }
+    .vote-btn {
+      display: block; text-align: center; padding: 7px 12px;
+      background: var(--gold); border: 1px solid var(--gold);
+      color: var(--paper);
+      font-family: var(--f-body); font-size: 11px; letter-spacing: 0.2em;
+      text-transform: uppercase; text-decoration: none; font-weight: 700;
+      margin-top: 4px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .vote-btn:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+    .page-footer {
+      text-align: center; margin-top: 48px;
+      font-family: var(--f-display); font-style: italic;
+      color: var(--ink-light); font-size: 18px; opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <svg viewBox="0 0 900 295" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="deboss2" x="-8%" y="-12%" width="116%" height="130%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="4.5" result="ab"/>
+        <feOffset in="ab" dx="3.5" dy="5" result="shadow-off"/>
+        <feFlood flood-color="#4a2e08" flood-opacity="0.55" result="sc"/>
+        <feComposite in="sc" in2="shadow-off" operator="in" result="shadow"/>
+        <feOffset in="ab" dx="-2.5" dy="-3" result="hi-off"/>
+        <feFlood flood-color="#fffbe8" flood-opacity="0.90" result="hc"/>
+        <feComposite in="hc" in2="hi-off" operator="in" result="highlight"/>
+        <feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/><feMergeNode in="highlight"/></feMerge>
+      </filter>
+      <clipPath id="cl2"><rect x="0" y="0" width="295" height="295"/></clipPath>
+      <clipPath id="cr2"><rect x="598" y="0" width="302" height="295"/></clipPath>
+    </defs>
+    <text x="-8" y="272" font-family="'Playfair Display',serif" font-size="288" font-weight="900" fill="#cdc0a0" filter="url(#deboss2)" clip-path="url(#cl2)">W</text>
+    <g filter="url(#deboss2)">
+      <circle cx="451" cy="148" r="122" fill="none" stroke="#cdc0a0" stroke-width="16.5"/>
+      <circle cx="451" cy="148" r="90" fill="none" stroke="#cdc0a0" stroke-width="11.5"/>
+      <circle cx="451" cy="148" r="61" fill="none" stroke="#cdc0a0" stroke-width="9"/>
+      <circle cx="451" cy="148" r="34" fill="none" stroke="#cdc0a0" stroke-width="7"/>
+      <circle cx="451" cy="148" r="10" fill="#cdc0a0"/>
+    </g>
+    <g filter="url(#deboss2)">
+      <line x1="636" y1="28" x2="453" y2="147" stroke="#cdc0a0" stroke-width="5.5" stroke-linecap="round"/>
+      <polygon points="451,148 440,128 461,131" fill="#cdc0a0"/>
+    </g>
+    <text x="596" y="272" font-family="'Playfair Display',serif" font-size="288" font-weight="900" fill="#cdc0a0" filter="url(#deboss2)" clip-path="url(#cr2)">W</text>
+  </svg>
+  <div class="range-row">
+    <div class="range-dec"></div>
+    <div class="range-label">Range</div>
+    <div class="range-dec"></div>
+  </div>
+  <div class="subtitle">Selezione Curator Cards · Enoteche Squillari · 2026</div>
+</div>
+
+<div class="grid">
+  <div class="wine-card" onclick="window.location='cards/card-2101146.html'">
+    <div class="card-producer">Dosio Vigneti</div>
+    <div class="card-wine">&lsquo;Langhe Nebbiolo Barilà&rsquo;</div>
+    <div class="card-denom">Piemonte · Nebbiolo</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Un Nebbiolo da Barolo country che non si prende troppo sul serio. Struttura piemontese, anima quotidiana.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2101146</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSeNw26jrAeYxjnzXlNWiWep3HK7PjzMqFc0AU1rVdUYh2SO2Q/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2116060.html'">
+    <div class="card-producer">Nitti</div>
+    <div class="card-wine">&lsquo;Negroamaro Rosé IGT&rsquo;</div>
+    <div class="card-denom">Puglia · Negroamaro</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Il Negroamaro rosato che convince anche i bianchi-isti. Struttura da rosso travestita da rosé.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2116060</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSeAukFB7DHhQd4fJ7pAdrzsMSBu5BPIM560gCpqE_x86I2fwg/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2111032.html'">
+    <div class="card-producer">Cantine Belisario</div>
+    <div class="card-wine">&lsquo;Marche Rosato IGT&rsquo;</div>
+    <div class="card-denom">Marche · Sangiovese · Lacrima</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Un rosato che sfida i cliché con una struttura croccante e sapida. Marchigiano senza compromessi.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2111032</span>
+      <span class="card-status ok">✓ Pronto</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSebWa9oLJ6AM0OvDKaIwj8FyZcErd_9KnKYM8aTB--_J7fnGA/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2109206.html'">
+    <div class="card-producer">Fattoria dei Barbi</div>
+    <div class="card-wine">&lsquo;Ciliegiolo Toscana IGT&rsquo;</div>
+    <div class="card-denom">Toscana · Ciliegiolo · Senza Solfiti Aggiunti</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Toscana naturale. Zero solfiti aggiunti, massima pulizia del frutto. Un Ciliegiolo che parla chiaro.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2109206</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLScssVPSRmBRSft7aKZgS-zLJlbBm-cqzCzJ8B9xX95dc8VEtA/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2101147.html'">
+    <div class="card-producer">Dosio Vigneti</div>
+    <div class="card-wine">&lsquo;Langhe Arneis&rsquo;</div>
+    <div class="card-denom">Piemonte · Arneis</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Il bianco piemontese di carattere. Eleganza senza eccessi e freschezza minerale.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2101147</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSeQFEsDwrsqpEIX6I6t7EjZ0AHbtKxkqupGPw975Qm7FCuWrQ/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2119027.html'">
+    <div class="card-producer">Brugnano</div>
+    <div class="card-wine">&lsquo;Coraline Frappato Rosé&rsquo;</div>
+    <div class="card-denom">Sicilia · Frappato</div>
+    <div class="card-rule"></div>
+    <div class="card-note">La Sicilia in rosa. Frappato che vira al rosé con leggerezza disarmante. Corallo, mare, sale.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2119027</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSeKARW7IB_C2ZmvMIbyHxbYmJN-lqBFFDH8p2l3-AW3F9krmw/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2119083.html'">
+    <div class="card-producer">Brugnano</div>
+    <div class="card-wine">&lsquo;Kùe Inzolia Viognier&rsquo;</div>
+    <div class="card-denom">Sicilia · Inzolia · Viognier</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Sicilia e Rodano si incontrano. Inzolia e Viognier: solarità, profumi netti, senso mediterraneo.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2119083</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSdIwiSvLv9mQaJ0TCj7Y4QmRBOasRLUuT5qB1_XpTJl-2meTQ/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-6601589.html'">
+    <div class="card-producer">Cantine Belisario</div>
+    <div class="card-wine">&lsquo;Nadir Spumante Brut&rsquo;</div>
+    <div class="card-denom">Marche · Verdicchio · Chardonnay</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Il Verdicchio marchigiano che fa le bolle e lo fa bene. Freschezza e carattere in ogni calice.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#6601589</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSeJtaegSx_aFnPoysZdeK79Yk8UD-gwwdJIui7VkKvCcgOTpw/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+  <div class="wine-card" onclick="window.location='cards/card-2101145.html'">
+    <div class="card-producer">La Torre</div>
+    <div class="card-wine">&lsquo;Chardonnay Barrique&rsquo;</div>
+    <div class="card-denom">Piemonte · Chardonnay</div>
+    <div class="card-rule"></div>
+    <div class="card-note">Lo Chardonnay piemontese con passaggio in barrique che non si dimentica. Elegante e persistente.</div>
+    <div class="card-footer-row">
+      <span class="card-sku">#2101145</span>
+      <span class="card-status review">Review</span>
+    </div>
+    <a class="vote-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSfYjFkpem56LG7bMMEZxn9FEDkebXw1ReVBtFVD_-PFmN8BPg/viewform?usp=sharing" target="_blank" rel="noopener" onclick="event.stopPropagation()">VOTA IL VINO</a>
+  </div>
+</div>
+
+<div class="page-footer">Enoteche Squillari</div>
+
+</body>
+</html>

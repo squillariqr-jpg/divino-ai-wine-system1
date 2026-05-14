@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{wine_name}} | WOW RANGE Curator Card</title>
+    <link rel="stylesheet" href="../assets/wow_range_css.css">
+</head>
+<body>
+
+    <div class="curator-card" id="card-{{sku}}">
+        
+        <!-- HEADER: Point 1, 2, 3 -->
+        <header class="header">
+            <div class="producer">{{producer}}</div>
+            <h1 class="wine-name">{{wine_name}}</h1>
+            <div class="meta-info">{{region}} &mdash; {{grapes}}</div>
+        </header>
+
+        <!-- BOTTLE -->
+        <div class="bottle-stage">
+            <img src="{{bottle_url}}" alt="{{wine_name}}" class="bottle-img">
+        </div>
+
+        <!-- CONTENT: Point 5, 6, 7, 8 -->
+        <main class="curator-content">
+            
+            <div class="column-left">
+                <!-- Point 5: PERCHÉ È STATO SCELTO -->
+                <div class="section">
+                    <span class="section-label">Perché è stato scelto</span>
+                    <p class="section-text italic">{{scouting_note}}</p>
+                </div>
+
+                <!-- Point 6: DEGUSTAZIONE MINIMALE -->
+                <div class="section">
+                    <span class="section-label">Degustazione Minimale</span>
+                    <p class="section-text">{{tasting_note}}</p>
+                </div>
+            </div>
+
+            <div class="column-right">
+                <!-- Point 7: SPECIFICHE ARCHIVIO -->
+                <div class="section">
+                    <span class="section-label">Specifiche Archivio</span>
+                    <div class="specs-grid">
+                        <div class="spec-item">Annata <span class="spec-value">{{year}}</span></div>
+                        <div class="spec-item">Gradazione <span class="spec-value">{{alcohol}}</span></div>
+                        <div class="spec-item">Formato <span class="spec-value">{{format}}</span></div>
+                        <div class="spec-item">Servizio <span class="spec-value">{{temp}}</span></div>
+                    </div>
+                </div>
+
+                <!-- Point 8: MOOD -->
+                <div class="section">
+                    <span class="section-label">Mood</span>
+                    <div class="mood-container">
+                        {{mood_tags}}
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- FOOTER: Point 4, 9 -->
+        <footer class="footer">
+            <div class="qr-box">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{qr_url}}" alt="QR Code" class="qr-code">
+                <div class="wow-badge">WOW Experience</div>
+            </div>
+            
+            <!-- Point 4: CODICE INTERNO -->
+            <div class="archive-code">#{{sku}}</div>
+        </footer>
+
+    </div>
+
+</body>
+</html>

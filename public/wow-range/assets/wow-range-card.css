@@ -1,0 +1,670 @@
+/* ═══════════════════════════════════════════════════════════════
+   WOW RANGE — Master Card CSS
+   A4 verticale · print-ready · premium feel
+   ─────────────────────────────────────────────────────────────
+   Per cambiare il vino:
+   • Modifica i placeholder {{...}} nell'HTML
+   • Sostituisci bottle_image_url, qr_image_url, logo URLs
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ─────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap');
+
+/* ── Design Tokens ─────────────────────────────────────────── */
+:root {
+  /* Palette carta materica beige */
+  --paper:          #e9ddc8;
+  --paper-warm:     #f0e8d4;
+  --paper-shadow:   #d4c8aa;
+
+  /* Testo */
+  --ink-dark:       #0e0804;
+  --ink-medium:     #1e1208;
+  --ink-light:      #3a2410;
+
+  /* Oro/rame */
+  --gold:           #8c6f24;
+  --gold-mid:       #b8923a;
+  --gold-light:     #c9a84a;
+
+  /* Linee */
+  --rule:           rgba(90, 70, 35, 0.38);
+
+  /* Emboss WOW */
+  --emboss-fill:    #cdc0a0;
+  --emboss-hi:      rgba(255, 250, 232, 0.92);
+  --emboss-shadow:  rgba(80, 55, 18, 0.52);
+
+  /* Tipografia */
+  --f-display:      'Playfair Display', Georgia, 'Times New Roman', serif;
+  --f-body:         'Cormorant Garamond', Georgia, serif;
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Screen wrapper ────────────────────────────────────────── */
+html, body {
+  min-height: 100vh;
+  background: #b0a898;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  font-family: var(--f-body);
+  color: var(--ink-dark);
+}
+
+/* ════════════════════════════════════════════════════════════
+   CARD — A4 verticale
+════════════════════════════════════════════════════════════ */
+.card {
+  width: 210mm;
+  min-height: 297mm;
+  background-color: var(--paper);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Effetto carta stampata premium */
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.18),
+    0 10px 40px rgba(0,0,0,0.22),
+    0 20px 60px rgba(0,0,0,0.10);
+}
+
+/* Grana carta — overlay noise sottile */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.70' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23g)' opacity='0.07'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* ════════════════════════════════════════════════════════════
+   HEADER — WOW + RANGE
+════════════════════════════════════════════════════════════ */
+.card-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 5mm;
+  padding-bottom: 0;
+  position: relative;
+}
+
+/* ── WOW logo area ─────────────────────────────────────────── */
+.wow-logo-wrapper {
+  width: 100%;
+  padding: 0 3mm;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+/*
+  PLACEHOLDER: {{wow_logo_url}}
+  Se disponibile come immagine, sostituire il blocco <svg> con:
+  <img src="{{wow_logo_url}}" alt="WOW" class="wow-logo-img">
+*/
+.wow-logo-img {
+  width: 92%;
+  max-height: 78mm;
+  object-fit: contain;
+  display: block;
+  filter:
+    drop-shadow( 2px 4px 5px var(--emboss-shadow))
+    drop-shadow(-1px -2px 2px var(--emboss-hi));
+  opacity: 0.86;
+}
+
+/* SVG WOW inline — deboss via filter SVG */
+.wow-svg {
+  width: 96%;
+  max-width: 196mm;
+  max-height: 82mm;
+  display: block;
+  overflow: visible;
+}
+
+/* ── RANGE row ─────────────────────────────────────────────── */
+.range-row {
+  display: flex;
+  align-items: center;
+  width: calc(100% - 16mm);
+  gap: 6px;
+  margin-top: 0mm;
+  margin-bottom: 4.5mm;
+}
+
+.range-dec {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--gold) 20%,
+    var(--gold) 80%,
+    transparent
+  );
+  opacity: 0.55;
+}
+
+.range-label {
+  font-family: var(--f-display);
+  font-size: 4.5mm;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.55em;
+  color: var(--gold);
+  text-transform: uppercase;
+  padding: 0 5px;
+}
+
+/* ── Separator ─────────────────────────────────────────────── */
+.h-sep {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 1%,
+    var(--rule) 12%,
+    var(--rule) 88%,
+    transparent 99%
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   BODY — bottiglia + contenuto
+════════════════════════════════════════════════════════════ */
+.card-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Colonna sinistra ─────────────────────────────────────── */
+.col-left {
+  width: 44%;
+  display: flex;
+  align-items: stretch;
+  padding: 0 0 0 4mm;
+  position: relative;
+}
+
+/* Linee verticali + testo ruotato */
+.v-accent {
+  width: 7mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: stretch;
+  position: relative;
+  padding: 5mm 0 5mm;
+}
+
+.v-line-top {
+  width: 0.5px;
+  height: 12mm;
+  background: var(--rule);
+  flex-shrink: 0;
+}
+
+.v-line-main {
+  width: 0.5px;
+  flex: 1;
+  background: var(--rule);
+}
+
+.v-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  white-space: nowrap;
+  font-family: var(--f-body);
+  font-size: 2mm;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+/* Bottiglia */
+.bottle-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6mm 3mm 6mm 4mm;
+  /* contenitore fisso: normalizza tutte le bottiglie alla stessa altezza visiva */
+  height: 160mm;
+  max-height: 160mm;
+  overflow: hidden;
+}
+
+.bottle-img {
+  display: block;
+  max-height: 152mm;
+  max-width: 68mm;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center bottom;
+  filter:
+    drop-shadow(5px 10px 18px rgba(40, 25, 8, 0.32))
+    drop-shadow(1px 2px 4px rgba(40, 25, 8, 0.14));
+}
+
+/* Fallback bottiglia CSS (se immagine mancante) */
+.bottle-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.28;
+  gap: 0;
+}
+.bf-neck {
+  width: 16px;
+  height: 52px;
+  background: var(--ink-medium);
+  border-radius: 3px 3px 0 0;
+}
+.bf-shoulder {
+  width: 36px;
+  height: 12px;
+  background: var(--ink-medium);
+  clip-path: polygon(28% 0%, 72% 0%, 100% 100%, 0% 100%);
+}
+.bf-body {
+  width: 52px;
+  height: 108px;
+  background: var(--ink-medium);
+  border-radius: 0 0 3px 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bf-label {
+  background: var(--paper-warm);
+  width: 40px;
+  padding: 5px 3px;
+  text-align: center;
+  font-size: 5px;
+  line-height: 1.4;
+  color: var(--ink-dark);
+}
+
+/* ── Colonna destra ───────────────────────────────────────── */
+.col-right {
+  width: 56%;
+  padding: 7mm 7mm 5mm 5mm;
+  border-left: 0.5px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Produttore */
+/*  {{producer_name}}  */
+.producer-name {
+  font-family: var(--f-body);
+  font-size: 2.5mm;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-mid);
+  font-weight: 500;
+  margin-bottom: 2.2mm;
+}
+
+/* Nome vino */
+/*  {{wine_name}}  */
+.wine-name {
+  font-family: var(--f-display);
+  font-size: 9.8mm;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink-dark);
+  line-height: 1.10;
+  letter-spacing: -0.01em;
+  margin-bottom: 3.5mm;
+}
+
+/* Denominazione */
+/*  {{denomination}}  */
+.denomination {
+  font-family: var(--f-body);
+  font-size: 3.0mm;
+  color: var(--ink-medium);
+  margin-bottom: 0.8mm;
+  font-weight: 400;
+}
+
+/* Codice vino */
+/*  {{wine_code}}  */
+.wine-code {
+  font-family: var(--f-body);
+  font-size: 2.8mm;
+  color: var(--ink-light);
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+
+/* Regola sezione */
+.rule {
+  width: 100%;
+  height: 0.5px;
+  background: var(--rule);
+  margin: 3mm 0;
+}
+
+/* Etichette sezione (PERCHÉ È STATO SCELTO, etc.) */
+.sec-label {
+  font-family: var(--f-body);
+  font-size: 2.3mm;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 2mm;
+}
+
+/* Testo sezione */
+.sec-text {
+  font-family: var(--f-body);
+  font-size: 3.15mm;
+  line-height: 1.58;
+  color: var(--ink-dark);
+  font-weight: 400;
+}
+
+/* Lista specifiche */
+/*  {{grapes}} {{aging}} {{serving_temp}} {{potential}} {{music_mood}}  */
+.specs {
+  list-style: none;
+  font-family: var(--f-body);
+  font-size: 3.0mm;
+  line-height: 1.72;
+  color: var(--ink-dark);
+  font-weight: 400;
+}
+
+.specs li::before {
+  content: none;
+}
+
+/* WOW Experience row */
+.wow-exp-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 5mm;
+  flex: 1;
+  align-self: flex-end;
+  width: 100%;
+  margin-top: 1mm;
+}
+
+.qr-caption {
+  flex: 1;
+  font-family: var(--f-body);
+  font-size: 2.85mm;
+  line-height: 1.55;
+  color: var(--ink-medium);
+  font-style: italic;
+  font-weight: 300;
+}
+
+.qr-box {
+  flex-shrink: 0;
+}
+
+/*  PLACEHOLDER QR: {{qr_image_url}}  */
+.qr-img {
+  display: block;
+  max-width: 21mm;
+  max-height: 30mm;
+  width: auto;
+  height: auto;
+  border: 0.5px solid rgba(90,70,30,0.25);
+  object-fit: contain;
+  background: white;
+}
+
+/* ════════════════════════════════════════════════════════════
+   FOOTER
+════════════════════════════════════════════════════════════ */
+.card-footer {
+  flex-shrink: 0;
+  padding: 0 8mm 5mm;
+}
+
+.footer-rule {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 1%,
+    var(--rule) 12%,
+    var(--rule) 88%,
+    transparent 99%
+  );
+  margin-bottom: 2mm;
+}
+
+.footer-ornament {
+  text-align: center;
+  font-size: 3.2mm;
+  color: var(--gold-mid);
+  letter-spacing: 0.2em;
+  margin-bottom: 2.5mm;
+  opacity: 0.7;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+}
+
+.footer-fill { flex: 1; }
+
+/* Squillari wordmark */
+/*  {{squillari_logo_url}}  */
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.sq-prefix {
+  font-family: var(--f-body);
+  font-size: 2.8mm;
+  font-weight: 400;
+  color: var(--ink-medium);
+  letter-spacing: 0.08em;
+}
+
+.sq-name {
+  font-family: var(--f-display);
+  font-size: 7mm;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-dark);
+  letter-spacing: 0.01em;
+  margin-top: 0.3mm;
+}
+
+/* Logo immagine Squillari (opzionale) */
+.sq-logo-img {
+  max-height: 12mm;
+  max-width: 40mm;
+  object-fit: contain;
+}
+
+/* Emblema circolare */
+/*  {{squillari_logo_url}} (versione emblem)  */
+.footer-emblem {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.emblem-img {
+  width: 14mm;
+  height: 14mm;
+  object-fit: contain;
+}
+
+.emblem-css {
+  width: 14mm;
+  height: 14mm;
+  border: 1.2px solid var(--gold-mid);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  opacity: 0.7;
+}
+
+.emblem-css::after {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  border: 0.5px solid var(--gold-mid);
+  border-radius: 50%;
+}
+
+.emblem-css span {
+  font-family: var(--f-display);
+  font-size: 5.5mm;
+  color: var(--gold-mid);
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+/* ════════════════════════════════════════════════════════════
+   PRINT
+════════════════════════════════════════════════════════════ */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    display: block;
+  }
+
+  .card {
+    box-shadow: none;
+    width: 210mm;
+    min-height: 297mm;
+    page-break-after: always;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 680px) {
+  html, body {
+    padding: 0;
+    display: block;
+    background: var(--paper);
+  }
+
+  .card {
+    width: 100vw;
+    min-height: 100vh;
+    box-shadow: none;
+  }
+
+  .card-body {
+    flex-direction: column;
+  }
+
+  .col-left {
+    width: 100%;
+    height: 58vw;
+    padding: 3vw;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .v-accent { display: none; }
+
+  .bottle-area {
+    padding: 3vw;
+    width: 100%;
+    height: 100%;
+  }
+
+  .bottle-img { max-height: 52vw; }
+
+  .col-right {
+    width: 100%;
+    border-left: none;
+    padding: 6vw;
+  }
+
+  .wine-name { font-size: min(8.5vw, 9.8mm); }
+  .sec-text  { font-size: min(4vw, 3.15mm); }
+
+  .wow-svg {
+    max-height: 28vw;
+  }
+}
+
+/* ── VOTO QR section ──────────────────────────────────── */
+.qr-vote-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2mm;
+}
+
+.vote-cta {
+  display: inline-block;
+  width: fit-content;
+  padding: 2.5mm 6mm;
+  background: var(--gold);
+  border: 1px solid var(--gold);
+  color: var(--paper-warm);
+  font-family: var(--f-body);
+  font-size: 3mm;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 700;
+  transition: background 0.2s, color 0.2s;
+}
+.vote-cta:hover {
+  background: var(--ink-dark);
+  border-color: var(--ink-dark);
+  color: var(--paper-warm);
+}
+
+/* REVIEW_REQUIRED — QR placeholder border */
+.qr-img.placeholder {
+  border: 1px dashed var(--gold-mid);
+  opacity: 0.45;
+}
