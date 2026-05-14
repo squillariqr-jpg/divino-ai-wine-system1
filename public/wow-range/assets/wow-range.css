@@ -157,40 +157,40 @@ body {
 
 .producer-name {
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
   font-weight: 600;
-  letter-spacing: 2.5px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--ink-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 15px;
 }
 
 .wine-title {
   font-family: var(--font-serif);
-  font-size: 38px;
+  font-size: 46px; /* Increased from 38px */
   font-weight: 400;
-  line-height: 1.05;
+  line-height: 1.1;
   color: var(--ink-primary);
   letter-spacing: -0.5px;
 }
 
 .text-block {
-  margin-bottom: 25px;
+  margin-bottom: 30px;
 }
 
 .block-label {
   font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 12px; /* Increased from 9px */
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   color: var(--ink-secondary);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .block-copy {
   font-family: var(--font-serif);
-  font-size: 14px;
+  font-size: 18px; /* Increased from 14px */
   line-height: 1.6;
   color: var(--ink-primary);
 }
@@ -203,20 +203,20 @@ body {
 .spec-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--ink-faint);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 14px; /* Increased from 11px */
 }
 
 .spec-key {
   color: var(--ink-secondary);
-  font-weight: 400;
+  font-weight: 500; /* Increased weight */
 }
 
 .spec-val {
   color: var(--ink-primary);
-  font-weight: 500;
+  font-weight: 600; /* Increased weight */
   text-align: right;
 }
 
@@ -227,18 +227,18 @@ body {
   justify-content: space-between;
   align-items: flex-end;
   border-top: 1px solid var(--ink-primary); /* Heavy editorial line to ground it */
-  padding-top: 20px;
+  padding-top: 25px;
 }
 
 .qr-vault {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
 .qr-img {
-  width: 60px;
-  height: 60px;
+  width: 75px; /* Increased from 60px */
+  height: 75px;
   mix-blend-mode: multiply;
   opacity: 0.85; /* Soften the digital harshness */
 }
@@ -246,13 +246,13 @@ body {
 .qr-meta {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 }
 
 .qr-lbl {
   font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: 600;
+  font-size: 13px; /* Increased from 9px */
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--ink-primary);
@@ -260,15 +260,15 @@ body {
 
 .qr-sub {
   font-family: var(--font-serif);
-  font-size: 11px;
+  font-size: 15px; /* Increased from 11px */
   color: var(--ink-secondary);
   font-style: italic;
 }
 
 .seal-text {
   font-family: var(--font-sans);
-  font-size: 8px;
-  font-weight: 500;
+  font-size: 11px; /* Increased from 8px */
+  font-weight: 600;
   letter-spacing: 2px;
   color: var(--ink-secondary);
   text-transform: uppercase;
