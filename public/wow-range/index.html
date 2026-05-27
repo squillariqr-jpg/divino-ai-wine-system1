@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260527b" />
+    <link rel="stylesheet" href="styles.css?v=20260528" />
   </head>
   <body>
     <div class="ambient-glow"></div>
@@ -22,55 +22,92 @@
 
       <!-- Titolo e Claim -->
       <div class="form-card title-card">
-        <h1>WOW RANGE 🍷🔍</h1>
+        <div class="brand-seal" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M20 9h24l-3 19a9 9 0 0 1-18 0z" />
+            <path d="M23 23h18M32 37v13M24 54h16" />
+          </svg>
+        </div>
+        <div>
+          <h1>WOW RANGE</h1>
+          <p>Tu assaggi. Tu voti. Tu scegli.</p>
+        </div>
       </div>
 
       <!-- Il sistema WOW RANGE -->
       <section class="form-card system-card" aria-labelledby="sistema-title">
-        <span class="section-kicker">IL SISTEMA WOW RANGE</span>
-        <h2 id="sistema-title">Tu assaggi. Tu voti. Tu scegli.</h2>
-        <p>Una selezione di vini entra in prova nelle Enoteche Squillari. Le preferenze raccolte aiutano a decidere quali etichette meritano di restare in assortimento.</p>
+        <div class="system-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M32 7l7.2 16.6L57 25.4 43.5 37.2 47.4 55 32 45.8 16.6 55l3.9-17.8L7 25.4l17.8-1.8z" />
+          </svg>
+        </div>
+        <div>
+          <span class="section-kicker">IL SISTEMA WOW RANGE</span>
+          <h2 id="sistema-title">Il vino lo scegli tu</h2>
+          <p>Le etichette piu votate restano in assortimento.</p>
+        </div>
       </section>
 
       <!-- Come funziona -->
       <section class="form-card steps-card" aria-labelledby="come-funziona-title">
         <span class="section-kicker">COME FUNZIONA</span>
-        <h2 id="come-funziona-title">Tre passi, una scelta reale</h2>
+        <h2 id="come-funziona-title">3 passi. 1 scelta.</h2>
         <ol class="steps">
-          <li><span class="step-number">01</span><div><strong>Assaggia</strong><p>Scopri i vini in prova nel tuo punto vendita.</p></div></li>
-          <li><span class="step-number">02</span><div><strong>Vota</strong><p>Apri la galleria e indica il vino che preferisci.</p></div></li>
-          <li><span class="step-number">03</span><div><strong>Influenza la selezione</strong><p>I vini piu apprezzati potranno restare in assortimento.</p></div></li>
+          <li>
+            <span class="step-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48"><path d="M15 6h18l-2 14a7 7 0 0 1-14 0zM18 17h12M24 27v10M18 41h12" /></svg>
+            </span>
+            <strong>Assaggia</strong>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48"><path d="M10 8h28v32H10zM16 24l6 6 11-14" /></svg>
+            </span>
+            <strong>Vota</strong>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48"><path d="M24 7l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z" /></svg>
+            </span>
+            <strong>Scegli</strong>
+          </li>
         </ol>
       </section>
 
 
 
       <!-- Le Nostre Enoteche -->
-      <div class="form-card text-card" style="padding: 1.5rem 2.5rem; text-align: left;">
-        <h2 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--gold);">LE NOSTRE ENOTECHE</h2>
-        <ul style="list-style: none; padding: 0; margin: 0; color: var(--text); font-size: 1rem; line-height: 1.6;">
-          <li style="margin-bottom: 0.8rem;">
-            <strong>Centro:</strong> Via Malta, 19r – 16121 Genova<br>
-            <span style="font-size: 0.9rem; opacity: 0.8;">Tel: +39 010 565229</span>
-          </li>
-          <li style="margin-bottom: 0.8rem;">
-            <strong>Sestri Ponente:</strong> Via Sestri, 178r – 16154 Genova<br>
-            <span style="font-size: 0.9rem; opacity: 0.8;">Tel: +39 010 4228133</span>
-          </li>
-          <li style="margin-bottom: 0.8rem;">
-            <strong>Sampierdarena:</strong> Via Cantore, 266r – 16149 Genova<br>
-            <span style="font-size: 0.9rem; opacity: 0.8;">Tel: +39 010 5298570</span>
-          </li>
-          <li style="margin-bottom: 0.8rem;">
-            <strong>Albaro:</strong> Via Trento, 79r – 16145 Genova<br>
-            <span style="font-size: 0.9rem; opacity: 0.8;">Tel: +39 010 364454</span>
+      <section class="form-card text-card stores-card" aria-labelledby="stores-title">
+        <span class="section-kicker">DOVE TROVARLI</span>
+        <h2 id="stores-title">Le nostre enoteche</h2>
+        <ul class="stores-grid">
+          <li>
+            <strong>Centro</strong>
+            <span>Via Malta, 19r</span>
+            <small>010 565229</small>
           </li>
           <li>
-            <strong>De Ferrari:</strong> Via Vernazza, 113r – 16121 Genova<br>
-            <span style="font-size: 0.9rem; opacity: 0.8;">Tel: +39 010 4712128</span>
+            <strong>Sestri Ponente</strong>
+            <span>Via Sestri, 178r</span>
+            <small>010 4228133</small>
+          </li>
+          <li>
+            <strong>Sampierdarena</strong>
+            <span>Via Cantore, 266r</span>
+            <small>010 5298570</small>
+          </li>
+          <li>
+            <strong>Albaro</strong>
+            <span>Via Trento, 79r</span>
+            <small>010 364454</small>
+          </li>
+          <li>
+            <strong>De Ferrari</strong>
+            <span>Via Vernazza, 113r</span>
+            <small>010 4712128</small>
           </li>
         </ul>
-      </div>
+      </section>
 
       <!-- I vini in prova -->
       <section class="form-card wines-card" aria-labelledby="vini-title">
@@ -92,8 +129,7 @@
       <!-- CTA Finale -->
       <div class="form-card section--cta">
         <h2>La Tua Voce Conta</h2>
-        <p>Ogni voto conta. Il tuo preferito potrebbe diventare parte dell'assortimento permanente.</p>
-        <p class="cta-disclaimer">Continua per vedere e votare i vini WOW RANGE.</p>
+        <p class="cta-disclaimer">Scegli il tuo preferito.</p>
         <a class="btn btn--gold" href="/divino-ai-wine-system1/public/wow-range/index_gallery.html" aria-label="Vai alla galleria dei vini WOW RANGE">
           Vota Subito
         </a>
