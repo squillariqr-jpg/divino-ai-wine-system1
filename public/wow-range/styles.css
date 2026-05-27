@@ -117,42 +117,60 @@ p {
   line-height: 1.58;
 }
 
-.image-card {
-  min-height: 128px;
-}
-
-.media-placeholder {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 9px;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(199, 154, 66, 0.13), transparent 44%),
-    linear-gradient(115deg, var(--night-card), var(--night-soft));
-}
-
-.media-placeholder::after {
-  content: '';
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
-  width: 44px;
-  height: 1px;
-  background: var(--gold);
-}
-
-.media-placeholder__eyebrow {
+.section-kicker {
+  display: block;
+  margin-bottom: 10px;
   color: var(--gold);
   font-size: 0.72rem;
   letter-spacing: 0.28em;
 }
 
-.media-placeholder p {
-  max-width: 28ch;
-  margin: 0;
+.system-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(199, 154, 66, 0.15), transparent 46%),
+    linear-gradient(115deg, var(--night-card), var(--night-soft));
+}
+
+.system-card p {
+  margin-bottom: 0;
   color: var(--paper);
-  font-family: var(--display);
-  font-size: 1.15rem;
+}
+
+.steps {
+  display: grid;
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 13px;
+  align-items: start;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.step-number {
+  padding-top: 3px;
+  color: var(--gold);
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+}
+
+.steps strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--paper);
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+.steps p {
+  margin: 0;
+  font-size: 0.92rem;
   line-height: 1.42;
 }
 
@@ -169,8 +187,40 @@ p {
   color: var(--muted);
 }
 
-.wine-grid:empty {
-  display: none;
+.wine-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.wine-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 14px 13px;
+  border: 1px solid rgba(199, 154, 66, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.wine-item span {
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.wine-item strong {
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 1.08rem;
+  font-weight: 400;
+  line-height: 1.28;
+}
+
+.wine-item small {
+  color: var(--muted);
+  font-size: 0.77rem;
+  letter-spacing: 0.06em;
 }
 
 .section--cta {

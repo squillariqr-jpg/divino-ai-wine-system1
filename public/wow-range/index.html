@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260527" />
+    <link rel="stylesheet" href="styles.css?v=20260527b" />
   </head>
   <body>
     <div class="ambient-glow"></div>
@@ -25,17 +25,23 @@
         <h1>WOW RANGE 🍷🔍</h1>
       </div>
 
-      <!-- Approfondimento sistema -->
-      <div class="form-card image-card media-placeholder" role="img" aria-label="Come funziona WOW RANGE">
-        <span class="media-placeholder__eyebrow">WOW RANGE</span>
-        <p>Assaggia. Vota. Aiuta a scegliere la prossima selezione.</p>
-      </div>
+      <!-- Il sistema WOW RANGE -->
+      <section class="form-card system-card" aria-labelledby="sistema-title">
+        <span class="section-kicker">IL SISTEMA WOW RANGE</span>
+        <h2 id="sistema-title">Tu assaggi. Tu voti. Tu scegli.</h2>
+        <p>Una selezione di vini entra in prova nelle Enoteche Squillari. Le preferenze raccolte aiutano a decidere quali etichette meritano di restare in assortimento.</p>
+      </section>
 
-      <!-- Approfondimento voto -->
-      <div class="form-card image-card media-placeholder" role="img" aria-label="Il tuo voto conta">
-        <span class="media-placeholder__eyebrow">LA TUA SCELTA</span>
-        <p>I vini piu apprezzati potranno restare in assortimento.</p>
-      </div>
+      <!-- Come funziona -->
+      <section class="form-card steps-card" aria-labelledby="come-funziona-title">
+        <span class="section-kicker">COME FUNZIONA</span>
+        <h2 id="come-funziona-title">Tre passi, una scelta reale</h2>
+        <ol class="steps">
+          <li><span class="step-number">01</span><div><strong>Assaggia</strong><p>Scopri i vini in prova nel tuo punto vendita.</p></div></li>
+          <li><span class="step-number">02</span><div><strong>Vota</strong><p>Apri la galleria e indica il vino che preferisci.</p></div></li>
+          <li><span class="step-number">03</span><div><strong>Influenza la selezione</strong><p>I vini piu apprezzati potranno restare in assortimento.</p></div></li>
+        </ol>
+      </section>
 
 
 
@@ -66,11 +72,22 @@
         </ul>
       </div>
 
-      <!-- I 9 Vini in Gara -->
-      <div class="form-card">
-        <h2>I Primi 9 Vini in Gara</h2>
-        <div id="viniInGara" class="wine-grid"></div>
-      </div>
+      <!-- I vini in prova -->
+      <section class="form-card wines-card" aria-labelledby="vini-title">
+        <span class="section-kicker">LA SELEZIONE</span>
+        <h2 id="vini-title">I vini in prova</h2>
+        <div class="wine-grid">
+          <article class="wine-item"><span>Dosio Vigneti</span><strong>&lsquo;Langhe Nebbiolo Baril&agrave; DOC&rsquo;</strong><small>Piemonte &middot; Nebbiolo</small></article>
+          <article class="wine-item"><span>Nitti</span><strong>&lsquo;Negroamaro Ros&eacute; IGT&rsquo;</strong><small>Puglia &middot; Negroamaro</small></article>
+          <article class="wine-item"><span>Cantine Belisario</span><strong>&lsquo;Marche Rosato IGT&rsquo;</strong><small>Marche &middot; Sangiovese &middot; Lacrima</small></article>
+          <article class="wine-item"><span>Fattoria dei Barbi</span><strong>&lsquo;Ciliegiolo Toscana IGT&rsquo;</strong><small>Toscana &middot; Ciliegiolo &middot; Senza Solfiti Aggiunti</small></article>
+          <article class="wine-item"><span>Dosio Vigneti</span><strong>&lsquo;Roero Arneis DOCG&rsquo;</strong><small>Piemonte &middot; Arneis</small></article>
+          <article class="wine-item"><span>Brugnano</span><strong>&lsquo;Coraline Frappato Ros&eacute; IGT&rsquo;</strong><small>Sicilia &middot; Frappato</small></article>
+          <article class="wine-item"><span>Brugnano</span><strong>&lsquo;K&ugrave;e Inzolia Viognier IGT&rsquo;</strong><small>Sicilia &middot; Inzolia &middot; Viognier</small></article>
+          <article class="wine-item"><span>Cantine Belisario</span><strong>&lsquo;Nadir Spumante Brut&rsquo;</strong><small>Marche &middot; Verdicchio &middot; Chardonnay</small></article>
+          <article class="wine-item"><span>La Torre</span><strong>&lsquo;Chardonnay Barrique DOC&rsquo;</strong><small>Piemonte &middot; Chardonnay</small></article>
+        </div>
+      </section>
 
       <!-- CTA Finale -->
       <div class="form-card section--cta">
@@ -80,7 +97,6 @@
         <a class="btn btn--gold" href="/divino-ai-wine-system1/public/wow-range/index_gallery.html" aria-label="Vai alla galleria dei vini WOW RANGE">
           Vota Subito
         </a>
-        <p class="cta-url">https://squillariqr-jpg.github.io/divino-ai-wine-system1/public/wow-range/index_gallery.html</p>
       </div>
 
     </main>
