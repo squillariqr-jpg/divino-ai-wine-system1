@@ -2,6 +2,8 @@
 
 This implementation is local/test-only. It uses a small JSON-RPC MCP boundary and keeps `WBOSReadOnlyApplicationGateway` as the sole execution authority.
 
+`OFFICIAL_MCP_CONFORMANCE: PARTIAL`. The local prototype passes its security/unit checks, but independent review found lifecycle, HTTP negotiation, Origin and standard session-header gaps against MCP 2025-06-18. See `RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md`.
+
 ## Implemented
 
 - local MCP server entrypoint;
@@ -15,6 +17,8 @@ This implementation is local/test-only. It uses a small JSON-RPC MCP boundary an
 - sanitized MCP error mapping and boundary audit;
 - security headers, no wildcard CORS and no public bind;
 - 38 independent tests.
+
+The 55 repository tests cover the gateway and local boundary. They do not substitute for an official MCP client/Inspector interoperability run.
 
 ## Local test run
 
