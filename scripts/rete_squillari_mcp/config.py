@@ -18,6 +18,7 @@ class MCPConfig:
     session_ttl_seconds: int = 900
     clock_skew_seconds: int = 5
     source_mode: str = "DEMO"
+    supported_protocol_versions: tuple = ("2025-06-18",)
 
     @classmethod
     def from_env(cls, transport="STDIO"):

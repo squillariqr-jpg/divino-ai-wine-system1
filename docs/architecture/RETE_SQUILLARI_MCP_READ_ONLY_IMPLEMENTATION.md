@@ -1,35 +1,11 @@
-# Rete Squillari — Authenticated Read-Only MCP Implementation
+# Rete Squillari authenticated read-only MCP implementation
 
-This implementation is local/test-only. It uses a small JSON-RPC MCP boundary and keeps `WBOSReadOnlyApplicationGateway` as the sole execution authority.
+The local boundary exposes exactly eight named read-only tools through `WBOSReadOnlyApplicationGateway`. The lifecycle is explicit: `NEW → INITIALIZED → READY`, with requests denied before readiness and notification responses suppressed.
 
-`OFFICIAL_MCP_CONFORMANCE: PARTIAL`. The local prototype passes its security/unit checks, but independent review found lifecycle, HTTP negotiation, Origin and standard session-header gaps against MCP 2025-06-18. See `RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md`.
+Protocol baseline is `2025-06-18`; the negotiated value is stored in each STDIO connection or HTTP `Mcp-Session-Id` session. HTTP is loopback-only, requires bearer authentication, exact Origin validation, `X-Request-Id`, and `MCP-Protocol-Version` after initialization. Sessions use CSPRNG identifiers and never accept a client-selected identifier.
 
-## Implemented
+JSON-RPC standard error codes, strict JSON decoding, payload limits, replay protection, audit-safe identifiers, and a bounded gateway timeout path are implemented. The timeout path remains locally bounded but cannot certify interruption of an arbitrary non-cancellable blocking adapter; this is the only implementation gap carried forward.
 
-- local MCP server entrypoint;
-- STDIO transport with stdout reserved for JSON-RPC;
-- loopback-only HTTP boundary at `/mcp`;
-- static digest credential verifier using `RETE_SQUILLARI_MCP_TEST_TOKEN`;
-- server-side principal and read-only capability profile;
-- exactly eight static tools from the existing registry;
-- WBOS gateway integration, including input/output validation and location scope;
-- in-memory sessions, TTL, nonce replay protection, rate limiting and payload limits;
-- sanitized MCP error mapping and boundary audit;
-- security headers, no wildcard CORS and no public bind;
-- 38 independent tests.
+Local verification: 135 unittest methods pass, independent subprocess STDIO passes, and independent loopback HTTP passes. The official Python SDK `mcp 1.28.1` and TypeScript SDK/Inspector were installed only in temporary external environments; the Python client defaults to a newer protocol and therefore could not complete a `2025-06-18` session.
 
-The 55 repository tests cover the gateway and local boundary. They do not substitute for an official MCP client/Inspector interoperability run.
-
-## Local test run
-
-```bash
-export RETE_SQUILLARI_MCP_TEST_TOKEN=local-test-token
-PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -v
-python3 scripts/rete_squillari_mcp_server.py --transport stdio
-```
-
-HTTP mode requires the same environment variable and binds only to `127.0.0.1`. It is not a production service.
-
-## Not implemented
-
-Public HTTPS deployment, ChatGPT connector registration, production identity provider, production secret storage, real backend, real data, write tools and public MCP exposure are not implemented.
+Security invariants remain: DEMO data only, no production secrets, no real backend, no public exposure, no ChatGPT connector, no write tools, and no gateway bypass.

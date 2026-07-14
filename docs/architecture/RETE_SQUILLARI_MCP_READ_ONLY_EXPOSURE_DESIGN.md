@@ -2,6 +2,8 @@
 
 The repository now contains a local/test-only MCP boundary implementation. It does not expose a public endpoint, connector, production authentication or production data access.
 
+The hardened local boundary is restricted to `127.0.0.1`/`::1`, uses the `2025-06-18` baseline, explicit lifecycle state, authenticated HTTP sessions, exact loopback Origin policy, replay identifiers, and read-only gateway dispatch. Independent STDIO and loopback HTTP sequences pass; timeout cancellation proof remains open.
+
 ## Boundary
 
 ```text

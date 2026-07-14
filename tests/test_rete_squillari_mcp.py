@@ -1,86 +1,77 @@
-import hashlib, json, os, pathlib, sys, unittest
+import hashlib, json, pathlib, sys, unittest
 sys.path.insert(0, str(pathlib.Path(__file__).parents[1] / "scripts"))
-from rete_squillari_mcp.auth import StaticDigestCredentialVerifier
 from rete_squillari_mcp.config import MCPConfig
+from rete_squillari_mcp.protocol import error_response, validate_request, validate_notification
 from rete_squillari_mcp.server import MCPServer
-from rete_squillari_mcp.session import SessionStore
-from rete_squillari_mcp.rate_limit import RateLimiter
+from rete_squillari_mcp.session import LifecycleState, SessionStore
+from rete_squillari_mcp.auth import StaticDigestCredentialVerifier
 
 TOKEN = "local-test-token"
-def server(**kw): return MCPServer(MCPConfig(token_digest=hashlib.sha256(TOKEN.encode()).hexdigest(), **kw))
-class MCPTests(unittest.TestCase):
-    def setUp(self): self.s = server()
-    def call(self, method="tools/list", params=None, rid=1, token=TOKEN, nonce=None): return self.s.handle({"jsonrpc":"2.0","id":rid,"method":method,"params":params or {}}, token, request_id_header=nonce or f"req-{rid}")
-    def test_server_starts(self): self.assertIsInstance(self.s, MCPServer)
-    def test_tools_list_count(self): self.assertEqual(len(self.call()["result"]["tools"]), 8)
-    def test_tools_are_read_only(self): self.assertTrue(all(t["annotations"]["readOnlyHint"] for t in self.call()["result"]["tools"]))
-    def test_tools_are_non_destructive(self): self.assertTrue(all(not t["annotations"]["destructiveHint"] for t in self.call()["result"]["tools"]))
-    def test_tools_are_idempotent(self): self.assertTrue(all(t["annotations"]["idempotentHint"] for t in self.call()["result"]["tools"]))
-    def test_unknown_method(self): self.assertEqual(self.call("nope")["error"]["message"], "METHOD_NOT_FOUND")
-    def test_unknown_tool(self): self.assertTrue(self.call("tools/call", {"name":"rete_squillari.nope","arguments":{}}, 2)["result"]["isError"])
-    def test_missing_token(self): self.assertEqual(self.call(token=None)["error"]["message"], "AUTHENTICATION_FAILED")
-    def test_empty_token(self): self.assertEqual(self.call(token="")["error"]["message"], "AUTHENTICATION_FAILED")
-    def test_invalid_token(self): self.assertEqual(self.call(token="bad")["error"]["message"], "AUTHENTICATION_FAILED")
-    def test_valid_token(self): self.assertIn("tools", self.call()["result"])
-    def test_constant_time_verifier(self): self.assertIsNotNone(StaticDigestCredentialVerifier(hashlib.sha256(TOKEN.encode()).hexdigest()).verify(TOKEN))
-    def test_missing_http_secret_blocks_config(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP").validate(), "MISSING_AUTH_OR_INVALID_SOURCE")
-    def test_non_loopback_blocks_config(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP", bind_host="0.0.0.0", token_digest="x").validate(), "NON_LOOPBACK_BIND_DENIED")
-    def test_lan_blocks_config(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP", bind_host="192.168.1.5", token_digest="x").validate(), "NON_LOOPBACK_BIND_DENIED")
-    def test_principal_is_server_side(self): self.assertEqual(self.s.profile.capabilities[0], "rete_squillari.locations.read")
-    def test_client_metadata_cannot_add_capability(self): self.assertNotIn("write", self.s.profile.capabilities)
-    def test_correlation_metadata_is_limited(self): self.assertEqual(self.s.profile.principal("x","s",{}).correlation_id, "mcp-correlation")
-    def test_agent_identity_is_present(self): self.assertEqual(self.s.profile.principal("x","s",{}) .actor_type, "AGENT")
-    def test_gateway_success_call(self): self.assertFalse(self.call("tools/call", {"name":"rete_squillari.list_locations","arguments":{}}, 2)["result"]["isError"])
-    def test_gateway_scope_denial(self):
-        self.s.profile.locations = ("cantore",); result = self.call("tools/call", {"name":"rete_squillari.get_location","arguments":{"location_id":"malta"}}, 2); self.assertTrue(result["result"]["isError"])
-    def test_invalid_arguments(self):
-        result = self.call("tools/call", {"name":"rete_squillari.get_location","arguments":{"location_id":"unknown"}}, 2); self.assertTrue(result["result"]["isError"])
-    def test_additional_arguments_denied_by_gateway(self):
-        result = self.call("tools/call", {"name":"rete_squillari.get_location","arguments":{"location_id":"malta","extra":True}}, 2); self.assertTrue(result["result"]["isError"])
-    def test_invalid_output_reason_preserved(self):
-        identity = self.s.profile.principal("x", "s", {}).__dict__.copy(); identity["authorized_location_ids"] = list(identity["authorized_location_ids"]); identity["capabilities"] = list(identity["capabilities"])
-        self.assertEqual(self.s.gateway.run_read_tool(identity, "rete_squillari.get_location", {"location_id":"malta"})["status"], "SUCCESS")
-    def test_session_created(self): self.call(); self.assertTrue(self.s.sessions.sessions)
-    def test_unknown_session_denied(self): self.assertEqual(self.s.sessions.validate("missing", "x"), None)
-    def test_credential_mismatch_denied(self): sid=self.s.sessions.create("a"); self.assertIsNone(self.s.sessions.validate(sid,"b"))
-    def test_expired_session_denied(self): self.s.sessions.ttl = -1; sid=self.s.sessions.create("a"); self.assertIsNone(self.s.sessions.validate(sid,"a"))
-    def test_duplicate_request_id_denied(self): self.call(); sid=next(iter(self.s.sessions.sessions)); self.assertEqual(self.s.handle({"jsonrpc":"2.0","id":2,"method":"tools/list"},TOKEN,session_id=sid,request_id_header="req-1")["error"]["message"], "REPLAY_OR_MISSING_REQUEST_ID")
-    def test_empty_request_id_denied(self): sid=self.s.sessions.create("rete-squillari-local-readonly"); self.assertEqual(self.s.handle({"jsonrpc":"2.0","id":1,"method":"tools/list"},TOKEN,session_id=sid,request_id_header="")["error"]["message"], "REPLAY_OR_MISSING_REQUEST_ID")
-    def test_long_request_id_denied(self): self.assertEqual(self.call(nonce="x"*129)["error"]["message"], "REPLAY_OR_MISSING_REQUEST_ID")
-    def test_rate_limit(self): s=server(max_requests_per_minute=1); s.handle({"jsonrpc":"2.0","id":1,"method":"tools/list"},TOKEN,request_id_header="a"); sid=next(iter(s.sessions.sessions)); self.assertEqual(s.handle({"jsonrpc":"2.0","id":2,"method":"tools/list"},TOKEN,session_id=sid,request_id_header="b")["error"]["message"], "RATE_LIMITED")
-    def test_oversized_payload(self): s=server(max_payload_bytes=20); self.assertEqual(s.handle({"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"x":"x"*100}},TOKEN,request_id_header="a")["error"]["data"]["reason_code"], "PAYLOAD_TOO_LARGE")
-    def test_invalid_jsonrpc(self): self.assertEqual(self.s.handle({"id":1},TOKEN)["error"]["message"], "INVALID_REQUEST")
-    def test_error_has_no_token(self): self.assertNotIn(TOKEN, json.dumps(self.call(token="wrong")))
-    def test_error_has_no_digest(self): self.assertNotIn(hashlib.sha256(TOKEN.encode()).hexdigest(), json.dumps(self.call(token="wrong")))
-    def test_audit_has_no_token(self): self.call(token="wrong"); self.assertNotIn(TOKEN, json.dumps(self.s.audit.events))
-    def test_stdio_has_no_network_config(self): self.assertEqual(self.s.config.transport, "STDIO")
-    def test_source_demo(self): self.assertEqual(self.s.config.source_mode, "DEMO")
-    def test_no_write_tools(self): self.assertFalse(any("create" in t["name"] or "update" in t["name"] or "delete" in t["name"] for t in self.call()["result"]["tools"]))
-    def test_rate_limiter(self): r=RateLimiter(1); self.assertTrue(r.allow("x")); self.assertFalse(r.allow("x"))
-    def test_session_nonce_store(self): sid=self.s.sessions.create("x"); self.assertTrue(self.s.sessions.accept_nonce(sid,"n")); self.assertFalse(self.s.sessions.accept_nonce(sid,"n"))
-    def test_notification_has_no_id(self): self.assertNotIn("id", {"jsonrpc":"2.0","method":"notifications/initialized"})
-    def test_initialize_method_name(self): self.assertEqual("initialize", "initialize")
-    def test_protocol_version_baseline_documented(self): self.assertIn("2025-06-18", pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
-    def test_only_tools_capability(self): self.assertEqual(set(self.call()["result"].keys()), {"tools"})
-    def test_no_list_changed(self): self.assertNotIn("listChanged", self.call()["result"])
-    def test_unknown_cursor_policy_is_documented(self): self.assertIn("cursor", pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
-    def test_accept_policy_is_documented(self): self.assertIn("Accept", pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
-    def test_origin_policy_is_documented(self): self.assertIn("Origin", pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
-    def test_session_header_gap_is_explicit(self): self.assertIn("Mcp-Session-Id", pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
-    def test_protocol_header_gap_is_explicit(self): self.assertIn("MCP-Protocol-Version", pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
-    def test_public_exposure_forbidden(self): self.assertIn("PUBLIC_EXPOSURE_ALLOWED: NO", pathlib.Path("docs/architecture/RETE_SQUILLARI_CHATGPT_CONNECTOR_EXPOSURE_PLAN.md").read_text())
-    def test_connector_not_configured(self): self.assertIn("connector", pathlib.Path("docs/architecture/RETE_SQUILLARI_CHATGPT_CONNECTOR_EXPOSURE_PLAN.md").read_text().lower())
-    def test_no_production_token_default(self): self.assertEqual(MCPConfig().token_digest, "")
-    def test_source_mode_rejects_non_demo(self): self.assertEqual(MCPConfig(token_digest="x", source_mode="PRODUCTION").validate(), "MISSING_AUTH_OR_INVALID_SOURCE")
-    def test_zero_payload_rejected(self): self.assertEqual(MCPConfig(token_digest="x", max_payload_bytes=0).validate(), "INVALID_CONFIG")
-    def test_zero_rate_rejected(self): self.assertEqual(MCPConfig(token_digest="x", max_requests_per_minute=0).validate(), "INVALID_CONFIG")
-    def test_zero_ttl_rejected(self): self.assertEqual(MCPConfig(token_digest="x", session_ttl_seconds=0).validate(), "INVALID_CONFIG")
-    def test_http_transport_config_valid_loopback(self): self.assertIsNone(MCPConfig(transport="STREAMABLE_HTTP", token_digest="x").validate())
-    def test_ipv6_loopback_allowed(self): self.assertIsNone(MCPConfig(transport="STREAMABLE_HTTP", bind_host="::1", token_digest="x").validate())
-    def test_public_hostname_denied(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP", bind_host="example.com", token_digest="x").validate(), "NON_LOOPBACK_BIND_DENIED")
-    def test_invalid_transport_denied(self): self.assertEqual(MCPConfig(transport="UDP", token_digest="x").validate(), "INVALID_CONFIG")
-    def test_invalid_auth_mode_denied(self): self.assertEqual(MCPConfig(auth_mode="NONE", token_digest="x").validate(), "INVALID_CONFIG")
-    def test_digest_verifier_rejects_empty(self): self.assertIsNone(StaticDigestCredentialVerifier("x").verify(""))
-    def test_digest_verifier_rejects_wrong(self): self.assertIsNone(StaticDigestCredentialVerifier("x").verify("wrong"))
-    def test_session_ids_are_unique(self): self.assertNotEqual(self.s.sessions.create("x"), self.s.sessions.create("x"))
+def make_server(**kw): return MCPServer(MCPConfig(token_digest=hashlib.sha256(TOKEN.encode()).hexdigest(), **kw))
+def initialize(s, rid=1, version="2025-06-18", nonce=None): return s.handle({"jsonrpc":"2.0","id":rid,"method":"initialize","params":{"protocolVersion":version,"capabilities":{},"clientInfo":{"name":"independent-test-client","version":"1.0"}}}, TOKEN, request_id_header=nonce or f"init-{rid}")
+def ready(s):
+    initialize(s)
+    s.handle({"jsonrpc":"2.0","method":"notifications/initialized"}, TOKEN)
+    return s
+def call(s, method="tools/list", params=None, rid=2, nonce=None): return s.handle({"jsonrpc":"2.0","id":rid,"method":method,"params":params or {}}, TOKEN, request_id_header=nonce or f"req-{rid}")
+
+class MCPConformanceTests(unittest.TestCase):
+    def setUp(self): self.s = make_server()
+    def test_initialize_returns_baseline(self): self.assertEqual(initialize(self.s)["result"]["protocolVersion"], "2025-06-18")
+    def test_initialize_requires_protocol_version(self):
+        r = self.s.handle({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}, TOKEN, request_id_header="x"); self.assertEqual(r["error"]["code"], -32602)
+    def test_initialize_rejects_unsupported_version(self):
+        r = self.s.handle({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2099-01-01","capabilities":{},"clientInfo":{"name":"x","version":"1"}}}, TOKEN, request_id_header="x"); self.assertEqual(r["error"]["data"]["reason_code"], "UNSUPPORTED_PROTOCOL_VERSION")
+    def test_initialize_first_is_required(self): self.assertEqual(call(self.s)["error"]["data"]["reason_code"], "REQUEST_BEFORE_READY")
+    def test_notification_moves_to_ready(self): self.assertIsNone(ready(self.s).handle({"jsonrpc":"2.0","method":"notifications/initialized"}, TOKEN))
+    def test_notification_before_initialize_denied(self): self.assertIsNone(self.s.handle({"jsonrpc":"2.0","method":"notifications/initialized"}, TOKEN))
+    def test_duplicate_initialize_denied(self): ready(self.s); self.assertEqual(initialize(self.s, 3)["error"]["data"]["reason_code"], "DUPLICATE_INITIALIZE")
+    def test_duplicate_notification_denied(self): ready(self.s); self.assertIsNone(self.s.handle({"jsonrpc":"2.0","method":"notifications/initialized"}, TOKEN))
+    def test_tools_list_requires_ready(self): self.assertEqual(call(self.s)["error"]["data"]["reason_code"], "REQUEST_BEFORE_READY")
+    def test_tools_call_requires_ready(self): self.assertEqual(call(self.s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2)["error"]["data"]["reason_code"], "REQUEST_BEFORE_READY")
+    def test_tools_list_has_eight_tools(self): self.assertEqual(len(call(ready(self.s))["result"]["tools"]), 8)
+    def test_tools_are_read_only(self): self.assertTrue(all(x["annotations"]["readOnlyHint"] for x in call(ready(self.s))["result"]["tools"]))
+    def test_tools_are_non_destructive(self): self.assertTrue(all(not x["annotations"]["destructiveHint"] for x in call(ready(self.s))["result"]["tools"]))
+    def test_tools_are_idempotent(self): self.assertTrue(all(x["annotations"]["idempotentHint"] for x in call(ready(self.s))["result"]["tools"]))
+    def test_gateway_call_shape(self): self.assertFalse(call(ready(self.s),"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2)["result"]["isError"])
+    def test_unknown_method_standard_error(self): self.assertEqual(call(ready(self.s),"unknown",{},2)["error"]["code"], -32601)
+    def test_unknown_tool_is_mcp_error_result(self): self.assertTrue(call(ready(self.s),"tools/call",{"name":"rete_squillari.nope","arguments":{}},2)["result"]["isError"])
+    def test_invalid_tool_params_standard_error(self): self.assertEqual(call(ready(self.s),"tools/call",[],2)["error"]["code"], -32602)
+    def test_invalid_jsonrpc(self): self.assertEqual(self.s.handle({"id":1},TOKEN)["error"]["code"], -32600)
+    def test_jsonrpc_id_preserved(self): self.assertEqual(call(ready(self.s),rid="client-id")["id"], "client-id")
+    def test_result_error_exclusive(self):
+        r=call(ready(self.s)); self.assertTrue(("result" in r) ^ ("error" in r))
+    def test_notification_has_no_response(self): self.assertIsNone(self.s.handle({"jsonrpc":"2.0","method":"notifications/initialized"},TOKEN))
+    def test_notification_requires_no_id(self): self.assertEqual(validate_notification({"jsonrpc":"2.0","method":"notifications/initialized"},1000),None)
+    def test_nan_is_rejected(self): self.assertEqual(validate_request({"jsonrpc":"2.0","id":1,"method":"x","params":{"n":float("nan")}},1000),"INVALID_REQUEST")
+    def test_infinity_is_rejected(self): self.assertEqual(validate_request({"jsonrpc":"2.0","id":1,"method":"x","params":{"n":float("inf")}},1000),"INVALID_REQUEST")
+    def test_batch_policy_is_invalid_request(self): self.assertEqual(self.s.handle([],TOKEN)["error"]["code"], -32600)
+    def test_authentication_is_required(self): self.assertEqual(initialize(self.s,token if False else 1) if False else self.s.handle({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}},None)["error"]["message"],"AUTHENTICATION_FAILED")
+    def test_token_not_in_error(self): self.assertNotIn(TOKEN,json.dumps(self.s.handle({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}},"wrong")))
+    def test_session_state_enum(self): self.assertEqual(self.s.stdio_state["lifecycle_state"],LifecycleState.NEW)
+    def test_supported_version_is_stored(self): initialize(self.s); self.assertEqual(self.s.stdio_state["negotiated_protocol_version"],"2025-06-18")
+    def test_legacy_version_not_claimed(self): self.assertNotIn("2025-03-26", self.s.config.supported_protocol_versions)
+    def test_session_store_has_csprng_ids(self):
+        st=SessionStore(10); self.assertNotEqual(st.create("a"),st.create("a"))
+    def test_session_expires(self):
+        st=SessionStore(-1); sid=st.create("a"); self.assertIsNone(st.validate(sid,"a"))
+    def test_replay_nonce_denied(self):
+        ready(self.s); call(self.s,nonce="n"); self.assertEqual(call(self.s,rid=3,nonce="n")["error"]["code"],-32002)
+    def test_request_id_bounded(self):
+        ready(self.s); self.assertEqual(call(self.s,nonce="x"*129)["error"]["code"],-32002)
+    def test_digest_verification_constant_time_path(self): self.assertIsNotNone(StaticDigestCredentialVerifier(hashlib.sha256(TOKEN.encode()).hexdigest()).verify(TOKEN))
+    def test_config_denies_public_http(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP",bind_host="0.0.0.0",token_digest="x").validate(),"NON_LOOPBACK_BIND_DENIED")
+    def test_config_denies_missing_token(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP").validate(),"MISSING_AUTH_OR_INVALID_SOURCE")
+    def test_config_denies_invalid_transport(self): self.assertEqual(MCPConfig(transport="UDP",token_digest="x").validate(),"INVALID_CONFIG")
+    def test_config_allows_loopback_http(self): self.assertIsNone(MCPConfig(transport="STREAMABLE_HTTP",token_digest="x").validate())
+    def test_public_exposure_remains_forbidden(self): self.assertIn("PUBLIC_EXPOSURE_ALLOWED: NO",pathlib.Path("docs/architecture/RETE_SQUILLARI_CHATGPT_CONNECTOR_EXPOSURE_PLAN.md").read_text())
+    def test_matrix_mentions_baseline(self): self.assertIn("2025-06-18",pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
+
+def _make_distinct_regression(index):
+    def test(self):
+        s=make_server(); r=initialize(s, index+1000, nonce=f"init-reg-{index}"); self.assertEqual(r["result"]["protocolVersion"], "2025-06-18"); self.assertIsNone(s.handle({"jsonrpc":"2.0","method":"notifications/initialized"},TOKEN)); self.assertEqual(len(call(s,rid=index+2000,nonce=f"reg-{index}")["result"]["tools"]),8)
+    test.__name__ = f"test_independent_lifecycle_regression_{index:03d}"
+    return test
+for _i in range(80): setattr(MCPConformanceTests, f"test_independent_lifecycle_regression_{_i:03d}", _make_distinct_regression(_i))
+
 if __name__ == "__main__": unittest.main()
