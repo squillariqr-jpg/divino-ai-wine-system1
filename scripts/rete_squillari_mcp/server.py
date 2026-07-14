@@ -17,7 +17,22 @@ class MCPServer:
         self.config, self.gateway = config, gateway or WBOSReadOnlyApplicationGateway()
         self.verifier = StaticDigestCredentialVerifier(config.token_digest, config.token_id)
         self.profile = LocalProfile(); self.sessions = SessionStore(config.session_ttl_seconds)
-        self.rate = RateLimiter(config.max_requests_per_minute); self.audit = MCPAudit(); self.stdio_state = {"lifecycle_state": LifecycleState.NEW, "protocol_version": None, "nonces": set()}; self.last_response_headers = {}
+        self.rate = RateLimiter(config.max_requests_per_minute)
+        self.audit = MCPAudit(sink=config.audit_sink)
+        self.stdio_state = {"lifecycle_state": LifecycleState.NEW, "protocol_version": None, "nonces": set()}
+        self.last_response_headers = {}
+        self.active_workers = set()
+        self._is_shutting_down = False
+
+    def shutdown(self):
+        self._is_shutting_down = True
+        for worker in list(self.active_workers):
+            if worker.is_alive():
+                worker.terminate()
+                worker.join(self.config.worker_shutdown_grace_ms / 1000.0)
+                if worker.is_alive():
+                    worker.kill()
+                    worker.join()
     def authenticate(self, token): return self.verifier.verify(token)
     def _tools(self):
         return [{"name": t["name"], "description": t["description"], "inputSchema": t["input_schema"], "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}} for t in self.gateway.registry.list_tools()]
@@ -30,6 +45,7 @@ class MCPServer:
         return requested, None
     def _lifecycle_error(self, rid, reason): return self._fail(rid, INVALID_PARAMS, "INVALID_PARAMS", reason)
     def handle(self, request, token=None, session_id=None, request_id_header=None):
+        if self._is_shutting_down: return self._fail(request.get("id") if isinstance(request, dict) else None, -32000, "SERVER_IS_SHUTTING_DOWN", "SERVER_IS_SHUTTING_DOWN")
         self.last_response_headers = {}
         is_notification = isinstance(request, dict) and "id" not in request
         failure = validate_notification(request, self.config.max_payload_bytes) if is_notification else validate_request(request, self.config.max_payload_bytes)
@@ -98,14 +114,19 @@ class MCPServer:
         if response["status"] == "SUCCESS": return {"content": [{"type": "text", "text": json.dumps(response, ensure_ascii=False)}], "structuredContent": response, "isError": False}
         return {"content": [{"type": "text", "text": json.dumps({"status": response["status"], "reason_codes": response["reason_codes"]})}], "structuredContent": response, "isError": True}
     def _run_isolated_worker(self, name, args, identity, sid):
+        if len(self.active_workers) >= self.config.max_active_workers:
+            self.audit.append(transport=self.config.transport, method="tools/call", authentication_status="SUCCESS", authorization_status="DENIED", gateway_status="DENIED", read_only=True, reason_code="WORKER_CAPACITY_EXHAUSTED")
+            return {"status": "DENIED", "reason_codes": ["WORKER_CAPACITY_EXHAUSTED"]}, "WORKER_CAPACITY_EXHAUSTED"
         from .worker import worker_entry
         payload = {"tool_name": name, "tool_arguments": args, "identity": {k: identity[k] for k in ("actor_type", "actor_id", "agent_id", "authorized_location_ids", "capabilities", "correlation_id") if k in identity}, "correlation_id": identity.get("correlation_id"), "request_id": sid, "source_mode": "DEMO"}
         encoded = json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
         if len(encoded) > self.config.max_payload_bytes: return None, "PAYLOAD_TOO_LARGE"
-        ctx = multiprocessing.get_context("fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn")
+
+        ctx = multiprocessing.get_context(self.config.worker_start_method)
         parent_conn, child_conn = ctx.Pipe(duplex=False)
         process = ctx.Process(target=worker_entry, args=(child_conn, encoded, self.config.max_payload_bytes, self.config.worker_max_response_bytes, self.config.worker_test_mode), daemon=True)
         process.start(); child_conn.close()
+        self.active_workers.add(process)
         try:
             if not parent_conn.poll(self.config.request_timeout_ms / 1000):
                 if not process.is_alive():
@@ -128,3 +149,4 @@ class MCPServer:
         finally:
             parent_conn.close()
             if process.is_alive(): process.terminate(); process.join()
+            self.active_workers.discard(process)
