@@ -1,13 +1,13 @@
 import copy, pathlib, sys, unittest
 sys.path.insert(0, str(pathlib.Path(__file__).parents[1] / "scripts"))
-from rete_squillari_tools.adapters import LOCATIONS, LocalStorageDemoReadOnlyAdapter
+from rete_squillari_tools.adapters import LOCATIONS, DemoInMemoryReadOnlyAdapter
 from rete_squillari_tools.contracts import TOOL_DEFINITIONS, ToolDefinition, validate_tool_contract
 from rete_squillari_tools.registry import ToolRegistry
 from rete_squillari_tools.gateway import WBOSReadOnlyApplicationGateway
 
-VALID = {"actor_type": "AGENT", "actor_id": "agent-1", "agent_id": "run-agent", "capabilities": ["rete_squillari.locations.read", "rete_squillari.shortages.read", "rete_squillari.shortages.validate", "rete_squillari.print.preview"], "correlation_id": "corr-1"}
+VALID = {"actor_type": "AGENT", "actor_id": "agent-1", "agent_id": "run-agent", "authorized_location_ids": ["malta", "sestri", "cantore", "trento", "de_ferrari", "armenia", "trasta"], "capabilities": ["rete_squillari.locations.read", "rete_squillari.shortages.read", "rete_squillari.shortages.validate", "rete_squillari.print.preview"], "correlation_id": "corr-1"}
 class GatewayTests(unittest.TestCase):
-    def setUp(self): self.adapter = LocalStorageDemoReadOnlyAdapter(); self.gateway = WBOSReadOnlyApplicationGateway(adapter=self.adapter)
+    def setUp(self): self.adapter = DemoInMemoryReadOnlyAdapter(); self.gateway = WBOSReadOnlyApplicationGateway(adapter=self.adapter)
     def run_tool(self, name, data=None, identity=None): return self.gateway.run_read_tool(VALID if identity is None else identity, name, data or {})
     def test_registry_has_exactly_eight_valid_tools(self):
         self.assertEqual(len(TOOL_DEFINITIONS), 8); self.assertTrue(all(not validate_tool_contract(t) for t in TOOL_DEFINITIONS)); self.assertTrue(all(t.read_only for t in TOOL_DEFINITIONS)); self.assertEqual(len({t.name for t in TOOL_DEFINITIONS}), 8)
@@ -38,4 +38,21 @@ class GatewayTests(unittest.TestCase):
         with self.assertRaises(ValueError): ToolRegistry((bad,))
     def test_fingerprint_is_stable_for_same_input_and_output(self):
         a = self.run_tool("rete_squillari.list_locations"); b = self.run_tool("rete_squillari.list_locations"); self.assertEqual(self.gateway.evidence.get(a["evidence_id"])["input_fingerprint"], self.gateway.evidence.get(b["evidence_id"])["input_fingerprint"]); self.assertEqual(self.gateway.evidence.get(a["evidence_id"])["output_fingerprint"], self.gateway.evidence.get(b["evidence_id"])["output_fingerprint"])
+    def test_location_scope_blocks_cross_location_read(self):
+        identity = {**VALID, "authorized_location_ids": ["cantore"]}
+        self.assertEqual(self.run_tool("rete_squillari.get_location", {"location_id": "malta"}, identity)["reason_codes"], ["LOCATION_SCOPE_DENIED"])
+    def test_defensive_copy_isolation(self):
+        locations = self.adapter.list_locations(); locations[0]["name"] = "tampered"; self.assertEqual(self.adapter.get_location("malta")["name"], "Malta")
+    def test_invalid_output_has_error_audit_and_no_evidence(self):
+        class BadAdapter(DemoInMemoryReadOnlyAdapter):
+            def list_locations(self): return {"unexpected": True}
+        gateway = WBOSReadOnlyApplicationGateway(adapter=BadAdapter()); response = gateway.run_read_tool(VALID, "rete_squillari.list_locations", {})
+        self.assertEqual(response["reason_codes"], ["OUTPUT_SCHEMA_VALIDATION_FAILED"]); self.assertIsNone(response["evidence_id"]); self.assertIsNotNone(gateway.audit.get(response["audit_event_id"]))
+    def test_adapter_exception_is_sanitized(self):
+        class ExplodingAdapter(DemoInMemoryReadOnlyAdapter):
+            def list_locations(self): raise RuntimeError("secret stack detail")
+        gateway = WBOSReadOnlyApplicationGateway(adapter=ExplodingAdapter()); response = gateway.run_read_tool(VALID, "rete_squillari.list_locations", {})
+        self.assertEqual(response["status"], "ERROR"); self.assertNotIn("secret", str(response)); self.assertIsNone(response["evidence_id"])
+    def test_identity_requires_location_scope(self):
+        self.assertEqual(self.run_tool("rete_squillari.list_locations", identity={k:v for k,v in VALID.items() if k != "authorized_location_ids"})["status"], "DENIED")
 if __name__ == "__main__": unittest.main()

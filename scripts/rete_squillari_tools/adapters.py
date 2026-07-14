@@ -13,7 +13,7 @@ LOCATIONS = [
 PERMISSIONS = {"malta": ["CUSTOMER_SALE", "STOCK_GAP"], "sestri": ["CUSTOMER_SALE", "STOCK_GAP"], "cantore": ["CUSTOMER_SALE", "ONLINE_SALE", "STOCK_GAP"], "trento": ["CUSTOMER_SALE", "STOCK_GAP"], "de_ferrari": ["CUSTOMER_SALE", "STOCK_GAP"], "armenia": ["CUSTOMER_SALE", "STOCK_GAP"], "trasta": ["ONLINE_SALE", "STOCK_GAP"]}
 REQUESTS = [{"request_number": "DEMO-001", "requester_location_id": "de_ferrari", "requester_location_type": "STORE", "product_code": "2101208", "product_description": "Erbaluce DOCG Rolletto", "requested_quantity": 6, "reason": "CUSTOMER_SALE", "comment": "", "priority": "HIGH", "status": "DA_TROVARE", "created_at": "2026-07-14T00:00:00.000Z", "updated_at": "2026-07-14T00:00:00.000Z", "supplier_location_id": None, "confirmed_quantity": None, "expected_transfer_date": None}]
 
-class LocalStorageDemoReadOnlyAdapter:
+class DemoInMemoryReadOnlyAdapter:
     source_mode = "DEMO"
     def __init__(self): self._requests = deepcopy(REQUESTS)
     def _location(self, location_id): return next((deepcopy(x) for x in LOCATIONS if x["id"] == location_id), None)

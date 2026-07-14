@@ -204,9 +204,9 @@ The architecture is defined for a future application-as-tools implementation. It
 
 ## Read-Only Tool Registry and Gateway Implementation
 
-This isolated proof of concept implements a static registry, typed contracts, a read-only WBOS gateway, a deterministic `LocalStorageDemoReadOnlyAdapter` equivalent backed by in-memory demo fixtures, audit events, evidence records, deterministic fingerprints and a local CLI harness. It exposes exactly eight read-only tools: location reads, shortage reads and validation, and request/transfer-label previews.
+This isolated proof of concept implements a static registry, typed contracts, a read-only WBOS gateway, a deterministic `DemoInMemoryReadOnlyAdapter` backed by in-memory demo fixtures, audit events, evidence records, deterministic fingerprints and a local CLI harness. It exposes exactly eight read-only tools: location reads, shortage reads and validation, and request/transfer-label previews. The adapter name is explicit: it does not access browser localStorage.
 
-The gateway validates a typed identity context and capability before resolving a registered tool. Unknown tools, write-like names, missing identity, missing capabilities, invalid inputs and adapter errors fail closed through a response envelope. Every invocation is read-only and produces audit/evidence metadata with `source_mode: DEMO`.
+The gateway validates a typed identity context, capability and authorized location scope before resolving a registered tool. It validates both input and adapter output against the registered schemas at runtime. Unknown tools, write-like names, missing identity, missing capabilities, invalid inputs, invalid outputs and adapter errors fail closed through a response envelope; failed calls have audit records but no success evidence. Every invocation is read-only and uses `source_mode: DEMO`.
 
 Implemented in this POC:
 
@@ -218,6 +218,8 @@ Implemented in this POC:
 - audit and evidence stores;
 - deterministic fingerprints;
 - local harness and tests.
+
+The design-only MCP exposure proposal is documented in `docs/architecture/RETE_SQUILLARI_MCP_READ_ONLY_EXPOSURE_DESIGN.md`; no MCP server, connector, network endpoint or real authentication is implemented.
 
 Not implemented:
 
