@@ -12,7 +12,7 @@ Baseline: official MCP specification revision `2025-06-18`. This review is indep
 | C-01 | Declare only implemented capabilities | MUST | `tools` only | PASS | No false capabilities declared. |
 | J-01 | JSON-RPC 2.0 envelope | MUST | `protocol.py`, tests | PASS | Result/error separation covered. |
 | J-02 | Standard error codes | MUST | Partial mapping | PARTIAL | Replace transport-level custom codes with standard JSON-RPC codes plus safe data. |
-| T-01 | `tools/list` shape | MUST | `server.py`, tests | PASS | Eight static tools and annotations. |
+| T-01 | `tools/list` shape and cursor policy | MUST | `server.py`, tests; cursor is absent because all eight tools fit one page | PASS | Unknown cursor remains a documented remediation case. |
 | T-02 | `tools/call` shape | MUST | `server.py`, tests | PASS | Content, structured content and `isError` returned. |
 | H-01 | POST requires JSON and both Accept types | MUST | HTTP handler | FAIL | Current handler only checks Content-Type. |
 | H-02 | Notification POST returns 202/no body | MUST | Not implemented | FAIL | Add notification detection and 202 response. |

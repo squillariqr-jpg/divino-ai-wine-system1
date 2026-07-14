@@ -29,6 +29,9 @@ class MCPServer:
         if not self.sessions.accept_nonce(sid, nonce): return error_response(rid, -32002, "REPLAY_OR_MISSING_REQUEST_ID")
         if not self.rate.allow(credential + ":" + sid): return error_response(rid, -32003, "RATE_LIMITED")
         method = request["method"]
+        if method == "notifications/initialized" and "id" not in request:
+            self.audit.append(transport=self.config.transport, session_id=sid, credential_id=credential, request_id=nonce, method=method, authentication_status="SUCCESS", authorization_status="SUCCESS", gateway_status="SUCCESS", read_only=True, payload_size=len(json.dumps(request).encode()))
+            return None
         if method == "initialize": result = {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "rete-squillari-local-mcp", "version": "0.1.0"}}
         elif method == "tools/list": result = {"tools": self._tools()}
         elif method == "tools/call": result = self._call(request.get("params") or {}, credential, sid)

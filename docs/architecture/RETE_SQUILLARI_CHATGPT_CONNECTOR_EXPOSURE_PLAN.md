@@ -2,6 +2,9 @@
 
 This document is planning only. No public endpoint, connector, OAuth client, production secret or real data connection is configured.
 
+`PUBLIC_EXPOSURE_ALLOWED: NO`
+`CONNECTOR_REGISTRATION_ALLOWED: NO`
+
 ## Preconditions
 
 1. Close the MCP 2025-06-18 gaps in the conformance matrix.
