@@ -1,27 +1,30 @@
 # Rete Squillari MCP conformance matrix
 
-Review base: official MCP `2025-06-18`. Latest official specification reviewed: `2025-11-25`; this implementation intentionally negotiates only the review baseline. Sources: [Lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), [Transports](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports), [Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools), [Authorization](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization).
+Baseline: MCP `2025-06-18`. Supported negotiated versions: `2025-06-18` and `2025-11-25`. The baseline remains primary; the newer revision is selected only when requested by a client. Latest specification reviewed: `2025-11-25`. Official sources: [Lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), [Transports](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports), [Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools), [Authorization](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization).
 
 | Requirement | Spec section | Implementation location | Test location | Status | Evidence | Remaining gap |
 |---|---|---|---|---|---|---|
-| Explicit NEW/INITIALIZED/READY/CLOSED lifecycle | Lifecycle | `scripts/rete_squillari_mcp/session.py`, `server.py` | `tests/test_rete_squillari_mcp.py` | PASS_LOCAL | 135 tests; per-STDIO and per-HTTP-session state | Closure is represented by process/session cleanup. |
-| `initialize` first interaction | Lifecycle | `MCPServer.handle` | lifecycle tests | PASS_LOCAL | pre-ready tools denied; duplicate initialize denied | None for local scope. |
-| `notifications/initialized` | Lifecycle | `MCPServer.handle`, STDIO/HTTP runners | notification tests, independent clients | PASS_LOCAL | no response body; HTTP 202 | None for local scope. |
-| Version negotiation `2025-06-18` | Lifecycle | `_version`, `MCPConfig` | version tests, STDIO/HTTP clients | PASS_LOCAL | negotiated version returned and stored | Official Python client 1.28.1 defaults to newer protocol and rejected baseline. |
-| `Mcp-Session-Id` | Transports | `SessionStore`, HTTP runner | independent HTTP client | PASS_LOCAL | CSPRNG header issued and required | No remote/session DELETE because public exposure is forbidden. |
-| `MCP-Protocol-Version` | Transports | HTTP runner/server | independent HTTP client | PASS_LOCAL | missing/mismatch denied with HTTP 400 | None for local scope. |
-| JSON-RPC standard errors | JSON-RPC | `protocol.py`, runners, server | protocol tests | PASS_LOCAL | `-32700` through `-32603`; batch denied `-32600` | None for local scope. |
-| Origin policy | Transports/security | HTTP runner | unit/HTTP tests | PASS_LOCAL | exact loopback allowlist; missing/null/public/LAN denied | Missing Origin is intentionally denied. |
-| Replay semantics | Transports/security | `SessionStore`, `MCPServer` | nonce tests, HTTP client | PASS_LOCAL | X-Request-Id bounded and unique per HTTP session | STDIO uses transport-local request IDs only. |
-| End-to-end timeout | server boundary | `MCPServer._call` | local timeout path | PARTIAL | bounded future and `REQUEST_TIMEOUT` audit path | Python thread cancellation cannot prove interruption of arbitrary blocking adapter. |
-| Independent STDIO interoperability | gate requirement | subprocess boundary | `/private/tmp/rete_squillari_stdio_client.py` | PASS_LOCAL | protocol-clean, 8 tools, call, clean exit | Official SDK attempt was not baseline-compatible. |
-| Independent Streamable HTTP interoperability | gate requirement | loopback HTTP boundary | `/private/tmp/rete_squillari_http_client.py` | PASS_LOCAL | session, 202, 8 tools, call, 400 errors | No public endpoint by policy. |
-| Exact eight read-only tools | Tools | gateway registry and `_tools` | gateway/MCP tests | PASS_LOCAL | 8, no writes/generic tools | None. |
+| Explicit lifecycle NEW/INITIALIZED/READY/CLOSED | Lifecycle | `session.py`, `server.py` | MCP tests | PASS | 164 tests; per-STDIO and HTTP session state | None in local scope. |
+| Strict initialize and initialized notification | Lifecycle | `server.py`, runners | MCP tests, official SDKs | PASS | both official SDKs complete lifecycle | None. |
+| Version negotiation | Lifecycle | `config.py`, `server.py` | version tests, official SDKs | PASS | `2025-06-18` and `2025-11-25` negotiated per session | None for supported versions. |
+| HTTP session and protocol headers | Transports | `session.py`, HTTP runner | official Python HTTP, independent HTTP | PASS | session ID issued; protocol header enforced | None. |
+| JSON-RPC standard errors and bounded decoding | JSON-RPC | `protocol.py`, runners | MCP tests | PASS | `-32700` through `-32603`; batch denied | None. |
+| Exact loopback Origin policy | Transports/security | HTTP runner | HTTP tests | PASS | structured allowlist; public/LAN/confusion origins denied | Missing Origin intentionally denied. |
+| Replay and request ID semantics | Transports/security | `session.py`, `server.py` | nonce tests, HTTP tests | PASS | bounded per-session X-Request-Id | None. |
+| Strong timeout cancellation | execution boundary | `worker.py`, `server.py` | timeout/kill tests | PASS | terminate, bounded join, kill fallback | OS sandbox is not implemented. |
+| Late mutation prevention | execution boundary | one-shot worker | mutation tests | PASS | worker mutation dies with isolated process; parent unchanged | None within demo process boundary. |
+| Worker IPC hardening | execution boundary | `worker.py` | failure tests | PASS | bounded JSON bytes; no pickle input; malformed/oversized/crash mapping | None. |
+| Official Python SDK | gate requirement | external venv | official Python STDIO/HTTP clients | PASS | `mcp 1.28.1`, protocol `2025-11-25`, 8 tools/call | None. |
+| Official TypeScript SDK | gate requirement | external node env | official TypeScript STDIO client | PASS | SDK latest `2025-11-25`, 8 tools/call | None. |
+| Independent transports | gate requirement | STDIO/HTTP runners | independent clients | PASS | STDIO and loopback HTTP pass | No public endpoint by policy. |
+| Exact eight read-only tools | Tools | registry, gateway, MCP server | gateway/MCP/SDK tests | PASS | 8 read-only, 0 write, 0 generic | None. |
 
 ## Decision
 
-`OFFICIAL_MCP_CONFORMANCE: IMPLEMENTATION_COMPLETE_INTEROPERABILITY_UNVERIFIED`
+`OFFICIAL_MCP_CONFORMANCE: PASS_LOCAL`
 
-`FAIL_COUNT: 0` for implemented local requirements; `CRITICAL_GAPS: TIMEOUT_CANCELLATION_PROOF, OFFICIAL_SDK_BASELINE_COMPATIBILITY`.
+`FAIL_COUNT: 0`
+`PARTIAL_COUNT: 0`
+`CRITICAL_GAPS: NONE`
 
-The server remains local-only: no public endpoint, tunnel, connector, production authorization, real data, or write tool.
+`OS_SANDBOX: NO` remains an explicit limitation. The server is local-only: no public endpoint, tunnel, connector, production authorization, real data, or write tool.

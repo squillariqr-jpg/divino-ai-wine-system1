@@ -1,5 +1,4 @@
-import json, sys, time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import json, multiprocessing, sys, time
 from .auth import LocalProfile, StaticDigestCredentialVerifier
 from .audit import MCPAudit
 from .config import MCPConfig
@@ -8,6 +7,8 @@ from .rate_limit import RateLimiter
 from .session import LifecycleState, SessionStore
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).parents[1]))
 from rete_squillari_tools.gateway import WBOSReadOnlyApplicationGateway
+
+class WorkerFailure(Exception): pass
 
 class MCPServer:
     def __init__(self, config, gateway=None):
@@ -76,6 +77,7 @@ class MCPServer:
             if method == "tools/list": result = {"tools": self._tools()}
             else:
                 try: result = self._call(request.get("params") or {}, credential, session_id or "stdio")
+                except WorkerFailure as exc: return self._fail(rid, -32603, "INTERNAL_ERROR", str(exc))
                 except ValueError: return self._fail(rid, INVALID_PARAMS, "INVALID_PARAMS", "INVALID_PARAMS")
                 except Exception: return self._fail(rid, INTERNAL_ERROR, "INTERNAL_ERROR", "INTERNAL_ERROR")
         else: return self._fail(rid, METHOD_NOT_FOUND, "METHOD_NOT_FOUND")
@@ -90,12 +92,39 @@ class MCPServer:
         name, args = params["name"], dict(params.get("arguments", {})); args.pop("_metadata", None)
         if name not in [x["name"] for x in self.gateway.registry.list_tools()]: return {"content": [{"type": "text", "text": "UNKNOWN_TOOL"}], "isError": True, "structuredContent": {"status": "DENIED", "reason_codes": ["UNKNOWN_TOOL"]}}
         principal = self.profile.principal(credential, sid, {}); identity = principal.__dict__.copy(); identity["authorized_location_ids"] = list(identity["authorized_location_ids"]); identity["capabilities"] = list(identity["capabilities"])
-        executor = ThreadPoolExecutor(max_workers=1); future = executor.submit(self.gateway.run_read_tool, identity, name, args)
-        try: response = future.result(timeout=self.config.request_timeout_ms / 1000)
-        except TimeoutError:
-            future.cancel(); executor.shutdown(wait=False, cancel_futures=True); self.audit.append(transport=self.config.transport, method="tools/call", authentication_status="SUCCESS", authorization_status="DENIED", gateway_status="TIMEOUT", read_only=True, reason_code="REQUEST_TIMEOUT"); return {"content": [{"type": "text", "text": "REQUEST_TIMEOUT"}], "isError": True, "structuredContent": {"status": "TIMEOUT", "reason_codes": ["REQUEST_TIMEOUT"]}}
-        finally:
-            if not future.done(): executor.shutdown(wait=False, cancel_futures=True)
-            else: executor.shutdown(wait=True)
-        if response["status"] == "SUCCESS": return {"content": [{"type": "text", "text": json.dumps(response, ensure_ascii=False)}, {"type": "json", "json": response}], "structuredContent": response, "isError": False}
+        response, failure = self._run_isolated_worker(name, args, identity, sid)
+        if failure == "REQUEST_TIMEOUT": self.audit.append(transport=self.config.transport, method="tools/call", authentication_status="SUCCESS", authorization_status="DENIED", gateway_status="TIMEOUT", read_only=True, reason_code="REQUEST_TIMEOUT"); return {"content": [{"type": "text", "text": "REQUEST_TIMEOUT"}], "isError": True, "structuredContent": {"status": "TIMEOUT", "reason_codes": ["REQUEST_TIMEOUT"]}}
+        if failure: raise WorkerFailure(failure)
+        if response["status"] == "SUCCESS": return {"content": [{"type": "text", "text": json.dumps(response, ensure_ascii=False)}], "structuredContent": response, "isError": False}
         return {"content": [{"type": "text", "text": json.dumps({"status": response["status"], "reason_codes": response["reason_codes"]})}], "structuredContent": response, "isError": True}
+    def _run_isolated_worker(self, name, args, identity, sid):
+        from .worker import worker_entry
+        payload = {"tool_name": name, "tool_arguments": args, "identity": {k: identity[k] for k in ("actor_type", "actor_id", "agent_id", "authorized_location_ids", "capabilities", "correlation_id") if k in identity}, "correlation_id": identity.get("correlation_id"), "request_id": sid, "source_mode": "DEMO"}
+        encoded = json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
+        if len(encoded) > self.config.max_payload_bytes: return None, "PAYLOAD_TOO_LARGE"
+        ctx = multiprocessing.get_context("fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn")
+        parent_conn, child_conn = ctx.Pipe(duplex=False)
+        process = ctx.Process(target=worker_entry, args=(child_conn, encoded, self.config.max_payload_bytes, self.config.worker_max_response_bytes, self.config.worker_test_mode), daemon=True)
+        process.start(); child_conn.close()
+        try:
+            if not parent_conn.poll(self.config.request_timeout_ms / 1000):
+                if not process.is_alive():
+                    process.join(); return None, "WORKER_EXECUTION_FAILED" if process.exitcode else "OUTPUT_SCHEMA_VALIDATION_FAILED"
+                process.terminate(); process.join(self.config.worker_terminate_grace_ms / 1000)
+                if process.is_alive(): process.kill(); process.join()
+                return None, "REQUEST_TIMEOUT"
+            try: raw = parent_conn.recv_bytes()
+            except (EOFError, OSError): raw = b""
+            process.join(self.config.worker_terminate_grace_ms / 1000)
+            if process.is_alive(): process.terminate(); process.join(); return None, "WORKER_EXECUTION_FAILED"
+            if process.exitcode not in (0, None): return None, "WORKER_EXECUTION_FAILED"
+            if len(raw) > self.config.worker_max_response_bytes: return None, "OUTPUT_SCHEMA_VALIDATION_FAILED"
+            try: decoded = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError): return None, "OUTPUT_SCHEMA_VALIDATION_FAILED"
+            if not isinstance(decoded, dict): return None, "OUTPUT_SCHEMA_VALIDATION_FAILED"
+            if "worker_error" in decoded: return None, decoded["worker_error"]
+            if not isinstance(decoded.get("status"), str) or "read_only" not in decoded: return None, "OUTPUT_SCHEMA_VALIDATION_FAILED"
+            return decoded, None
+        finally:
+            parent_conn.close()
+            if process.is_alive(): process.terminate(); process.join()

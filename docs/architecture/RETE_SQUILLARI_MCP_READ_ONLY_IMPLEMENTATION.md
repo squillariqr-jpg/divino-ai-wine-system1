@@ -1,11 +1,11 @@
 # Rete Squillari authenticated read-only MCP implementation
 
-The local boundary exposes exactly eight named read-only tools through `WBOSReadOnlyApplicationGateway`. The lifecycle is explicit: `NEW → INITIALIZED → READY`, with requests denied before readiness and notification responses suppressed.
+The boundary exposes exactly eight named read-only tools through `WBOSReadOnlyApplicationGateway`. Every `tools/call` runs in a fresh one-shot worker process. The parent sends only a bounded JSON payload containing the tool name, validated arguments, sanitized identity context, correlation/request IDs and `DEMO` source mode.
 
-Protocol baseline is `2025-06-18`; the negotiated value is stored in each STDIO connection or HTTP `Mcp-Session-Id` session. HTTP is loopback-only, requires bearer authentication, exact Origin validation, `X-Request-Id`, and `MCP-Protocol-Version` after initialization. Sessions use CSPRNG identifiers and never accept a client-selected identifier.
+The worker reconstructs the demo gateway, executes one tool, serializes one bounded JSON response and exits. The parent waits for `request_timeout_ms`, then sends terminate, performs a bounded join, sends kill if necessary, joins again, discards late pipe output and returns `REQUEST_TIMEOUT`. Worker crash, malformed response and oversized response are mapped to sanitized errors.
 
-JSON-RPC standard error codes, strict JSON decoding, payload limits, replay protection, audit-safe identifiers, and a bounded gateway timeout path are implemented. The timeout path remains locally bounded but cannot certify interruption of an arbitrary non-cancellable blocking adapter; this is the only implementation gap carried forward.
+No pickle is accepted from the client, no mutable state is shared with the parent, and the worker receives no bearer token, Authorization header, token digest or raw HTTP request. This is process isolation, not an OS sandbox: `OS_SANDBOX: NO`.
 
-Local verification: 135 unittest methods pass, independent subprocess STDIO passes, and independent loopback HTTP passes. The official Python SDK `mcp 1.28.1` and TypeScript SDK/Inspector were installed only in temporary external environments; the Python client defaults to a newer protocol and therefore could not complete a `2025-06-18` session.
+Protocol versions are negotiated per session. `2025-06-18` remains the primary review baseline and `2025-11-25` is supported for official SDK clients. Official Python `mcp 1.28.1` and the official TypeScript SDK complete STDIO; the Python SDK also completes loopback Streamable HTTP.
 
-Security invariants remain: DEMO data only, no production secrets, no real backend, no public exposure, no ChatGPT connector, no write tools, and no gateway bypass.
+Local verification: 164 tests pass, including forced-kill, late-mutation, worker-failure, official SDK and independent transport tests. Security invariants remain: DEMO data only, no production secrets, no public exposure, no ChatGPT connector, no real backend and no write tools.

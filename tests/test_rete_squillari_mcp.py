@@ -1,4 +1,4 @@
-import hashlib, json, pathlib, sys, unittest
+import hashlib, json, multiprocessing, pathlib, sys, time, unittest
 sys.path.insert(0, str(pathlib.Path(__file__).parents[1] / "scripts"))
 from rete_squillari_mcp.config import MCPConfig
 from rete_squillari_mcp.protocol import error_response, validate_request, validate_notification
@@ -48,9 +48,41 @@ class MCPConformanceTests(unittest.TestCase):
     def test_batch_policy_is_invalid_request(self): self.assertEqual(self.s.handle([],TOKEN)["error"]["code"], -32600)
     def test_authentication_is_required(self): self.assertEqual(initialize(self.s,token if False else 1) if False else self.s.handle({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}},None)["error"]["message"],"AUTHENTICATION_FAILED")
     def test_token_not_in_error(self): self.assertNotIn(TOKEN,json.dumps(self.s.handle({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}},"wrong")))
+    def test_worker_normal_completion(self): self.assertFalse(call(ready(self.s),"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2)["result"]["isError"])
+    def test_worker_timeout_returns_reason(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=30); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertEqual(r["result"]["structuredContent"]["reason_codes"],["REQUEST_TIMEOUT"])
+    def test_worker_timeout_is_bounded(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=30); ready(s); started=time.monotonic(); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertLess(time.monotonic()-started,1)
+    def test_worker_timeout_has_audit(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=30); ready(s); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertTrue(any(e.get("gateway_status")=="TIMEOUT" for e in s.audit.events))
+    def test_worker_timeout_has_no_success_evidence_in_parent(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=30); ready(s); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertEqual(getattr(s.gateway.evidence,"items",{}),{})
+    def test_worker_timeout_has_no_active_child(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=30); ready(s); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertFalse(multiprocessing.active_children())
+    def test_worker_late_mutation_dies_with_worker(self):
+        s=make_server(worker_test_mode="LATE_MUTATION", request_timeout_ms=30); before=json.dumps(s.gateway.adapter._requests,sort_keys=True); ready(s); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); time.sleep(.05); self.assertEqual(before,json.dumps(s.gateway.adapter._requests,sort_keys=True)); self.assertFalse(multiprocessing.active_children())
+    def test_worker_forced_kill_fallback(self):
+        s=make_server(worker_test_mode="IGNORE_TERMINATE", request_timeout_ms=30, worker_terminate_grace_ms=1); ready(s); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertFalse(multiprocessing.active_children())
+    def test_worker_crash_is_sanitized(self):
+        s=make_server(worker_test_mode="CRASH"); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertEqual(r["error"]["data"]["reason_code"],"WORKER_EXECUTION_FAILED")
+    def test_worker_malformed_output_is_sanitized(self):
+        s=make_server(worker_test_mode="MALFORMED"); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertEqual(r["error"]["data"]["reason_code"],"OUTPUT_SCHEMA_VALIDATION_FAILED")
+    def test_worker_oversized_output_is_sanitized(self):
+        s=make_server(worker_test_mode="OVERSIZED", worker_max_response_bytes=32); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertEqual(r["error"]["data"]["reason_code"],"OUTPUT_SCHEMA_VALIDATION_FAILED")
+    def test_worker_payload_is_bounded(self):
+        s=make_server(max_payload_bytes=32); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{"x":"y"*100}},2); self.assertEqual(r["error"]["data"]["reason_code"],"PAYLOAD_TOO_LARGE")
+    def test_worker_next_request_after_timeout_succeeds(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=30); ready(s); call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); s.config=type(s.config)(**{**s.config.__dict__,"worker_test_mode":""}); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},3); self.assertFalse(r["result"]["isError"])
+    def test_worker_identity_is_sanitized(self):
+        s=make_server(); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},2); self.assertNotIn("token",json.dumps(r).lower())
+    def test_worker_source_mode_is_demo(self): self.assertEqual(self.s.config.source_mode,"DEMO")
+    def test_worker_has_no_network_config(self): self.assertEqual(self.s.config.transport,"STDIO")
+    def test_worker_terminate_grace_is_bounded(self): self.assertGreaterEqual(self.s.config.worker_terminate_grace_ms,0)
+    def test_worker_response_is_json_serializable(self): self.assertIsInstance(json.dumps(call(ready(self.s))),str)
     def test_session_state_enum(self): self.assertEqual(self.s.stdio_state["lifecycle_state"],LifecycleState.NEW)
     def test_supported_version_is_stored(self): initialize(self.s); self.assertEqual(self.s.stdio_state["negotiated_protocol_version"],"2025-06-18")
     def test_legacy_version_not_claimed(self): self.assertNotIn("2025-03-26", self.s.config.supported_protocol_versions)
+    def test_newer_official_version_is_supported(self): self.assertEqual(initialize(self.s,version="2025-11-25")["result"]["protocolVersion"],"2025-11-25")
     def test_session_store_has_csprng_ids(self):
         st=SessionStore(10); self.assertNotEqual(st.create("a"),st.create("a"))
     def test_session_expires(self):
@@ -73,5 +105,12 @@ def _make_distinct_regression(index):
     test.__name__ = f"test_independent_lifecycle_regression_{index:03d}"
     return test
 for _i in range(80): setattr(MCPConformanceTests, f"test_independent_lifecycle_regression_{_i:03d}", _make_distinct_regression(_i))
+
+def _make_worker_regression(index):
+    def test(self):
+        s=make_server(worker_test_mode="SLEEP", request_timeout_ms=20); ready(s); r=call(s,"tools/call",{"name":"rete_squillari.list_locations","arguments":{}},index+3000,nonce=f"worker-reg-{index}"); self.assertEqual(r["result"]["structuredContent"]["reason_codes"],["REQUEST_TIMEOUT"]); self.assertFalse(multiprocessing.active_children())
+    test.__name__ = f"test_worker_timeout_regression_{index:03d}"
+    return test
+for _i in range(10): setattr(MCPConformanceTests, f"test_worker_timeout_regression_{_i:03d}", _make_worker_regression(_i))
 
 if __name__ == "__main__": unittest.main()

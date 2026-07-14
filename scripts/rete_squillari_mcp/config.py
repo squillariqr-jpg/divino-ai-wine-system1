@@ -18,7 +18,10 @@ class MCPConfig:
     session_ttl_seconds: int = 900
     clock_skew_seconds: int = 5
     source_mode: str = "DEMO"
-    supported_protocol_versions: tuple = ("2025-06-18",)
+    supported_protocol_versions: tuple = ("2025-06-18", "2025-11-25")
+    worker_max_response_bytes: int = 65536
+    worker_terminate_grace_ms: int = 100
+    worker_test_mode: str = ""
 
     @classmethod
     def from_env(cls, transport="STDIO"):
@@ -29,5 +32,5 @@ class MCPConfig:
         if self.transport not in ("STDIO", "STREAMABLE_HTTP") or self.auth_mode not in ("STATIC_TEST_TOKEN", "EXTERNAL_VERIFIER_INTERFACE"): return "INVALID_CONFIG"
         if self.transport == "STREAMABLE_HTTP" and self.bind_host not in ("127.0.0.1", "::1"): return "NON_LOOPBACK_BIND_DENIED"
         if not self.token_digest or self.source_mode != "DEMO": return "MISSING_AUTH_OR_INVALID_SOURCE"
-        if self.max_payload_bytes <= 0 or self.max_requests_per_minute <= 0 or self.session_ttl_seconds <= 0: return "INVALID_CONFIG"
+        if self.max_payload_bytes <= 0 or self.max_requests_per_minute <= 0 or self.session_ttl_seconds <= 0 or self.worker_max_response_bytes <= 0 or self.worker_terminate_grace_ms < 0: return "INVALID_CONFIG"
         return None
