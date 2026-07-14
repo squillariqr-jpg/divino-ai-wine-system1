@@ -1,6 +1,6 @@
 # Rete Squillari — MCP Read-Only Exposure Design
 
-This is a design document only. It does not implement an MCP server, connector, endpoint, real authentication or production data access.
+The repository now contains a local/test-only MCP boundary implementation. It does not expose a public endpoint, connector, production authentication or production data access.
 
 ## Boundary
 
