@@ -4,6 +4,7 @@ import threading
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from playwright.sync_api import sync_playwright
 import json
+import re
 
 class NoLogHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -33,7 +34,17 @@ class FrontendAuthE2ETests(unittest.TestCase):
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
 
+        
+        def intercept_html(route):
+            with open("public/rete-squillari/index.html", "r") as f:
+                html = f.read()
+            html = re.sub(r'integrity="sha384-[^"]+"', '', html)
+            route.fulfill(status=200, content_type="text/html", body=html)
+            
+        self.page.route("**/public/rete-squillari/index.html", intercept_html)
+        
         self.page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.100.1", lambda route: route.fulfill(
+
             status=200,
             content_type="application/javascript",
             body="""
