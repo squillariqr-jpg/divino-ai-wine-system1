@@ -105,11 +105,11 @@ if __name__ == "__main__":
     os.environ["RETE_SQUILLARI_MCP_TRANSPORT"] = "STREAMABLE_HTTP" if args.transport == "http" else "STDIO"
     if args.transport == "stdio" and os.environ.get("RETE_SQUILLARI_MCP_ENV") == "staging" and "RETE_SQUILLARI_MCP_AUDIT_SINK" not in os.environ:
         os.environ["RETE_SQUILLARI_MCP_AUDIT_SINK"] = "stderr_json"
-    
+
     config = MCPConfig.from_env()
     val_err = config.validate()
     if val_err:
         print(json.dumps(error_response(None, -32600, val_err), separators=(",", ":")), flush=True)
         sys.exit(1)
-        
+
     instance = MCPServer(config); run_http(instance) if args.transport == "http" else run_stdio(instance)

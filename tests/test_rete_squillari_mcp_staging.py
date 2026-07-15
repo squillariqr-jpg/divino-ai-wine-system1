@@ -234,15 +234,15 @@ class StagingReadinessTests(unittest.TestCase):
         # stdio + stderr_json -> PASS
         c = MCPConfig(transport="STDIO", audit_sink="stderr_json", environment="staging", token_digest="a", worker_start_method="spawn")
         self.assertIsNone(c.validate())
-        
+
         # stdio + stdout_json -> FAIL
         c = MCPConfig(transport="STDIO", audit_sink="stdout_json", environment="staging", token_digest="a", worker_start_method="spawn")
         self.assertEqual(c.validate(), "STAGING_STDIO_STDERR_AUDIT_REQUIRED")
-        
+
         # stdio + memory + local -> PASS
         c = MCPConfig(transport="STDIO", audit_sink="memory", environment="local", token_digest="a", worker_start_method="fork")
         self.assertIsNone(c.validate())
-        
+
         # stdio + memory + staging -> FAIL
         c = MCPConfig(transport="STDIO", audit_sink="memory", environment="staging", token_digest="a", worker_start_method="spawn")
         self.assertEqual(c.validate(), "STAGING_STDIO_STDERR_AUDIT_REQUIRED")
@@ -262,7 +262,7 @@ class StagingReadinessTests(unittest.TestCase):
         env["RETE_SQUILLARI_MCP_ENV"] = "staging"
         env["RETE_SQUILLARI_MCP_TEST_TOKEN"] = "test"
         env["PYTHONPATH"] = "scripts"
-        
+
         proc = subprocess.Popen([sys.executable, "-m", "rete_squillari_mcp_server", "--transport", "stdio"], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         # Send a malformed message
         # Send a fully valid initialize request to get an initialized session, then a tools/call to trigger audit
@@ -270,7 +270,7 @@ class StagingReadinessTests(unittest.TestCase):
         proc.stdin.write(req1)
         proc.stdin.flush()
         time.sleep(0.2)
-        
+
         req2 = '{"jsonrpc":"2.0", "method": "notifications/initialized"}\n'
         proc.stdin.write(req2)
         proc.stdin.flush()
@@ -280,10 +280,10 @@ class StagingReadinessTests(unittest.TestCase):
         proc.stdin.write(req3)
         proc.stdin.flush()
         time.sleep(0.5)
-        
+
         proc.stdin.close()
         stdout, stderr = proc.communicate(timeout=2)
-        
+
         # Audit logs should be in stderr
         self.assertIn('"mcp_event_id"', stderr)
         # Check purity of stdout

@@ -37,7 +37,7 @@ class MCPConfig:
         audit_default = "memory"
         if env == "staging":
             audit_default = "stdout_json" if transport_env == "STREAMABLE_HTTP" else "stderr_json"
-        
+
         return cls(
             transport=transport_env,
             bind_host=os.environ.get("RETE_SQUILLARI_MCP_BIND_HOST", "127.0.0.1"),
@@ -59,9 +59,9 @@ class MCPConfig:
             if self.worker_start_method != "spawn": return "STAGING_REQUIRES_SPAWN"
             if self.transport == "STDIO" and self.audit_sink != "stderr_json": return "STAGING_STDIO_STDERR_AUDIT_REQUIRED"
             if self.transport == "STREAMABLE_HTTP" and self.audit_sink != "stdout_json": return "STAGING_HTTP_STDOUT_AUDIT_REQUIRED"
-        
+
         if self.transport == "STDIO" and self.audit_sink == "stdout_json": return "STDIO_STDOUT_AUDIT_FORBIDDEN"
-        
+
         if self.environment == "production": return "PRODUCTION_NOT_AUTHORIZED"
         if self.worker_start_method not in ("spawn", "forkserver", "fork"): return "INVALID_WORKER_START_METHOD"
         return None
