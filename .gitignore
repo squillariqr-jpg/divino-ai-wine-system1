@@ -4,3 +4,8 @@ dist
 npm-debug.log*
 .DS_Store
 .vercel
+
+# Supabase Local
+supabase/.temp/
+supabase/.branches/
+
