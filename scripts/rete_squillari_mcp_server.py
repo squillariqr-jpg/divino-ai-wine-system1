@@ -101,4 +101,15 @@ def run_http(server):
     finally: server_http.server_close()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(); parser.add_argument("--transport", choices=("stdio", "http"), default="stdio"); args = parser.parse_args(); config = MCPConfig.from_env("STREAMABLE_HTTP" if args.transport == "http" else "STDIO"); instance = MCPServer(config); run_http(instance) if args.transport == "http" else run_stdio(instance)
+    parser = argparse.ArgumentParser(); parser.add_argument("--transport", choices=("stdio", "http"), default="stdio"); args = parser.parse_args()
+    os.environ["RETE_SQUILLARI_MCP_TRANSPORT"] = "STREAMABLE_HTTP" if args.transport == "http" else "STDIO"
+    if args.transport == "stdio" and os.environ.get("RETE_SQUILLARI_MCP_ENV") == "staging" and "RETE_SQUILLARI_MCP_AUDIT_SINK" not in os.environ:
+        os.environ["RETE_SQUILLARI_MCP_AUDIT_SINK"] = "stderr_json"
+    
+    config = MCPConfig.from_env()
+    val_err = config.validate()
+    if val_err:
+        print(json.dumps(error_response(None, -32600, val_err), separators=(",", ":")), flush=True)
+        sys.exit(1)
+        
+    instance = MCPServer(config); run_http(instance) if args.transport == "http" else run_stdio(instance)

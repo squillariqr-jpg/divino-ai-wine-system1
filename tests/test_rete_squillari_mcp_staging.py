@@ -170,7 +170,7 @@ class StagingReadinessTests(unittest.TestCase):
             worker_start_method="spawn",
             audit_sink="memory" # Invalid for staging
         )
-        self.assertEqual(config.validate(), "STAGING_REQUIRES_STDOUT_AUDIT")
+        self.assertEqual(config.validate(), "STAGING_HTTP_STDOUT_AUDIT_REQUIRED")
 
     def test_audit_sink_memory(self):
         from scripts.rete_squillari_mcp.audit import MCPAudit
@@ -215,6 +215,85 @@ class StagingReadinessTests(unittest.TestCase):
         with open("Dockerfile.rete-squillari-mcp", "r") as f:
             content = f.read()
         self.assertIn("scripts/rete_squillari_mcp_entrypoint.py", content)
+
+
+    def test_audit_sink_stderr(self):
+        import io, sys
+        from scripts.rete_squillari_mcp.audit import MCPAudit
+        audit = MCPAudit(sink="stderr_json")
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            audit.append(method="test_stderr")
+            output = sys.stderr.getvalue()
+            self.assertIn('"method":"test_stderr"', output)
+        finally:
+            sys.stderr = old_stderr
+
+    def test_config_combinations(self):
+        # stdio + stderr_json -> PASS
+        c = MCPConfig(transport="STDIO", audit_sink="stderr_json", environment="staging", token_digest="a", worker_start_method="spawn")
+        self.assertIsNone(c.validate())
+        
+        # stdio + stdout_json -> FAIL
+        c = MCPConfig(transport="STDIO", audit_sink="stdout_json", environment="staging", token_digest="a", worker_start_method="spawn")
+        self.assertEqual(c.validate(), "STAGING_STDIO_STDERR_AUDIT_REQUIRED")
+        
+        # stdio + memory + local -> PASS
+        c = MCPConfig(transport="STDIO", audit_sink="memory", environment="local", token_digest="a", worker_start_method="fork")
+        self.assertIsNone(c.validate())
+        
+        # stdio + memory + staging -> FAIL
+        c = MCPConfig(transport="STDIO", audit_sink="memory", environment="staging", token_digest="a", worker_start_method="spawn")
+        self.assertEqual(c.validate(), "STAGING_STDIO_STDERR_AUDIT_REQUIRED")
+
+        # streamable_http + stdout_json -> PASS
+        c = MCPConfig(transport="STREAMABLE_HTTP", audit_sink="stdout_json", environment="staging", token_digest="a", worker_start_method="spawn")
+        self.assertIsNone(c.validate())
+
+        # streamable_http + memory + staging -> FAIL
+        c = MCPConfig(transport="STREAMABLE_HTTP", audit_sink="memory", environment="staging", token_digest="a", worker_start_method="spawn")
+        self.assertEqual(c.validate(), "STAGING_HTTP_STDOUT_AUDIT_REQUIRED")
+
+    def test_stdio_stdout_purity(self):
+        import subprocess, sys
+        env = dict(os.environ)
+        env["RETE_SQUILLARI_MCP_TRANSPORT"] = "STDIO"
+        env["RETE_SQUILLARI_MCP_ENV"] = "staging"
+        env["RETE_SQUILLARI_MCP_TEST_TOKEN"] = "test"
+        env["PYTHONPATH"] = "scripts"
+        
+        proc = subprocess.Popen([sys.executable, "-m", "rete_squillari_mcp_server", "--transport", "stdio"], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Send a malformed message
+        # Send a fully valid initialize request to get an initialized session, then a tools/call to trigger audit
+        req1 = '{"jsonrpc":"2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test", "version": "1"}}}\n'
+        proc.stdin.write(req1)
+        proc.stdin.flush()
+        time.sleep(0.2)
+        
+        req2 = '{"jsonrpc":"2.0", "method": "notifications/initialized"}\n'
+        proc.stdin.write(req2)
+        proc.stdin.flush()
+        time.sleep(0.2)
+
+        req3 = '{"jsonrpc":"2.0", "id": 2, "method": "tools/call", "params": {"name": "rete_squillari.list_locations", "arguments": {}}}\n'
+        proc.stdin.write(req3)
+        proc.stdin.flush()
+        time.sleep(0.5)
+        
+        proc.stdin.close()
+        stdout, stderr = proc.communicate(timeout=2)
+        
+        # Audit logs should be in stderr
+        self.assertIn('"mcp_event_id"', stderr)
+        # Check purity of stdout
+        for line in stdout.strip().split('\n'):
+            if not line: continue
+            try:
+                data = json.loads(line)
+                self.assertIn("jsonrpc", data)
+            except json.JSONDecodeError:
+                self.fail(f"Non-JSON line in stdout: {line}")
 
 if __name__ == '__main__':
     unittest.main()

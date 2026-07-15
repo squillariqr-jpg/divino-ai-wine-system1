@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import os
 import logging
 from scripts.rete_squillari_mcp.config import MCPConfig
 from scripts.rete_squillari_mcp.server import MCPServer
@@ -8,6 +9,8 @@ from scripts.rete_squillari_mcp_server import run_http
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 def main():
+    os.environ["RETE_SQUILLARI_MCP_TRANSPORT"] = "STREAMABLE_HTTP"
+    os.environ["RETE_SQUILLARI_MCP_AUDIT_SINK"] = "stdout_json"
     config = MCPConfig.from_env()
     validation_error = config.validate()
 

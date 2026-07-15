@@ -12,8 +12,13 @@ class MCPAudit:
         elif self.sink == "stdout_json":
             try:
                 line = json.dumps(event, ensure_ascii=False, separators=(",", ":"))
-                # Redact newlines just in case, though json.dumps escapes them
                 print(line.replace('\n', '\\n'), file=sys.stdout, flush=True)
+            except Exception:
+                pass
+        elif self.sink == "stderr_json":
+            try:
+                line = json.dumps(event, ensure_ascii=False, separators=(",", ":"))
+                print(line.replace('\n', '\\n'), file=sys.stderr, flush=True)
             except Exception:
                 pass
         return event
