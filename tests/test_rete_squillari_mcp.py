@@ -94,7 +94,7 @@ class MCPConformanceTests(unittest.TestCase):
     def test_digest_verification_constant_time_path(self): self.assertIsNotNone(StaticDigestCredentialVerifier(hashlib.sha256(TOKEN.encode()).hexdigest()).verify(TOKEN))
     def test_config_denies_public_http(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP",bind_host="0.0.0.0",token_digest="x").validate(),"NON_LOOPBACK_BIND_DENIED")
     def test_config_denies_missing_token(self): self.assertEqual(MCPConfig(transport="STREAMABLE_HTTP").validate(),"MISSING_AUTH_OR_INVALID_SOURCE")
-    def test_config_denies_invalid_transport(self): self.assertEqual(MCPConfig(transport="UDP",token_digest="x").validate(),"INVALID_CONFIG")
+    def test_config_denies_invalid_transport(self): self.assertEqual(MCPConfig(transport="UDP",token_digest="x").validate(),"INVALID_TRANSPORT")
     def test_config_allows_loopback_http(self): self.assertIsNone(MCPConfig(transport="STREAMABLE_HTTP",token_digest="x").validate())
     def test_public_exposure_remains_forbidden(self): self.assertIn("PUBLIC_EXPOSURE_ALLOWED: NO",pathlib.Path("docs/architecture/RETE_SQUILLARI_CHATGPT_CONNECTOR_EXPOSURE_PLAN.md").read_text())
     def test_matrix_mentions_baseline(self): self.assertIn("2025-06-18",pathlib.Path("docs/architecture/RETE_SQUILLARI_MCP_CONFORMANCE_MATRIX.md").read_text())
