@@ -583,7 +583,8 @@ GRANT ALL ON TABLE "public"."rete_trasta_arrivals" TO "anon";
 GRANT ALL ON TABLE "public"."rete_trasta_arrivals" TO "authenticated";
 GRANT ALL ON TABLE "public"."rete_trasta_arrivals" TO "service_role";
 
--- Insert 6 locations + 1 warehouse
+-- Insert the six certified store locations. Trasta is not a store and is
+-- intentionally not part of rete_locations.
 INSERT INTO public.rete_locations (id, code, name, active) VALUES
 (1, 101, 'Malta', true),
 (2, 102, 'Sestri', true),
