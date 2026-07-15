@@ -10,12 +10,12 @@ const DRY_RUN = process.argv.includes('--dry-run');
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_SERVICE_ROLE_KEY) {
+if (!DRY_RUN && !SUPABASE_SERVICE_ROLE_KEY) {
     console.error('Error: SUPABASE_SERVICE_ROLE_KEY is required in environment.');
     process.exit(1);
 }
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+const keyToUse = SUPABASE_SERVICE_ROLE_KEY || 'dummy-key';
+const supabase = createClient(SUPABASE_URL, keyToUse, {
     auth: { autoRefreshToken: false, persistSession: false }
 });
 
@@ -119,13 +119,16 @@ async function main() {
         
         // 1. Ensure user exists
         let userId;
-        const { data: listData, error: listError } = await supabase.auth.admin.listUsers();
-        if (listError) {
-            console.error('Error listing users:', listError);
-            process.exit(1);
+        let existing = null;
+        if (!DRY_RUN) {
+            const { data: listData, error: listError } = await supabase.auth.admin.listUsers();
+            if (listError) {
+                console.error('Error listing users:', listError);
+                process.exit(1);
+            }
+            existing = listData.users.find(u => u.email === p.email);
         }
         
-        const existing = listData.users.find(u => u.email === p.email);
         if (existing) {
             console.log(`- User already exists (id: ${existing.id}). Updating password...`);
             userId = existing.id;
