@@ -9,8 +9,14 @@ const {
   STORE_ENTRIES,
   CENTRAL_ENTRY,
   classifyAdminSecretKey,
+  classifySupabaseUrl,
+  CANONICAL_PROJECT_REF,
+  CANONICAL_SUPABASE_HOSTNAME,
+  CANONICAL_SUPABASE_URL,
   verifyRemoteLocationMatrix,
   buildProvisioningPlan,
+  validateMatrixStructure,
+  validateProvisioningStructure,
   provisionEntry,
   buildMembershipPayload,
   MEMBERSHIP_UPSERT_CONFLICT_TARGET
@@ -52,18 +58,18 @@ assert.strictEqual(LOCATION_MATRIX.length, 7, 'exactly 7 total identities expect
 // Read-only remote location matrix verification — fail-closed on divergence
 // ---------------------------------------------------------------------------
 
-const authoritativeRemoteRows = STORE_ENTRIES.map((e) => ({ id: e.location_id, code: e.code, name: e.name }));
-assert.strictEqual(verifyRemoteLocationMatrix(authoritativeRemoteRows).ok, true, 'matching remote rows must verify OK');
+const authoritativeRemoteRows = STORE_ENTRIES.map((e) => ({ id: e.location_id, code: e.code, name: e.name, active: true }));
+assert.strictEqual(verifyRemoteLocationMatrix(authoritativeRemoteRows).ok, true, 'matching remote rows (all active) must verify OK');
 
 // Divergent matrix (e.g. the legacy sequential 1..6 ids currently present in the
 // local dev schema) must be rejected fail-closed, never silently accepted.
 const sequentialRemoteRows = [
-  { id: 1, code: 101, name: 'Malta' },
-  { id: 2, code: 102, name: 'Sestri' },
-  { id: 3, code: 103, name: 'Cantore' },
-  { id: 4, code: 104, name: 'Trento' },
-  { id: 5, code: 105, name: 'De Ferrari' },
-  { id: 6, code: 106, name: 'Armenia' }
+  { id: 1, code: 101, name: 'Malta', active: true },
+  { id: 2, code: 102, name: 'Sestri', active: true },
+  { id: 3, code: 103, name: 'Cantore', active: true },
+  { id: 4, code: 104, name: 'Trento', active: true },
+  { id: 5, code: 105, name: 'De Ferrari', active: true },
+  { id: 6, code: 106, name: 'Armenia', active: true }
 ];
 const divergent = verifyRemoteLocationMatrix(sequentialRemoteRows);
 assert.strictEqual(divergent.ok, false, 'divergent remote matrix must fail-closed');
@@ -71,10 +77,45 @@ assert.ok(divergent.mismatches.length > 0);
 
 assert.strictEqual(verifyRemoteLocationMatrix([]).ok, false, 'empty remote matrix must fail-closed');
 assert.strictEqual(
-  verifyRemoteLocationMatrix([...authoritativeRemoteRows, { id: 99, code: 999, name: 'Trasta' }]).ok,
+  verifyRemoteLocationMatrix([...authoritativeRemoteRows, { id: 99, code: 999, name: 'Trasta', active: true }]).ok,
   false,
   'an unexpected extra location (e.g. Trasta) must fail-closed'
 );
+
+// ---------------------------------------------------------------------------
+// F-2 — remote verification must also check `active` and reject duplicates
+// ---------------------------------------------------------------------------
+
+{
+  const oneInactive = authoritativeRemoteRows.map((r) => ({ ...r }));
+  oneInactive[0] = { ...oneInactive[0], active: false };
+  assert.strictEqual(verifyRemoteLocationMatrix(oneInactive).ok, false, 'active=false on any store must fail-closed');
+
+  const missingActiveField = authoritativeRemoteRows.map((r) => ({ ...r }));
+  delete missingActiveField[0].active;
+  assert.strictEqual(verifyRemoteLocationMatrix(missingActiveField).ok, false, 'missing active field must fail-closed');
+
+  const nonBooleanActive = authoritativeRemoteRows.map((r) => ({ ...r }));
+  nonBooleanActive[0] = { ...nonBooleanActive[0], active: 'true' };
+  assert.strictEqual(verifyRemoteLocationMatrix(nonBooleanActive).ok, false, 'non-boolean active value must fail-closed');
+
+  const missingLocation = authoritativeRemoteRows.filter((r) => r.name !== 'Malta');
+  assert.strictEqual(verifyRemoteLocationMatrix(missingLocation).ok, false, 'a missing certified location must fail-closed');
+
+  const duplicateLocation = [...authoritativeRemoteRows, { ...authoritativeRemoteRows[0] }];
+  const duplicateResult = verifyRemoteLocationMatrix(duplicateLocation);
+  assert.strictEqual(duplicateResult.ok, false, 'a duplicated location row must fail-closed');
+  assert.ok(duplicateResult.mismatches.some((m) => m.reason === 'DUPLICATE_IN_REMOTE'));
+
+  const divergentField = authoritativeRemoteRows.map((r) => ({ ...r }));
+  divergentField[0] = { ...divergentField[0], code: 999 };
+  assert.strictEqual(verifyRemoteLocationMatrix(divergentField).ok, false, 'id/code/name divergence must fail-closed');
+
+  // Centrale is never part of the remote rete_locations check (role central,
+  // location_id null) — the certified matrix itself enforces this (see F-3
+  // structural checks below), independent of what the remote table returns.
+  assert.strictEqual(CENTRAL_ENTRY.location_id, null);
+}
 
 // ---------------------------------------------------------------------------
 // Dry-run plan shape
@@ -85,6 +126,114 @@ assert.strictEqual(plan.totalIdentities, 7);
 assert.strictEqual(plan.stores.length, 6);
 assert.ok(plan.central);
 assert.strictEqual(plan.central.role, 'central');
+
+// ---------------------------------------------------------------------------
+// F-1 — Supabase URL classification: bound to exactly one certified project.
+// ---------------------------------------------------------------------------
+
+assert.strictEqual(CANONICAL_PROJECT_REF, 'ljuyolwnlbqlfxjujfrq');
+assert.strictEqual(CANONICAL_SUPABASE_HOSTNAME, 'ljuyolwnlbqlfxjujfrq.supabase.co');
+assert.strictEqual(CANONICAL_SUPABASE_URL, 'https://ljuyolwnlbqlfxjujfrq.supabase.co');
+
+// Accepted.
+assert.strictEqual(classifySupabaseUrl('https://ljuyolwnlbqlfxjujfrq.supabase.co'), 'VALID', 'canonical URL must pass');
+assert.strictEqual(classifySupabaseUrl('https://ljuyolwnlbqlfxjujfrq.supabase.co/'), 'VALID', 'canonical URL with trailing slash must pass (normalized)');
+
+// Missing variable in mutating mode.
+assert.strictEqual(classifySupabaseUrl(undefined), 'MISSING');
+assert.strictEqual(classifySupabaseUrl(null), 'MISSING');
+assert.strictEqual(classifySupabaseUrl(''), 'MISSING');
+assert.strictEqual(classifySupabaseUrl('   '), 'MISSING');
+
+// Rejected formats — every one of these must fail-closed.
+const rejectedSupabaseUrls = {
+  'http (not https)': 'http://ljuyolwnlbqlfxjujfrq.supabase.co',
+  'localhost': 'https://localhost',
+  '127.0.0.1': 'https://127.0.0.1',
+  'different project ref': 'https://otherref.supabase.co',
+  'hostname with appended suffix': 'https://ljuyolwnlbqlfxjujfrq.supabase.co.evil.com',
+  'deceptive subdomain': 'https://evil.ljuyolwnlbqlfxjujfrq.supabase.co',
+  'deceptive prefixed hostname': 'https://ljuyolwnlbqlfxjujfrq-evil.supabase.co',
+  'custom port': 'https://ljuyolwnlbqlfxjujfrq.supabase.co:8443',
+  'username in URL': 'https://user@ljuyolwnlbqlfxjujfrq.supabase.co',
+  'username+password in URL': 'https://user:pass@ljuyolwnlbqlfxjujfrq.supabase.co',
+  'extra path': 'https://ljuyolwnlbqlfxjujfrq.supabase.co/rest/v1',
+  'query string': 'https://ljuyolwnlbqlfxjujfrq.supabase.co?x=1',
+  'fragment': 'https://ljuyolwnlbqlfxjujfrq.supabase.co#frag',
+  'malformed string': 'not a url at all :::'
+};
+for (const [label, url] of Object.entries(rejectedSupabaseUrls)) {
+  assert.strictEqual(classifySupabaseUrl(url), 'INVALID', `${label} must be rejected: ${url}`);
+}
+assert.doesNotThrow(() => classifySupabaseUrl('::::'), 'malformed input must never throw');
+
+// ---------------------------------------------------------------------------
+// F-3 — structural validation of the provisioning matrix (generic, pure)
+// ---------------------------------------------------------------------------
+
+// The real, shipped matrix must pass its own structural validation.
+assert.strictEqual(validateProvisioningStructure().ok, true, 'the certified LOCATION_MATRIX must pass structural validation');
+
+function cloneMatrix() {
+  return LOCATION_MATRIX.map((e) => ({ ...e }));
+}
+
+// mapping certificato → PASS (already covered above); every mutation below → FAIL.
+
+{
+  const m = cloneMatrix();
+  m[1] = { ...m[1], location_id: m[0].location_id }; // Sestri = Malta's location_id
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'duplicate location_id must fail');
+}
+{
+  const m = cloneMatrix();
+  m[1] = { ...m[1], code: m[0].code };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'duplicate code must fail');
+}
+{
+  const m = cloneMatrix();
+  m[1] = { ...m[1], email: m[0].email };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'duplicate technical identity/email must fail');
+}
+{
+  const m = cloneMatrix();
+  m[1] = { ...m[1], name: m[0].name };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'duplicate profile name must fail');
+}
+{
+  const m = cloneMatrix();
+  m[0] = { ...m[0], role: 'central', location_id: null };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'two central identities must fail');
+}
+{
+  const m = cloneMatrix();
+  const centralIndex = m.findIndex((e) => e.role === 'central');
+  m[centralIndex] = { ...m[centralIndex], location_id: 9 };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'central with a non-null location_id must fail');
+}
+{
+  const m = cloneMatrix();
+  m[0] = { ...m[0], location_id: null };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'store without a location_id must fail');
+}
+{
+  const m = cloneMatrix();
+  m[0] = { ...m[0], location_id: 1 };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'location_id 1 must fail');
+}
+{
+  const m = cloneMatrix();
+  m[0] = { ...m[0], location_id: 3 };
+  assert.strictEqual(validateMatrixStructure(m).ok, false, 'location_id 3 must fail');
+}
+{
+  const m = [...cloneMatrix(), { key: 'trasta', email: 'trasta@rete.squillari.it', role: 'store', location_id: 99, code: 999, name: 'Trasta' }];
+  const result = validateMatrixStructure(m);
+  assert.strictEqual(result.ok, false, 'Trasta present must fail');
+  assert.ok(result.problems.includes('TRASTA_PRESENT'));
+}
+assert.deepStrictEqual(validateMatrixStructure(null), { ok: false, problems: validateMatrixStructure(null).problems }, 'non-array input must not throw');
+assert.doesNotThrow(() => validateMatrixStructure(undefined));
 
 // ---------------------------------------------------------------------------
 // PROBLEMA 2 — admin secret key classification
@@ -269,6 +418,76 @@ function baseEnv(overrides) {
   const result = runScript([], env);
   assert.notStrictEqual(result.status, 0);
   assert.ok(result.stdout.includes('ADMIN_KEY_MISSING'));
+}
+
+// ---------------------------------------------------------------------------
+// F-1 process-level checks: a syntactically VALID synthetic key is combined
+// with a missing/invalid SUPABASE_URL to prove the URL check runs, fails
+// closed, and happens before any client/network is created — without ever
+// making a real request to the certified project (no real secret is used, so
+// the certified-URL "PASS" path is exercised only at the unit level above,
+// never end-to-end here).
+// ---------------------------------------------------------------------------
+
+const SYNTHETIC_VALID_KEY = 'sb_secret_synthetic_0000000000000000';
+
+// Missing SUPABASE_URL in mutating mode must fail-closed with SUPABASE_URL_MISSING,
+// before ADMIN key material or any URL is ever echoed.
+{
+  const env = baseEnv({ SUPABASE_SERVICE_ROLE_KEY: SYNTHETIC_VALID_KEY });
+  delete env.SUPABASE_URL;
+  const result = runScript([], env);
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('ADMIN_KEY_VALID'));
+  assert.ok(result.stdout.includes('SUPABASE_URL_MISSING'));
+  assert.ok(!result.stdout.includes('LOCATION_MATRIX_VERIFIED'), 'must never reach the remote check');
+}
+
+// Invalid SUPABASE_URL (with an otherwise valid-format key) must fail-closed,
+// fast (proving no real network attempt was made), and must never print the
+// rejected URL or any key material.
+{
+  const rejected = 'http://ljuyolwnlbqlfxjujfrq.supabase.co'; // http, not https
+  const start = Date.now();
+  const result = runScript([], baseEnv({ SUPABASE_SERVICE_ROLE_KEY: SYNTHETIC_VALID_KEY, SUPABASE_URL: rejected }));
+  const elapsedMs = Date.now() - start;
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('ADMIN_KEY_VALID'));
+  assert.ok(result.stdout.includes('SUPABASE_URL_REJECTED'));
+  assert.ok(!result.stdout.includes('LOCATION_MATRIX_VERIFIED'), 'must never reach the remote check (client never created)');
+  assert.ok(!result.stdout.includes(rejected) && !result.stderr.includes(rejected), 'the rejected URL must never be echoed');
+  assert.ok(!result.stdout.includes(SYNTHETIC_VALID_KEY) && !result.stderr.includes(SYNTHETIC_VALID_KEY), 'no key fragment may appear in logs');
+  assert.ok(elapsedMs < 4000, `URL validation must fail before any network attempt (took ${elapsedMs}ms)`);
+}
+
+// A deceptive-subdomain / wrong-project URL must be rejected identically.
+{
+  const result = runScript([], baseEnv({ SUPABASE_SERVICE_ROLE_KEY: SYNTHETIC_VALID_KEY, SUPABASE_URL: 'https://evil.ljuyolwnlbqlfxjujfrq.supabase.co' }));
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('SUPABASE_URL_REJECTED'));
+}
+
+// Dry-run must succeed with no SUPABASE_URL in the environment at all, and
+// must ignore SUPABASE_URL entirely even if present (already exercised above
+// with an unreachable address) — no ADMIN_KEY_* or SUPABASE_URL_* message is
+// ever evaluated/printed in dry-run.
+{
+  const env = baseEnv({});
+  delete env.SUPABASE_URL;
+  delete env.SUPABASE_SERVICE_ROLE_KEY;
+  const result = runScript(['--dry-run'], env);
+  assert.strictEqual(result.status, 0, `dry-run without SUPABASE_URL must exit 0, got: ${result.stderr}`);
+  assert.ok(!/SUPABASE_URL_/.test(result.stdout), 'dry-run must never evaluate/print SUPABASE_URL status');
+}
+
+// ---------------------------------------------------------------------------
+// F-3 process-level check: structural validation runs before dry-run's plan
+// output too (both modes share the same guard at the top of main()).
+// ---------------------------------------------------------------------------
+{
+  const result = runScript(['--dry-run'], baseEnv({}));
+  assert.strictEqual(result.status, 0);
+  assert.ok(!result.stdout.includes('PROVISIONING_MATRIX_INVALID'), 'the certified matrix must pass structural validation in dry-run too');
 }
 
 idempotencyCheck()

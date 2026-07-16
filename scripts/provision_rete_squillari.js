@@ -11,7 +11,12 @@ const readline = require('readline');
 // location_id dalla posizione nell'array o da un indice + 1: Trasta non è una sede negozio
 // e gli id storicamente non sono sequenziali.
 
-const SUPABASE_URL_DEFAULT = 'http://127.0.0.1:54321';
+// Canonical remote project. Mutating mode MUST NOT fall back to a local URL:
+// the operator has to explicitly point at this exact project, or the script
+// refuses to create an admin client at all.
+const CANONICAL_PROJECT_REF = 'ljuyolwnlbqlfxjujfrq';
+const CANONICAL_SUPABASE_HOSTNAME = `${CANONICAL_PROJECT_REF}.supabase.co`;
+const CANONICAL_SUPABASE_URL = `https://${CANONICAL_SUPABASE_HOSTNAME}`;
 
 const LOCATION_MATRIX = Object.freeze([
   Object.freeze({ key: 'malta', email: 'malta@rete.squillari.it', role: 'store', location_id: 2, code: 101, name: 'Malta' }),
@@ -93,15 +98,63 @@ function classifyAdminSecretKey(rawValue) {
 }
 
 // ---------------------------------------------------------------------------
+// Supabase URL classification (F-1).
+//
+// Mutating mode is bound to exactly one project: CANONICAL_SUPABASE_URL. No
+// local fallback, no other host, subdomain, port, path, query, fragment, or
+// credentials embedded in the URL are ever accepted. On any rejection the
+// caller must print a generic message only — never the raw URL value.
+// ---------------------------------------------------------------------------
+
+function classifySupabaseUrl(rawValue) {
+  if (rawValue === undefined || rawValue === null) return 'MISSING';
+  const trimmed = String(rawValue).trim();
+  if (trimmed.length === 0) return 'MISSING';
+
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch (err) {
+    return 'INVALID';
+  }
+
+  if (parsed.protocol !== 'https:') return 'INVALID';
+  if (parsed.hostname !== CANONICAL_SUPABASE_HOSTNAME) return 'INVALID';
+  if (parsed.username !== '') return 'INVALID';
+  if (parsed.password !== '') return 'INVALID';
+  if (parsed.port !== '') return 'INVALID';
+  // The only normalization performed is accepting an optional trailing slash;
+  // no other pathname is ever accepted.
+  if (parsed.pathname !== '' && parsed.pathname !== '/') return 'INVALID';
+  if (parsed.search !== '') return 'INVALID';
+  if (parsed.hash !== '') return 'INVALID';
+
+  return 'VALID';
+}
+
+// ---------------------------------------------------------------------------
 // Read-only remote location matrix verification (fail-closed).
 // ---------------------------------------------------------------------------
 
 function verifyRemoteLocationMatrix(remoteRows) {
   const rows = Array.isArray(remoteRows) ? remoteRows : [];
-  const byName = new Map(rows.map((row) => [row.name, row]));
+  const byName = new Map();
+  const duplicateNames = new Set();
+  for (const row of rows) {
+    if (byName.has(row.name)) {
+      duplicateNames.add(row.name);
+    } else {
+      byName.set(row.name, row);
+    }
+  }
+
   const mismatches = [];
 
   for (const entry of STORE_ENTRIES) {
+    if (duplicateNames.has(entry.name)) {
+      mismatches.push({ name: entry.name, reason: 'DUPLICATE_IN_REMOTE' });
+      continue;
+    }
     const remote = byName.get(entry.name);
     if (!remote) {
       mismatches.push({ name: entry.name, reason: 'MISSING_IN_REMOTE' });
@@ -109,6 +162,10 @@ function verifyRemoteLocationMatrix(remoteRows) {
     }
     if (remote.id !== entry.location_id || remote.code !== entry.code || remote.name !== entry.name) {
       mismatches.push({ name: entry.name, reason: 'FIELD_MISMATCH' });
+      continue;
+    }
+    if (remote.active !== true) {
+      mismatches.push({ name: entry.name, reason: 'INACTIVE_OR_INVALID_ACTIVE_FIELD' });
     }
   }
 
@@ -123,7 +180,7 @@ function verifyRemoteLocationMatrix(remoteRows) {
 }
 
 async function fetchRemoteLocations(supabaseClient) {
-  const { data, error } = await supabaseClient.from('rete_locations').select('id, code, name');
+  const { data, error } = await supabaseClient.from('rete_locations').select('id, code, name, active');
   if (error) {
     throw new Error(`Failed to read rete_locations: ${error.message}`);
   }
@@ -140,6 +197,66 @@ function buildProvisioningPlan() {
     central: { ...CENTRAL_ENTRY },
     totalIdentities: LOCATION_MATRIX.length
   };
+}
+
+// ---------------------------------------------------------------------------
+// Structural validation of the provisioning matrix (F-3).
+//
+// Pure, generic, and independent of any specific matrix instance so tests can
+// exercise every failure mode against synthetic clones without touching the
+// real (correct) LOCATION_MATRIX constant.
+// ---------------------------------------------------------------------------
+
+const EXPECTED_STORE_LOCATION_IDS = Object.freeze([2, 4, 5, 6, 7, 8]);
+const FORBIDDEN_LOCATION_IDS = Object.freeze([1, 3]);
+
+function validateMatrixStructure(matrix) {
+  const list = Array.isArray(matrix) ? matrix : [];
+  const problems = [];
+
+  if (list.length !== 7) problems.push('IDENTITY_COUNT');
+
+  const stores = list.filter((entry) => entry && entry.role === 'store');
+  const centrals = list.filter((entry) => entry && entry.role === 'central');
+
+  if (stores.length !== 6) problems.push('STORE_COUNT');
+  if (centrals.length !== 1) problems.push('CENTRAL_COUNT');
+
+  for (const entry of stores) {
+    if (entry.location_id === null || entry.location_id === undefined) {
+      problems.push('STORE_MISSING_LOCATION_ID');
+    }
+  }
+  for (const entry of centrals) {
+    if (entry.location_id !== null) problems.push('CENTRAL_HAS_LOCATION_ID');
+  }
+
+  const locationIds = stores.map((entry) => entry.location_id);
+  if (new Set(locationIds).size !== locationIds.length) problems.push('DUPLICATE_LOCATION_ID');
+
+  const codes = stores.map((entry) => entry.code);
+  if (new Set(codes).size !== codes.length) problems.push('DUPLICATE_CODE');
+
+  const emails = list.map((entry) => entry.email);
+  if (new Set(emails).size !== emails.length) problems.push('DUPLICATE_EMAIL');
+
+  const names = list.map((entry) => entry.name);
+  if (new Set(names).size !== names.length) problems.push('DUPLICATE_NAME');
+
+  if (locationIds.some((id) => FORBIDDEN_LOCATION_IDS.includes(id))) problems.push('FORBIDDEN_LOCATION_ID');
+
+  const numericIds = locationIds.filter((id) => typeof id === 'number').sort((a, b) => a - b);
+  if (JSON.stringify(numericIds) !== JSON.stringify(EXPECTED_STORE_LOCATION_IDS)) problems.push('MAPPING_MISMATCH');
+
+  if (names.some((name) => typeof name === 'string' && name.trim().toLowerCase() === 'trasta')) {
+    problems.push('TRASTA_PRESENT');
+  }
+
+  return { ok: problems.length === 0, problems };
+}
+
+function validateProvisioningStructure() {
+  return validateMatrixStructure(LOCATION_MATRIX);
 }
 
 // ---------------------------------------------------------------------------
@@ -276,15 +393,26 @@ async function promptConfirm(question) {
 
 async function main() {
     const DRY_RUN = process.argv.includes('--dry-run');
-    const SUPABASE_URL = process.env.SUPABASE_URL || SUPABASE_URL_DEFAULT;
 
     console.log(`Starting Provisioning (DRY_RUN: ${DRY_RUN})`);
+
+    // F-3: structural validation of the provisioning matrix runs unconditionally,
+    // before anything else (dry-run or mutating).
+    const structural = validateProvisioningStructure();
+    if (!structural.ok) {
+        console.error('PROVISIONING_MATRIX_INVALID');
+        for (const problem of structural.problems) {
+            console.error(`- ${problem}`);
+        }
+        process.exit(1);
+    }
 
     let supabase = null;
 
     if (DRY_RUN) {
-        // Dry-run must never initialize a remote admin client and must never
-        // require or read the admin secret.
+        // Dry-run must never initialize a remote admin client, must never
+        // require or read the admin secret, and must never require or read
+        // SUPABASE_URL — only the internal synthetic plan below is used.
         const plan = buildProvisioningPlan();
         console.log(`Dry-run plan: ${plan.stores.length} store identities + 1 central identity = ${plan.totalIdentities} total.`);
     } else {
@@ -299,7 +427,21 @@ async function main() {
         }
         console.log('ADMIN_KEY_VALID');
 
-        supabase = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        // F-1: mutating mode is bound to exactly one certified project. No
+        // local fallback is accepted; the client is never created on mismatch,
+        // and the raw URL value is never logged (only a generic outcome).
+        const urlStatus = classifySupabaseUrl(process.env.SUPABASE_URL);
+        if (urlStatus === 'MISSING') {
+            console.log('SUPABASE_URL_MISSING');
+            process.exit(1);
+        }
+        if (urlStatus === 'INVALID') {
+            console.log('SUPABASE_URL_REJECTED');
+            process.exit(1);
+        }
+        console.log('SUPABASE_URL_VERIFIED');
+
+        supabase = createClient(CANONICAL_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
             auth: { autoRefreshToken: false, persistSession: false }
         });
 
@@ -393,9 +535,17 @@ module.exports = {
     CENTRAL_ENTRY,
     pinEnvVarName,
     classifyAdminSecretKey,
+    classifySupabaseUrl,
+    CANONICAL_PROJECT_REF,
+    CANONICAL_SUPABASE_HOSTNAME,
+    CANONICAL_SUPABASE_URL,
     verifyRemoteLocationMatrix,
     fetchRemoteLocations,
     buildProvisioningPlan,
+    validateMatrixStructure,
+    validateProvisioningStructure,
+    EXPECTED_STORE_LOCATION_IDS,
+    FORBIDDEN_LOCATION_IDS,
     ensureUser,
     upsertMembership,
     provisionEntry,
