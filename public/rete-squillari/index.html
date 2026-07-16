@@ -52,10 +52,10 @@ function resolveConflict(dec){log('Decisione conflitto','Richiesta 1','decisione
 document.getElementById('role').onclick=function(){picker()};document.getElementById('mob').onclick=function(){picker()};document.getElementById('view').addEventListener('click',e=>{});
 const SUPABASE_URL = 'https://ljuyolwnlbqlfxjujfrq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdXlvbHdubGJxbGZ4anVqZnJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwODkxNTcsImV4cCI6MjA5OTY2NTE1N30.6YYt0aGAwJiHIqfT6m8wWpgrDiwkMKI-gETKEs7TPwI';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     await loadSession(session);
   } else {
@@ -64,7 +64,7 @@ async function initAuth() {
 }
 
 async function loadSession(session) {
-  const { data: member, error } = await supabase
+  const { data: member, error } = await supabaseClient
     .from('rete_memberships')
     .select('role, rete_locations(name)')
     .eq('user_id', session.user.id)
@@ -73,7 +73,7 @@ async function loadSession(session) {
   if (error || !member || (member.role !== 'admin' && member.role !== 'store')) {
     RoleAuthority.reset();
     toast('Errore: Profilo non trovato.');
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     document.getElementById('login-screen').style.display = 'flex';
     return;
   }
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loginBtn.textContent = 'Accesso...';
       const email = document.getElementById('login-store').value;
       const password = document.getElementById('login-pin').value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
       
       if (error) {
         toast('Credenziali non valide');
@@ -153,7 +153,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   window.go=function(next){if(next==='shortages'){page=next;boot();return}oldGo(next)};
   window.render=function(){if(page==='shortages'){document.getElementById('view').innerHTML=renderShortages();return}oldRender()};
   window.picker=function(){
-  open('<h2>Profilo</h2><p>Utente autenticato come <b>'+esc(role)+'</b>.</p><div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="danger" onclick="supabase.auth.signOut().then(()=>location.reload())">Disconnetti</button></div>');
+  open('<h2>Profilo</h2><p>Utente autenticato come <b>'+esc(role)+'</b>.</p><div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="danger" onclick="supabaseClient.auth.signOut().then(()=>location.reload())">Disconnetti</button></div>');
 };
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function locationId(){return profileMap[role]||null}
