@@ -3,7 +3,7 @@ import os
 import re
 import threading
 import unittest
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, SimpleHTTPRequestHandler, HTTPServer
 
 from playwright.sync_api import sync_playwright
 
@@ -363,6 +363,215 @@ class CSPBrowserRuntimeTests(unittest.TestCase):
                 self.assertTrue(self.page.is_visible('#login-pin'))
                 self.assertTrue(self.page.is_visible('#login-btn'))
                 self.assertFalse(self.page.is_visible('#main-app'))
+
+
+class CleanUrlHandlerFactory:
+    """Mimics Vercel's actual routing for /rete-squillari: serves the page at
+    the clean URL (no /public prefix, no .html), 308-redirects the
+    trailing-slash variant to the no-slash canonical (as Vercel does), and
+    serves same-directory assets (location-model.js, assets/*) relative to
+    /rete-squillari/ - exactly as production does. Deliberately has no
+    fallback to /public/... so a relative-path regression like F-2 cannot
+    hide behind a mismatched test URL structure."""
+
+    def __init__(self, csp_value):
+        self.csp_value = csp_value
+
+    def build(self):
+        csp_value = self.csp_value
+        page_dir = os.path.join(REPO_ROOT, 'public', 'rete-squillari')
+        content_types = {'.js': 'application/javascript', '.png': 'image/png', '.html': 'text/html; charset=utf-8'}
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, format, *args):
+                pass
+
+            def _serve_file(self, rel_path):
+                full_path = os.path.join(page_dir, rel_path)
+                if not os.path.isfile(full_path):
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                if rel_path == 'index.html':
+                    # The SDK script is mocked (see MOCK_SDK_SCRIPT) so login
+                    # can be simulated without a real PIN/project; its body
+                    # therefore will not match the real SRI hash, so the
+                    # integrity attribute is stripped here - exactly like the
+                    # existing test_rete_squillari_frontend_auth.py harness
+                    # does for the same reason. CSPBrowserRuntimeTests (which
+                    # uses the real unmocked bundle) does not do this.
+                    with open(full_path, 'r', encoding='utf-8') as f:
+                        text = re.sub(r'integrity="sha384-[^"]+"\s*', '', f.read())
+                    body = text.encode('utf-8')
+                else:
+                    with open(full_path, 'rb') as f:
+                        body = f.read()
+                ext = os.path.splitext(rel_path)[1]
+                self.send_response(200)
+                self.send_header('Content-Type', content_types.get(ext, 'application/octet-stream'))
+                if rel_path == 'index.html':
+                    self.send_header('Content-Security-Policy', csp_value)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                path = self.path.split('?')[0]
+                if path == '/rete-squillari/':
+                    self.send_response(308)
+                    self.send_header('Location', '/rete-squillari')
+                    self.end_headers()
+                    return
+                if path == '/rete-squillari':
+                    self._serve_file('index.html')
+                    return
+                if path.startswith('/rete-squillari/'):
+                    self._serve_file(path[len('/rete-squillari/'):])
+                    return
+                # No /public/... fallback: a request for /location-model.js
+                # (root, the F-2 regression) is a genuine 404, matching prod.
+                self.send_response(404)
+                self.end_headers()
+
+        return Handler
+
+
+MOCK_SDK_SCRIPT = """
+window.supabase = {
+    createClient: () => ({
+        auth: {
+            getSession: async () => {
+                const sess = sessionStorage.getItem('mockSession');
+                return { data: { session: sess ? JSON.parse(sess) : null }, error: null };
+            },
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+            signInWithPassword: async ({ email, password }) => {
+                if (password !== '123456') return { error: { message: 'Invalid' }, data: null };
+                const s = { user: { id: 'u1' } };
+                sessionStorage.setItem('mockSession', JSON.stringify(s));
+                return { data: { session: s }, error: null };
+            },
+            signOut: async () => { sessionStorage.removeItem('mockSession'); }
+        },
+        from: (table) => ({
+            select: () => ({
+                eq: () => ({
+                    single: async () => {
+                        if (table === 'rete_memberships') {
+                            const mm = sessionStorage.getItem('mockMember');
+                            if (mm) return { data: JSON.parse(mm), error: null };
+                        }
+                        return { error: { message: 'Not found' }, data: null };
+                    }
+                })
+            })
+        })
+    })
+};
+"""
+
+
+class CleanUrlRoutingTests(unittest.TestCase):
+    """FASE 6/F-2/F-3: reproduces Vercel's clean-URL routing for real (no
+    /public/... shortcut), proving location-model.js resolves at its
+    absolute path and the 'Schede ammanco' feature it powers actually
+    renders. The Supabase SDK network call is mocked (no real Supabase
+    project, no real PIN) so login can be simulated; location-model.js
+    itself is served for real, unmocked, from disk."""
+
+    @classmethod
+    def setUpClass(cls):
+        config = load_vercel_config()
+        csp_value = rete_squillari_csp_values(config)[0]
+        handler = CleanUrlHandlerFactory(csp_value).build()
+        cls.server = HTTPServer(('127.0.0.1', 0), handler)
+        cls.port = cls.server.server_port
+        cls.server_thread = threading.Thread(target=cls.server.serve_forever)
+        cls.server_thread.daemon = True
+        cls.server_thread.start()
+
+        cls.playwright = sync_playwright().start()
+        cls.browser = cls.playwright.chromium.launch(headless=True)
+        cls.base_url = f'http://127.0.0.1:{cls.port}'
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.close()
+        cls.playwright.stop()
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def setUp(self):
+        self.context = self.browser.new_context()
+        self.page = self.context.new_page()
+        self.page.route(JSDELIVR_ORIGIN + '/npm/@supabase/supabase-js@2.100.1', lambda route: route.fulfill(
+            status=200, content_type='application/javascript', body=MOCK_SDK_SCRIPT
+        ))
+        self.requests = []
+        self.page.on('request', lambda r: self.requests.append((r.method, r.url)))
+        self.console_errors = []
+        self.page.on('console', lambda m: self.console_errors.append(m.text) if m.type == 'error' else None)
+        self.page_errors = []
+        self.page.on('pageerror', lambda exc: self.page_errors.append(str(exc)))
+
+    def tearDown(self):
+        self.context.close()
+
+    def set_mock_member(self, val):
+        js_str = json.dumps(val).replace("'", "\\'")
+        self.page.evaluate(f"sessionStorage.setItem('mockMember', '{js_str}');")
+
+    def test_trailing_slash_redirects_to_canonical_no_slash(self):
+        self.page.goto(self.base_url + '/rete-squillari/')
+        self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
+        self.assertEqual(self.page.url, self.base_url + '/rete-squillari')
+
+    def test_location_model_requested_at_absolute_path_not_root(self):
+        self.page.goto(self.base_url + '/rete-squillari')
+        self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
+        urls = [u for _, u in self.requests]
+        self.assertIn(self.base_url + '/rete-squillari/location-model.js', urls)
+        self.assertNotIn(self.base_url + '/location-model.js', urls)
+
+    def test_location_model_http_200(self):
+        statuses = {}
+        self.page.on('response', lambda r: statuses.__setitem__(r.url, r.status))
+        self.page.goto(self.base_url + '/rete-squillari')
+        self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
+        self.assertEqual(statuses.get(self.base_url + '/rete-squillari/location-model.js'), 200)
+
+    def test_rete_location_model_global_available(self):
+        self.page.goto(self.base_url + '/rete-squillari')
+        self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
+        self.assertEqual(self.page.evaluate("typeof window.RETE_LOCATION_MODEL"), 'object')
+
+    def test_shortages_section_renders_for_store_with_clean_url(self):
+        self.page.goto(self.base_url + '/rete-squillari')
+        self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.page.select_option('#login-store', 'malta@rete.squillari.it')
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('#login-screen', state='hidden', timeout=10000)
+
+        self.page.click("button:has-text('Schede ammanco')")
+        self.page.wait_for_selector('text=IDENTITÀ E PERMESSI', timeout=10000)
+
+        model_errors = [e for e in self.page_errors if 'model is not defined' in e or 'RETE_LOCATION_MODEL' in e]
+        self.assertEqual(model_errors, [], f'location-model.js failed to power Schede ammanco: {model_errors}')
+        self.assertEqual(self.page_errors, [], f'unexpected page errors: {self.page_errors}')
+
+    def test_no_console_errors_through_clean_url_flow(self):
+        self.page.goto(self.base_url + '/rete-squillari')
+        self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.page.select_option('#login-store', 'malta@rete.squillari.it')
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('#login-screen', state='hidden', timeout=10000)
+        self.page.click("button:has-text('Schede ammanco')")
+        self.page.wait_for_timeout(500)
+        self.assertEqual(self.console_errors, [], f'console errors during clean-url flow: {self.console_errors}')
 
 
 if __name__ == '__main__':
