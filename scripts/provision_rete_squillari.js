@@ -19,12 +19,12 @@ const CANONICAL_SUPABASE_HOSTNAME = `${CANONICAL_PROJECT_REF}.supabase.co`;
 const CANONICAL_SUPABASE_URL = `https://${CANONICAL_SUPABASE_HOSTNAME}`;
 
 const LOCATION_MATRIX = Object.freeze([
-  Object.freeze({ key: 'malta', email: 'malta@rete.squillari.it', role: 'store', location_id: 2, code: 101, name: 'Malta' }),
-  Object.freeze({ key: 'sestri', email: 'sestri@rete.squillari.it', role: 'store', location_id: 4, code: 102, name: 'Sestri' }),
-  Object.freeze({ key: 'cantore', email: 'cantore@rete.squillari.it', role: 'store', location_id: 5, code: 103, name: 'Cantore' }),
-  Object.freeze({ key: 'trento', email: 'trento@rete.squillari.it', role: 'store', location_id: 6, code: 104, name: 'Trento' }),
-  Object.freeze({ key: 'de_ferrari', email: 'de_ferrari@rete.squillari.it', role: 'store', location_id: 7, code: 105, name: 'De Ferrari' }),
-  Object.freeze({ key: 'armenia', email: 'armenia@rete.squillari.it', role: 'store', location_id: 8, code: 106, name: 'Armenia' }),
+  Object.freeze({ key: 'malta', email: 'malta@rete.squillari.it', role: 'store', location_id: 2, code: 2, name: 'Malta' }),
+  Object.freeze({ key: 'sestri', email: 'sestri@rete.squillari.it', role: 'store', location_id: 4, code: 4, name: 'Sestri' }),
+  Object.freeze({ key: 'cantore', email: 'cantore@rete.squillari.it', role: 'store', location_id: 5, code: 5, name: 'Cantore' }),
+  Object.freeze({ key: 'trento', email: 'trento@rete.squillari.it', role: 'store', location_id: 6, code: 6, name: 'Trento' }),
+  Object.freeze({ key: 'de_ferrari', email: 'de_ferrari@rete.squillari.it', role: 'store', location_id: 7, code: 7, name: 'De Ferrari' }),
+  Object.freeze({ key: 'armenia', email: 'armenia@rete.squillari.it', role: 'store', location_id: 8, code: 8, name: 'Armenia' }),
   Object.freeze({ key: 'centrale', email: 'centrale@rete.squillari.it', role: 'central', location_id: null, code: null, name: 'Centrale' })
 ]);
 

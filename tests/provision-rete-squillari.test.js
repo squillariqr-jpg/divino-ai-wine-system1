@@ -118,6 +118,107 @@ assert.strictEqual(
 }
 
 // ---------------------------------------------------------------------------
+// F-4 — location codes must equal location_id (aligned to the certified
+// remote project ljuyolwnlbqlfxjujfrq), never the old local-migration
+// convention (101-106).
+// ---------------------------------------------------------------------------
+
+const EXPECTED_CODE_BY_NAME = {
+  Malta: 2,
+  Sestri: 4,
+  Cantore: 5,
+  Trento: 6,
+  'De Ferrari': 7,
+  Armenia: 8
+};
+
+// 1) the six location_id values are exactly 2,4,5,6,7,8.
+assert.deepStrictEqual(
+  STORE_ENTRIES.map((e) => e.location_id).sort((a, b) => a - b),
+  [2, 4, 5, 6, 7, 8],
+  'the six store location_id values must be exactly 2,4,5,6,7,8'
+);
+
+// 2) the six code values are exactly 2,4,5,6,7,8.
+assert.deepStrictEqual(
+  STORE_ENTRIES.map((e) => e.code).sort((a, b) => a - b),
+  [2, 4, 5, 6, 7, 8],
+  'the six store code values must be exactly 2,4,5,6,7,8'
+);
+
+// 3) for every store, code === location_id, and none of the old 101-106
+// local-migration values remain.
+for (const entry of STORE_ENTRIES) {
+  assert.strictEqual(entry.code, entry.location_id, `${entry.name}: code must equal location_id`);
+  assert.strictEqual(EXPECTED_CODE_BY_NAME[entry.name], entry.code, `${entry.name}: code must match the certified remote value`);
+  assert.ok(entry.code < 100, `${entry.name}: code must not use the old local-migration convention (101-106)`);
+}
+
+// 4) verifyRemoteLocationMatrix accepts an independently constructed synthetic
+// fixture using the certified code === id convention (not derived from
+// STORE_ENTRIES, to avoid a tautological comparison).
+const certifiedRemoteFixture = [
+  { id: 2, code: 2, name: 'Malta', active: true },
+  { id: 4, code: 4, name: 'Sestri', active: true },
+  { id: 5, code: 5, name: 'Cantore', active: true },
+  { id: 6, code: 6, name: 'Trento', active: true },
+  { id: 7, code: 7, name: 'De Ferrari', active: true },
+  { id: 8, code: 8, name: 'Armenia', active: true }
+];
+assert.strictEqual(verifyRemoteLocationMatrix(certifiedRemoteFixture).ok, true, 'the certified code===id fixture must verify OK');
+
+// 5) a single legacy code (101-106) must be rejected fail-closed, even if
+// id/name/active are otherwise correct.
+{
+  const oneLegacyCode = certifiedRemoteFixture.map((r) => ({ ...r }));
+  oneLegacyCode[0] = { ...oneLegacyCode[0], code: 101 };
+  const result = verifyRemoteLocationMatrix(oneLegacyCode);
+  assert.strictEqual(result.ok, false, 'a single legacy code (101) must fail-closed');
+  assert.ok(result.mismatches.some((m) => m.name === 'Malta' && m.reason === 'FIELD_MISMATCH'));
+}
+
+// 6) a missing code field must be rejected fail-closed.
+{
+  const missingCode = certifiedRemoteFixture.map((r) => ({ ...r }));
+  delete missingCode[0].code;
+  assert.strictEqual(verifyRemoteLocationMatrix(missingCode).ok, false, 'a missing code field must fail-closed');
+}
+
+// 7) a duplicated code, or a code associated with the wrong location, must be
+// rejected fail-closed.
+{
+  const duplicatedCode = certifiedRemoteFixture.map((r) => ({ ...r }));
+  duplicatedCode[1] = { ...duplicatedCode[1], code: duplicatedCode[0].code }; // Sestri's code = Malta's code
+  assert.strictEqual(verifyRemoteLocationMatrix(duplicatedCode).ok, false, 'a duplicated code must fail-closed');
+
+  const swappedCode = certifiedRemoteFixture.map((r) => ({ ...r }));
+  const maltaCode = swappedCode[0].code;
+  swappedCode[0] = { ...swappedCode[0], code: swappedCode[1].code };
+  swappedCode[1] = { ...swappedCode[1], code: maltaCode };
+  assert.strictEqual(verifyRemoteLocationMatrix(swappedCode).ok, false, 'a code associated with the wrong location must fail-closed');
+}
+
+// 8) an inactive certified location must still fail-closed with the new codes.
+{
+  const inactiveWithNewCodes = certifiedRemoteFixture.map((r) => ({ ...r }));
+  inactiveWithNewCodes[0] = { ...inactiveWithNewCodes[0], active: false };
+  assert.strictEqual(verifyRemoteLocationMatrix(inactiveWithNewCodes).ok, false, 'an inactive location must still fail-closed after the code fix');
+}
+
+// 9) a duplicated location id must still fail-closed with the new codes.
+{
+  const duplicatedId = certifiedRemoteFixture.map((r) => ({ ...r }));
+  duplicatedId[1] = { ...duplicatedId[1], id: duplicatedId[0].id };
+  const result = verifyRemoteLocationMatrix(duplicatedId);
+  assert.strictEqual(result.ok, false, 'a duplicated location id must still fail-closed after the code fix');
+}
+
+// 10) a wrong project URL/ref must still fail-closed, and the canonical URL
+// must still validate — unaffected by the code fix (full coverage lives in
+// the F-1 section below; re-asserted here for F-4 completeness).
+assert.strictEqual(classifySupabaseUrl('https://otherref.supabase.co'), 'INVALID', 'wrong project ref must still fail-closed after the code fix');
+
+// ---------------------------------------------------------------------------
 // Dry-run plan shape
 // ---------------------------------------------------------------------------
 
