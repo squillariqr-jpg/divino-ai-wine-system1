@@ -10,7 +10,12 @@ class NoLogHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
-class FrontendAuthE2ETests(unittest.TestCase):
+class _FrontendHarness(unittest.TestCase):
+    """Shared Chromium/local-server/mock-SDK harness. Not a test case itself
+    (no test_ methods) - both FrontendAuthE2ETests and CentralRoleContractTests
+    inherit it independently so their test methods run exactly once each,
+    instead of duplicating a shared parent's tests."""
+
     @classmethod
     def setUpClass(cls):
         cls.server = HTTPServer(('127.0.0.1', 0), NoLogHandler)
@@ -95,6 +100,8 @@ class FrontendAuthE2ETests(unittest.TestCase):
         else:
             self.page.evaluate("sessionStorage.removeItem('mockMember');")
 
+
+class FrontendAuthE2ETests(_FrontendHarness):
     def test_overlay_login_present_senza_sessione(self):
         self.page.goto(self.file_url)
         self.page.wait_for_selector('#login-screen', state='visible')
@@ -130,7 +137,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_login_valido_e_membership(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({ 'role': 'store', 'rete_locations': { 'name': '2 – Malta' } })
+        self.set_mock_member({ 'role': 'store', 'rete_locations': { 'name': '2 – Malta', 'active': True } })
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         
@@ -158,7 +165,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_logout_blocca_ui(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({ 'role': 'store', 'rete_locations': { 'name': '2 – Malta' } })
+        self.set_mock_member({ 'role': 'store', 'rete_locations': { 'name': '2 – Malta', 'active': True } })
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         
@@ -173,7 +180,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_banner_demo_presente(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({ 'role': 'store', 'rete_locations': { 'name': '2 – Malta' } })
+        self.set_mock_member({ 'role': 'store', 'rete_locations': { 'name': '2 – Malta', 'active': True } })
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         
@@ -236,7 +243,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_profile_menu_has_no_role_switch_options(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta'}})
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -252,7 +259,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_localstorage_role_tamper_ignored(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta'}})
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -266,7 +273,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_sessionstorage_role_tamper_ignored(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta'}})
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -289,7 +296,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_dom_has_no_role_switch_controls_after_login(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta'}})
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -300,7 +307,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_membership_store_renders_store_view_only(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '6 – Trento'}})
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '6 – Trento', 'active': True}})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -310,7 +317,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_membership_central_renders_manager_view(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'admin', 'rete_locations': None})
+        self.set_mock_member({'role': 'central', 'rete_locations': None})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -369,7 +376,7 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_logout_clears_membership_derived_state(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'admin', 'rete_locations': None})
+        self.set_mock_member({'role': 'central', 'rete_locations': None})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
@@ -384,12 +391,119 @@ class FrontendAuthE2ETests(unittest.TestCase):
 
     def test_no_central_flash_for_store_profile(self):
         self.page.goto(self.file_url)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '5 – Cantore'}})
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '5 – Cantore', 'active': True}})
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
         self.page.wait_for_selector('#login-screen', state='hidden')
         nav_text = self.page.inner_text('#nav')
         self.assertNotIn('Inbox email', nav_text)
+
+
+class CentralRoleContractTests(_FrontendHarness):
+    """F-1: the DB role enum is {central, store}; 'admin' is not a valid DB
+    value. Role and location validity must be derived only from the
+    membership row (and its embedded rete_locations), never accepted on
+    trust. Every scenario here is exercised with a mocked membership/session -
+    no real PIN or account is used."""
+
+    def test_central_role_accepted_no_location(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'central', 'rete_locations': None})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('#login-screen', state='hidden')
+        self.assertTrue(self.page.is_visible('#main-app'))
+        is_manager = self.page.evaluate("RoleAuthority.isManager")
+        self.assertTrue(is_manager)
+
+    def test_store_role_accepted_with_active_location(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '4 – Sestri', 'active': True}})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('#login-screen', state='hidden')
+        self.assertTrue(self.page.is_visible('#main-app'))
+        is_manager = self.page.evaluate("RoleAuthority.isManager")
+        self.assertFalse(is_manager)
+
+    def test_admin_role_rejected_not_a_db_value(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'admin', 'rete_locations': None})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('.toast', state='visible')
+        self.assertTrue(self.page.is_visible('#login-screen'))
+        self.assertFalse(self.page.is_visible('#main-app'))
+
+    def test_unknown_role_rejected(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'superadmin', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('.toast', state='visible')
+        self.assertTrue(self.page.is_visible('#login-screen'))
+        self.assertFalse(self.page.is_visible('#main-app'))
+
+    def test_central_with_false_location_rejected(self):
+        # Central must never carry a location; if the row is malformed and
+        # has one anyway, fail closed rather than trust it.
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'central', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('.toast', state='visible')
+        self.assertTrue(self.page.is_visible('#login-screen'))
+        self.assertFalse(self.page.is_visible('#main-app'))
+
+    def test_store_without_location_rejected(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'store', 'rete_locations': None})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('.toast', state='visible')
+        self.assertTrue(self.page.is_visible('#login-screen'))
+        self.assertFalse(self.page.is_visible('#main-app'))
+
+    def test_store_with_inactive_location_rejected(self):
+        # rete_locations RLS does not filter by the location's own `active`
+        # flag, so this must be enforced client-side from the embedded field.
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': False}})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('.toast', state='visible')
+        self.assertTrue(self.page.is_visible('#login-screen'))
+        self.assertFalse(self.page.is_visible('#main-app'))
+
+    def test_localstorage_tamper_does_not_change_role(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('#login-screen', state='hidden')
+
+        self.page.evaluate("localStorage.setItem('rete-squillari-v2.role', 'central')")
+        self.page.reload()
+        self.page.wait_for_selector('#login-screen', state='hidden')
+        is_manager = self.page.evaluate("RoleAuthority.isManager")
+        self.assertFalse(is_manager)
+
+    def test_window_setrole_still_absent(self):
+        self.page.goto(self.file_url)
+        self.assertEqual(self.page.evaluate("typeof window.setRole"), 'undefined')
+
+    def test_logout_blocks_ui_again_for_central(self):
+        self.page.goto(self.file_url)
+        self.set_mock_member({'role': 'central', 'rete_locations': None})
+        self.page.fill('#login-pin', '123456')
+        self.page.click('#login-btn')
+        self.page.wait_for_selector('#login-screen', state='hidden')
+
+        self.page.click('#role')
+        self.page.click('button.danger')
+        self.page.wait_for_selector('#login-screen', state='visible')
+        is_manager = self.page.evaluate("RoleAuthority.isManager")
+        self.assertFalse(is_manager)
 
 
 if __name__ == '__main__':

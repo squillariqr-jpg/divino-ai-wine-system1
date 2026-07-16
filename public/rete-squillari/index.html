@@ -32,7 +32,7 @@ const KEY='rete-squillari-v2';const stores=['Responsabile centrale','2 – Malta
 // loadSession() from the validated rete_memberships row returned by Supabase;
 // no other function may set it, and there is no globally reachable setter
 // that accepts an arbitrary role or location value.
-const RoleAuthority=(function(){let managerFlag=false;return{applyMembership(memberRole){managerFlag=(memberRole==='admin')},reset(){managerFlag=false},get isManager(){return managerFlag}}})();
+const RoleAuthority=(function(){let managerFlag=false;return{applyMembership(memberRole){managerFlag=(memberRole==='central')},reset(){managerFlag=false},get isManager(){return managerFlag}}})();
 const seed={requests:[{id:1,store:'7 – De Ferrari',code:'2101208',name:'Erbaluce DOCG Rolletto',ordered:12,delivered:6,original:6,remaining:6,status:'DA TROVARE',urgent:true},{id:2,store:'4 – Sestri',code:'2103033',name:'Riesling Oltrepò Pavese DOC Finigeto',ordered:12,delivered:2,original:10,remaining:6,arrived:4,status:'ARRIVO PARZIALE A TRASTA',urgent:false},{id:3,store:'6 – Trento',code:'2104110',name:'Barbera d’Alba DOC',ordered:12,delivered:4,original:8,remaining:0,arrived:8,status:'ARRIVATO A TRASTA',urgent:false}],offers:[{id:1,request:1,from:'8 – Armenia',qty:4,approved:0,status:'DICHIARATA',date:'oggi'},{id:2,request:1,from:'2 – Malta',qty:2,approved:2,status:'APPROVATA',date:'oggi'},{id:3,request:2,from:'8 – Armenia',qty:3,approved:0,status:'DICHIARATA',date:'oggi'}],transfers:[{id:1,request:1,offer:2,from:'2 – Malta',to:'7 – De Ferrari',qty:2,status:'DA PREPARARE',date:'oggi'},{id:9,request:1,offer:null,from:'5 – Cantore',to:'7 – De Ferrari',qty:2,status:'IN TRASFERIMENTO',date:'ieri'}],emails:[{id:1,sender:'commerciale@enotecasquillari.it',subject:'Mancanti – 7 – De Ferrari – 2101208',date:'13/07/2026',status:'LINKED',data:'7 – De Ferrari · 2101208 · Mancante 6'},{id:2,sender:'commerciale@enotecasquillari.it',subject:'Mancanti – 4 – Sestri',date:'13/07/2026',status:'NEEDS_REVIEW',data:'Quantità mancante non interpretabile'},{id:3,sender:'commerciale@enotecasquillari.it',subject:'Mancanti – negozio?',date:'12/07/2026',status:'ERROR',data:'Negozio non riconosciuto'},{id:4,sender:'commerciale@enotecasquillari.it',subject:'Mancanti – 7 – De Ferrari – 2101208',date:'12/07/2026',status:'DUPLICATE',data:'Comunicazione già collegata'},{id:5,sender:'ordini@esempio.test',subject:'Mancanti urgenti',date:'12/07/2026',status:'ERROR',data:'Mittente non autorizzato'}],audit:[{action:'Importazione email',user:'Sistema demo',store:'—',item:'Email 1',old:'',next:'LINKED',note:''},{action:'Offerta dichiarata',user:'8 – Armenia',store:'8 – Armenia',item:'Richiesta 1',old:'',next:'4 bottiglie',note:''},{action:'Arrivo a Trasta',user:'Responsabile centrale',store:'Trasta',item:'2103033',old:'10',next:'6 residue',note:'Fonte: inserimento responsabile'}]};let db=JSON.parse(localStorage.getItem(KEY+'.db')||'null')||seed;
 const storeNav=[['home','⌂','Home'],['mine','◌','Le mie richieste'],['offers','↗','Le mie offerte'],['prepare','▣','Merce da preparare'],['transfers','→','Trasferimenti'],['history','◷','Storico']];const mgrNav=[['dashboard','⌂','Dashboard'],['inbox','✉','Inbox email'],['review','✓','Verifica estrazione'],['published','▤','Richieste pubblicate'],['approve','◎','Offerte da approvare'],['arrivals','＋','Arrivi a Trasta'],['conflicts','!','Gestione conflitti'],['audit','◷','Audit log']];const manager=()=>RoleAuthority.isManager;const save=()=>localStorage.setItem(KEY+'.db',JSON.stringify(db));function log(action,item,old='',next='',note=''){db.audit.unshift({action,user:role,store:role,item,old,next,note});save()}function toast(t){const x=document.getElementById('toast');x.textContent=t;x.classList.remove('hidden');setTimeout(()=>x.classList.add('hidden'),3000)}function open(html){document.getElementById('modal').innerHTML=html;document.getElementById('mb').classList.remove('hidden')}function closeModal(){document.getElementById('mb').classList.add('hidden')}
 function boot(){document.getElementById('who').textContent=role;document.getElementById('mob').textContent=role+' ⌄';document.getElementById('eyebrow').textContent=manager()?'Vista responsabile':'Vista negozio';document.getElementById('title').textContent=manager()?'Controllo rete':'Dove serve una mano?';const ns=manager()?mgrNav:storeNav;document.getElementById('nav').innerHTML=ns.map(n=>`<button class="${page===n[0]?'on':''}" onclick="go('${n[0]}')"><b>${n[1]}</b>${n[2]}</button>`).join('');render()}
@@ -52,10 +52,10 @@ function resolveConflict(dec){log('Decisione conflitto','Richiesta 1','decisione
 document.getElementById('role').onclick=function(){picker()};document.getElementById('mob').onclick=function(){picker()};document.getElementById('view').addEventListener('click',e=>{});
 const SUPABASE_URL = 'https://ljuyolwnlbqlfxjujfrq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdXlvbHdubGJxbGZ4anVqZnJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwODkxNTcsImV4cCI6MjA5OTY2NTE1N30.6YYt0aGAwJiHIqfT6m8wWpgrDiwkMKI-gETKEs7TPwI';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     await loadSession(session);
   } else {
@@ -64,22 +64,30 @@ async function initAuth() {
 }
 
 async function loadSession(session) {
-  const { data: member, error } = await supabase
+  const { data: member, error } = await supabaseClient
     .from('rete_memberships')
-    .select('role, rete_locations(name)')
+    .select('role, rete_locations(name, active)')
     .eq('user_id', session.user.id)
     .single();
 
-  if (error || !member || (member.role !== 'admin' && member.role !== 'store')) {
+  // rete_locations RLS grants read access to any active member, regardless of
+  // the location's own `active` flag - it does not filter inactive locations
+  // out of this embedded join. Location validity must therefore be checked
+  // here, client-side, in addition to the role check.
+  const location = member && member.rete_locations;
+  const isValidCentral = member && member.role === 'central' && !location;
+  const isValidStore = member && member.role === 'store' && location && location.active === true;
+
+  if (error || !member || !(isValidCentral || isValidStore)) {
     RoleAuthority.reset();
     toast('Errore: Profilo non trovato.');
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     document.getElementById('login-screen').style.display = 'flex';
     return;
   }
 
   RoleAuthority.applyMembership(member.role);
-  if (member.role === 'admin') {
+  if (member.role === 'central') {
     role = 'Responsabile centrale';
   } else {
     const locName = member.rete_locations.name;
@@ -104,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loginBtn.textContent = 'Accesso...';
       const email = document.getElementById('login-store').value;
       const password = document.getElementById('login-pin').value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
       
       if (error) {
         toast('Credenziali non valide');
@@ -142,7 +150,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   const originalDetail=window.detail; window.detail=function(id){originalDetail(id);const r=db.requests.find(x=>x.id===id);if(r?.trastaArrivalDate){const p=document.createElement('p');p.className='muted';p.textContent='Data arrivo a Trasta: '+r.trastaArrivalDate;document.querySelector('#modal')?.appendChild(p);}}
   const originalApprove=window.approve; window.approve=function(){originalApprove();document.querySelectorAll('button').forEach(b=>{if(b.textContent.trim()==='Approva'){const row=b.closest('.row');const text=row?.textContent||'';const offer=db.offers.find(o=>text.includes(o.from));if(offer)b.dataset.approveId=offer.id;}});}; document.addEventListener('click',e=>{const b=e.target.closest('button[data-approve-id]');if(b){e.preventDefault();approvePrompt(Number(b.dataset.approveId));}});
 })();
-</script><style>.squillari-logo{display:block;width:112px;height:auto;max-width:100%;object-fit:contain;margin-bottom:10px}.logo{display:flex;flex-direction:column;align-items:flex-start}.logo small{display:block}.public-demo-banner{background:#fae8bb;border:1px solid #d7ad5d;color:#4a3518;border-radius:10px;padding:12px 14px;margin:0 0 18px;font:12px Arial;line-height:1.45}.public-demo-banner strong{font-size:11px;letter-spacing:.1em}.public-demo-banner span{color:#70552c}@media(max-width:720px){.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-top:14px}.side .nav button{font-size:11px;padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side{padding-bottom:10px}.squillari-logo{width:86px;margin-bottom:6px}.logo small{font-size:9px}.main{position:relative}.mobile{position:absolute;right:15px;top:15px;float:none;max-width:145px}.public-demo-banner{margin-top:10px;font-size:11px}}@media(min-width:721px) and (max-width:900px){.app{display:block}.side{width:100%;display:block;padding:18px 24px}.side .role{display:block;float:right}.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:14px}.side .foot{display:none}.main{padding:24px}.grid{grid-template-columns:1fr}}@media print{body *{visibility:hidden!important}.print-sheet.active,.print-sheet.active *{visibility:visible!important}.print-sheet.active{display:block!important;position:absolute;inset:0;padding:20mm;background:#fff;color:#111}}</style><script src="location-model.js"></script><script>
+</script><style>.squillari-logo{display:block;width:112px;height:auto;max-width:100%;object-fit:contain;margin-bottom:10px}.logo{display:flex;flex-direction:column;align-items:flex-start}.logo small{display:block}.public-demo-banner{background:#fae8bb;border:1px solid #d7ad5d;color:#4a3518;border-radius:10px;padding:12px 14px;margin:0 0 18px;font:12px Arial;line-height:1.45}.public-demo-banner strong{font-size:11px;letter-spacing:.1em}.public-demo-banner span{color:#70552c}@media(max-width:720px){.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-top:14px}.side .nav button{font-size:11px;padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side{padding-bottom:10px}.squillari-logo{width:86px;margin-bottom:6px}.logo small{font-size:9px}.main{position:relative}.mobile{position:absolute;right:15px;top:15px;float:none;max-width:145px}.public-demo-banner{margin-top:10px;font-size:11px}}@media(min-width:721px) and (max-width:900px){.app{display:block}.side{width:100%;display:block;padding:18px 24px}.side .role{display:block;float:right}.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:14px}.side .foot{display:none}.main{padding:24px}.grid{grid-template-columns:1fr}}@media print{body *{visibility:hidden!important}.print-sheet.active,.print-sheet.active *{visibility:visible!important}.print-sheet.active{display:block!important;position:absolute;inset:0;padding:20mm;background:#fff;color:#111}}</style><script src="/rete-squillari/location-model.js"></script><script>
 (function(){
   'use strict';
   var model=window.RETE_LOCATION_MODEL, profileMap={'2 – Malta':'malta','4 – Sestri':'sestri','5 – Cantore':'cantore','6 – Trento':'trento','7 – De Ferrari':'de_ferrari','8 – Armenia':'armenia','Trasta':'trasta'};
@@ -153,7 +161,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   window.go=function(next){if(next==='shortages'){page=next;boot();return}oldGo(next)};
   window.render=function(){if(page==='shortages'){document.getElementById('view').innerHTML=renderShortages();return}oldRender()};
   window.picker=function(){
-  open('<h2>Profilo</h2><p>Utente autenticato come <b>'+esc(role)+'</b>.</p><div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="danger" onclick="supabase.auth.signOut().then(()=>location.reload())">Disconnetti</button></div>');
+  open('<h2>Profilo</h2><p>Utente autenticato come <b>'+esc(role)+'</b>.</p><div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="danger" onclick="supabaseClient.auth.signOut().then(()=>location.reload())">Disconnetti</button></div>');
 };
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function locationId(){return profileMap[role]||null}
