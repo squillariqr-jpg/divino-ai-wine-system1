@@ -1,0 +1,281 @@
+const assert = require('assert');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const provisioning = require(path.join('..', 'scripts', 'provision_rete_squillari.js'));
+
+const {
+  LOCATION_MATRIX,
+  STORE_ENTRIES,
+  CENTRAL_ENTRY,
+  classifyAdminSecretKey,
+  verifyRemoteLocationMatrix,
+  buildProvisioningPlan,
+  provisionEntry,
+  buildMembershipPayload,
+  MEMBERSHIP_UPSERT_CONFLICT_TARGET
+} = provisioning;
+
+const SCRIPT_PATH = path.join(__dirname, '..', 'scripts', 'provision_rete_squillari.js');
+
+function byName(name) {
+  return STORE_ENTRIES.find((e) => e.name === name);
+}
+
+// ---------------------------------------------------------------------------
+// PROBLEMA 1 — mapping matrix
+// ---------------------------------------------------------------------------
+
+assert.strictEqual(byName('Malta').location_id, 2, 'Malta must map to location_id 2');
+assert.strictEqual(byName('Sestri').location_id, 4, 'Sestri must map to location_id 4');
+assert.strictEqual(byName('Cantore').location_id, 5, 'Cantore must map to location_id 5');
+assert.strictEqual(byName('Trento').location_id, 6, 'Trento must map to location_id 6');
+assert.strictEqual(byName('De Ferrari').location_id, 7, 'De Ferrari must map to location_id 7');
+assert.strictEqual(byName('Armenia').location_id, 8, 'Armenia must map to location_id 8');
+assert.strictEqual(CENTRAL_ENTRY.location_id, null, 'Centrale must have a null location_id');
+assert.strictEqual(CENTRAL_ENTRY.role, 'central');
+
+const usedLocationIds = STORE_ENTRIES.map((e) => e.location_id);
+assert.ok(!usedLocationIds.includes(1), 'location_id 1 must never be used by the provisioning matrix');
+assert.ok(!usedLocationIds.includes(3), 'location_id 3 must never be used by the provisioning matrix');
+
+// Nessuna derivazione sequenziale: l'indice nell'array (+1) non deve coincidere
+// sistematicamente con location_id per tutte le voci store.
+const sequentialMatches = STORE_ENTRIES.filter((entry, index) => entry.location_id === index + 1).length;
+assert.notStrictEqual(sequentialMatches, STORE_ENTRIES.length, 'location_id must not be derivable from array position + 1');
+
+assert.ok(!LOCATION_MATRIX.some((e) => e.name === 'Trasta'), 'Trasta must be absent from the provisioning matrix (not a store)');
+assert.strictEqual(STORE_ENTRIES.length, 6, 'exactly 6 store entries expected');
+assert.strictEqual(LOCATION_MATRIX.length, 7, 'exactly 7 total identities expected (6 store + 1 central)');
+
+// ---------------------------------------------------------------------------
+// Read-only remote location matrix verification — fail-closed on divergence
+// ---------------------------------------------------------------------------
+
+const authoritativeRemoteRows = STORE_ENTRIES.map((e) => ({ id: e.location_id, code: e.code, name: e.name }));
+assert.strictEqual(verifyRemoteLocationMatrix(authoritativeRemoteRows).ok, true, 'matching remote rows must verify OK');
+
+// Divergent matrix (e.g. the legacy sequential 1..6 ids currently present in the
+// local dev schema) must be rejected fail-closed, never silently accepted.
+const sequentialRemoteRows = [
+  { id: 1, code: 101, name: 'Malta' },
+  { id: 2, code: 102, name: 'Sestri' },
+  { id: 3, code: 103, name: 'Cantore' },
+  { id: 4, code: 104, name: 'Trento' },
+  { id: 5, code: 105, name: 'De Ferrari' },
+  { id: 6, code: 106, name: 'Armenia' }
+];
+const divergent = verifyRemoteLocationMatrix(sequentialRemoteRows);
+assert.strictEqual(divergent.ok, false, 'divergent remote matrix must fail-closed');
+assert.ok(divergent.mismatches.length > 0);
+
+assert.strictEqual(verifyRemoteLocationMatrix([]).ok, false, 'empty remote matrix must fail-closed');
+assert.strictEqual(
+  verifyRemoteLocationMatrix([...authoritativeRemoteRows, { id: 99, code: 999, name: 'Trasta' }]).ok,
+  false,
+  'an unexpected extra location (e.g. Trasta) must fail-closed'
+);
+
+// ---------------------------------------------------------------------------
+// Dry-run plan shape
+// ---------------------------------------------------------------------------
+
+const plan = buildProvisioningPlan();
+assert.strictEqual(plan.totalIdentities, 7);
+assert.strictEqual(plan.stores.length, 6);
+assert.ok(plan.central);
+assert.strictEqual(plan.central.role, 'central');
+
+// ---------------------------------------------------------------------------
+// PROBLEMA 2 — admin secret key classification
+// ---------------------------------------------------------------------------
+
+function synthesizeLegacyJwt(role) {
+  const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const header = b64url({ alg: 'HS256', typ: 'JWT' });
+  const payload = b64url({ role, iss: 'supabase-demo', synthetic: true });
+  const fakeSignature = 'synthetic-signature-not-a-real-secret';
+  return `${header}.${payload}.${fakeSignature}`;
+}
+
+// Accepted: modern secret key format.
+assert.strictEqual(classifyAdminSecretKey('sb_secret_synthetic_0000000000000000'), 'VALID');
+
+// Accepted: legacy service-role JWT (synthetic, unsigned — format+claim check only).
+assert.strictEqual(classifyAdminSecretKey(synthesizeLegacyJwt('service_role')), 'VALID');
+
+// Rejected: legacy anon JWT.
+assert.strictEqual(classifyAdminSecretKey(synthesizeLegacyJwt('anon')), 'INVALID');
+
+// Rejected: modern publishable key.
+assert.strictEqual(classifyAdminSecretKey('sb_publishable_synthetic_0000000000'), 'INVALID');
+
+// Rejected: personal access token.
+assert.strictEqual(classifyAdminSecretKey('sbp_synthetic_0000000000000000000000'), 'INVALID');
+
+// Rejected: placeholders.
+['your-service-role-key-here', 'CHANGE_ME', 'placeholder', '<SUPABASE_SERVICE_ROLE_KEY>', 'xxxxxxxxxxxx', 'TODO'].forEach((placeholder) => {
+  assert.strictEqual(classifyAdminSecretKey(placeholder), 'INVALID', `placeholder "${placeholder}" must be rejected`);
+});
+
+// Rejected: empty / missing.
+assert.strictEqual(classifyAdminSecretKey(''), 'MISSING');
+assert.strictEqual(classifyAdminSecretKey('   '), 'MISSING');
+assert.strictEqual(classifyAdminSecretKey(undefined), 'MISSING');
+assert.strictEqual(classifyAdminSecretKey(null), 'MISSING');
+
+// Rejected: structurally malformed JWT-like strings must not throw.
+assert.strictEqual(classifyAdminSecretKey('not.a.jwt.at.all'), 'INVALID');
+assert.strictEqual(classifyAdminSecretKey('only-one-segment'), 'INVALID');
+assert.doesNotThrow(() => classifyAdminSecretKey('a.b.c'));
+
+// ---------------------------------------------------------------------------
+// Idempotency — provisionEntry against a fully in-memory mock client
+// (no real Supabase credentials, no real PINs).
+// ---------------------------------------------------------------------------
+
+function createMockSupabase() {
+  const users = [];
+  const memberships = new Map();
+  let nextUserId = 1;
+
+  return {
+    _state: { users, memberships },
+    auth: {
+      admin: {
+        async listUsers() {
+          return { data: { users: users.slice() }, error: null };
+        },
+        async createUser({ email }) {
+          const user = { id: `user-${nextUserId++}`, email };
+          users.push(user);
+          return { data: { user }, error: null };
+        },
+        async updateUserById(id, { password }) {
+          const user = users.find((u) => u.id === id);
+          if (!user) return { error: { message: 'not found' } };
+          user.lastPassword = password;
+          return { error: null };
+        }
+      }
+    },
+    from(table) {
+      assert.strictEqual(table, 'rete_memberships');
+      return {
+        upsert(payload, options) {
+          assert.strictEqual(options.onConflict, MEMBERSHIP_UPSERT_CONFLICT_TARGET);
+          memberships.set(payload.user_id, payload);
+          return Promise.resolve({ error: null });
+        }
+      };
+    }
+  };
+}
+
+async function idempotencyCheck() {
+  const supabase = createMockSupabase();
+  const entry = byName('Malta');
+
+  const first = await provisionEntry(supabase, entry, '123456', false);
+  assert.strictEqual(first.user.status, 'CREATED');
+  assert.strictEqual(first.membership.status, 'UPSERTED');
+  assert.strictEqual(supabase._state.users.length, 1);
+  assert.strictEqual(supabase._state.memberships.size, 1);
+
+  const second = await provisionEntry(supabase, entry, '654321', false);
+  assert.strictEqual(second.user.status, 'UPDATED', 'second run must find the existing user, not create a duplicate');
+  assert.strictEqual(second.user.userId, first.user.userId);
+  assert.strictEqual(second.membership.status, 'UPSERTED');
+  assert.strictEqual(supabase._state.users.length, 1, 'no duplicate user must be created on re-run');
+  assert.strictEqual(supabase._state.memberships.size, 1, 'no duplicate membership must be created on re-run');
+
+  const membershipPayload = supabase._state.memberships.get(first.user.userId);
+  assert.strictEqual(membershipPayload.location_id, 2);
+  assert.strictEqual(membershipPayload.role, 'store');
+}
+
+// buildMembershipPayload is pure and deterministic for a given (entry, userId).
+const payloadA = buildMembershipPayload(byName('Sestri'), 'user-x');
+const payloadB = buildMembershipPayload(byName('Sestri'), 'user-x');
+assert.deepStrictEqual(payloadA, payloadB);
+assert.strictEqual(payloadA.location_id, 4);
+assert.strictEqual(MEMBERSHIP_UPSERT_CONFLICT_TARGET, 'user_id');
+
+// ---------------------------------------------------------------------------
+// Dry-run process-level checks: no secret required, no network, no writes,
+// no PIN/secret fragments printed.
+// ---------------------------------------------------------------------------
+
+function runScript(args, env) {
+  return spawnSync(process.execPath, [SCRIPT_PATH, ...args], {
+    env,
+    timeout: 5000,
+    encoding: 'utf8'
+  });
+}
+
+function baseEnv(overrides) {
+  const env = {};
+  for (const key of Object.keys(process.env)) {
+    if (key === 'SUPABASE_SERVICE_ROLE_KEY' || key.startsWith('RETE_PIN_')) continue;
+    env[key] = process.env[key];
+  }
+  // Synthetic, distinct PINs only — never real PINs. Prevents the script from
+  // blocking on interactive stdin during automated testing.
+  LOCATION_MATRIX.forEach((entry, index) => {
+    const envVar = provisioning.pinEnvVarName(entry);
+    env[envVar] = String(100000 + index).padStart(6, '0');
+  });
+  return Object.assign(env, overrides);
+}
+
+// Dry-run without SUPABASE_SERVICE_ROLE_KEY in the environment must succeed.
+{
+  const result = runScript(['--dry-run'], baseEnv({}));
+  assert.strictEqual(result.status, 0, `dry-run without secret must exit 0, got: ${result.stderr}`);
+  assert.ok(!/ADMIN_KEY_/.test(result.stdout), 'dry-run must never evaluate/print admin key status');
+  const anyPinLeaked = LOCATION_MATRIX.some((entry, index) => {
+    const pin = String(100000 + index).padStart(6, '0');
+    return result.stdout.includes(pin) || result.stderr.includes(pin);
+  });
+  assert.ok(!anyPinLeaked, 'dry-run must never print PIN values');
+}
+
+// Dry-run performs zero network calls: point SUPABASE_URL at an address that
+// would hang/refuse if contacted, and confirm the run still completes quickly.
+{
+  const start = Date.now();
+  const result = runScript(['--dry-run'], baseEnv({ SUPABASE_URL: 'http://10.255.255.1:81' }));
+  const elapsedMs = Date.now() - start;
+  assert.strictEqual(result.status, 0, `dry-run must succeed even with an unreachable SUPABASE_URL, got: ${result.stderr}`);
+  assert.ok(elapsedMs < 4000, `dry-run must not attempt network I/O (took ${elapsedMs}ms)`);
+}
+
+// Non-dry-run with a synthetic invalid key must fail-closed and print only the
+// permitted admin-key message — never a fragment of the key itself.
+{
+  const fakeKey = 'sb_publishable_should_never_appear_in_logs_zzzzz';
+  const result = runScript([], baseEnv({ SUPABASE_SERVICE_ROLE_KEY: fakeKey }));
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('ADMIN_KEY_INVALID'));
+  assert.ok(!result.stdout.includes(fakeKey) && !result.stderr.includes(fakeKey), 'no key fragment may appear in logs');
+  assert.ok(!result.stdout.includes('sb_publishable_') && !result.stderr.includes('sb_publishable_'), 'no key prefix may appear in logs');
+}
+
+// Missing key (non-dry-run) must fail-closed with ADMIN_KEY_MISSING only.
+{
+  const env = baseEnv({});
+  delete env.SUPABASE_SERVICE_ROLE_KEY;
+  const result = runScript([], env);
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stdout.includes('ADMIN_KEY_MISSING'));
+}
+
+idempotencyCheck()
+  .then(() => {
+    console.log('PROVISIONING_TESTS: PASS');
+  })
+  .catch((err) => {
+    console.error('PROVISIONING_TESTS: FAIL', err);
+    process.exit(1);
+  });
