@@ -56,18 +56,31 @@ BEGIN
     ('11111111-0000-0000-0000-000000000004', 'sql-test-cantore1@local.invalid', 'authenticated', 'authenticated', now(), now(), now(), '{}'::jsonb, '{}'::jsonb),
     ('11111111-0000-0000-0000-000000000005', 'sql-test-nomembership@local.invalid', 'authenticated', 'authenticated', now(), now(), now(), '{}'::jsonb, '{}'::jsonb),
     ('11111111-0000-0000-0000-000000000006', 'sql-test-inactive@local.invalid', 'authenticated', 'authenticated', now(), now(), now(), '{}'::jsonb, '{}'::jsonb),
-    ('11111111-0000-0000-0000-000000000007', 'sql-test-malta-device2@local.invalid', 'authenticated', 'authenticated', now(), now(), now(), '{}'::jsonb, '{}'::jsonb)
+    ('11111111-0000-0000-0000-000000000007', 'sql-test-malta-device2@local.invalid', 'authenticated', 'authenticated', now(), now(), now(), '{}'::jsonb, '{}'::jsonb),
+    ('11111111-0000-0000-0000-000000000008', 'sql-test-nonpilot1@local.invalid', 'authenticated', 'authenticated', now(), now(), now(), '{}'::jsonb, '{}'::jsonb)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.rete_memberships (user_id, role, location_id, display_name, active)
+  -- pilot_enabled is set explicitly and individually per row: central1,
+  -- malta1, sestri1, cantore1 and malta_device2 are pilot-enabled (used for
+  -- the authorized/happy-path assertions below); nonpilot1 is an otherwise
+  -- perfectly valid, active store membership with pilot_enabled=false, used
+  -- exclusively to prove that an active, correctly-membershipped identity
+  -- that is simply not in the pilot allowlist is still denied by every RPC.
+  INSERT INTO public.rete_memberships (user_id, role, location_id, display_name, active, pilot_enabled)
   VALUES
-    ('11111111-0000-0000-0000-000000000001', 'central', NULL, 'SQL Test Central', true),
-    ('11111111-0000-0000-0000-000000000002', 'store', 1, 'SQL Test Malta', true),
-    ('11111111-0000-0000-0000-000000000003', 'store', 2, 'SQL Test Sestri', true),
-    ('11111111-0000-0000-0000-000000000004', 'store', 3, 'SQL Test Cantore', true),
-    ('11111111-0000-0000-0000-000000000006', 'store', 1, 'SQL Test Inactive', false),
-    ('11111111-0000-0000-0000-000000000007', 'store', 1, 'SQL Test Malta Device2', true)
-  ON CONFLICT (user_id) DO NOTHING;
+    ('11111111-0000-0000-0000-000000000001', 'central', NULL, 'SQL Test Central', true, true),
+    ('11111111-0000-0000-0000-000000000002', 'store', 1, 'SQL Test Malta', true, true),
+    ('11111111-0000-0000-0000-000000000003', 'store', 2, 'SQL Test Sestri', true, true),
+    ('11111111-0000-0000-0000-000000000004', 'store', 3, 'SQL Test Cantore', true, true),
+    ('11111111-0000-0000-0000-000000000006', 'store', 1, 'SQL Test Inactive', false, false),
+    ('11111111-0000-0000-0000-000000000007', 'store', 1, 'SQL Test Malta Device2', true, true),
+    ('11111111-0000-0000-0000-000000000008', 'store', 4, 'SQL Test Non-Pilot', true, false)
+  ON CONFLICT (user_id) DO UPDATE SET
+    role = EXCLUDED.role,
+    location_id = EXCLUDED.location_id,
+    display_name = EXCLUDED.display_name,
+    active = EXCLUDED.active,
+    pilot_enabled = EXCLUDED.pilot_enabled;
 END;
 $$;
 
@@ -80,6 +93,7 @@ $$;
 \set nomembership_id '''11111111-0000-0000-0000-000000000005'''
 \set inactive_id '''11111111-0000-0000-0000-000000000006'''
 \set malta_device2_id '''11111111-0000-0000-0000-000000000007'''
+\set nonpilot_id '''11111111-0000-0000-0000-000000000008'''
 
 -- ===========================================================================
 -- CATEGORY: Authentication / authorization
@@ -142,6 +156,124 @@ SELECT pg_temp.assert_true(
       AND p.proname NOT IN ('rete_request_publish', 'rete_require_active_membership')
   ),
   'no RPC other than rete_request_publish accepts a client-supplied location_id (role/location always come from membership)'
+);
+
+-- ===========================================================================
+-- CATEGORY: Pilot allowlist enforcement (server-side, all 9 RPCs)
+-- ===========================================================================
+-- nonpilot_id is an otherwise perfectly valid, ACTIVE store membership with
+-- pilot_enabled=false. Every one of the 9 RPCs must deny it with the exact
+-- same generic message used for "no active membership" - the pilot gate
+-- lives inside rete_require_active_membership(), the single helper called
+-- first (before any RPC-specific role check) by all nine functions, so a
+-- non-pilot identity is rejected before role/location are ever evaluated.
+
+SET ROLE authenticated;
+SET request.jwt.claim.sub = :nonpilot_id;
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_request_publish(1::smallint, 'X', 'X', 1, 'NORMALE', NULL, 'pilot-deny-publish') $sql$,
+  'pilot_enabled=false denies rete_request_publish even though the caller is an active store'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_offer_create('00000000-0000-0000-0000-000000000000'::uuid, 1, 'pilot-deny-offer-create') $sql$,
+  'pilot_enabled=false denies rete_offer_create'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_offer_withdraw('00000000-0000-0000-0000-000000000000'::uuid, 'pilot-deny-offer-withdraw') $sql$,
+  'pilot_enabled=false denies rete_offer_withdraw'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_offer_approve('00000000-0000-0000-0000-000000000000'::uuid, 1, 'pilot-deny-offer-approve') $sql$,
+  'pilot_enabled=false denies rete_offer_approve'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_offer_reject('00000000-0000-0000-0000-000000000000'::uuid, 'pilot-deny-offer-reject') $sql$,
+  'pilot_enabled=false denies rete_offer_reject'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_transfer_mark_ready('00000000-0000-0000-0000-000000000000'::uuid, 'pilot-deny-mark-ready') $sql$,
+  'pilot_enabled=false denies rete_transfer_mark_ready'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_transfer_mark_departed('00000000-0000-0000-0000-000000000000'::uuid, 'pilot-deny-mark-departed') $sql$,
+  'pilot_enabled=false denies rete_transfer_mark_departed'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_transfer_receive('00000000-0000-0000-0000-000000000000'::uuid, 1, NULL, 'pilot-deny-receive') $sql$,
+  'pilot_enabled=false denies rete_transfer_receive'
+);
+SELECT pg_temp.assert_raises(
+  $sql$ SELECT public.rete_trasta_arrival_record('00000000-0000-0000-0000-000000000000'::uuid, 'X', 1, NULL, 'pilot-deny-trasta') $sql$,
+  'pilot_enabled=false denies rete_trasta_arrival_record'
+);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Nessun DML, nessun audit, nessun record idempotente creato per nessuna
+-- delle 9 chiamate negate sopra (tutte usavano chiavi di idempotenza uniche
+-- prefissate 'pilot-deny-').
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.rete_idempotent_operations WHERE idempotency_key LIKE 'pilot-deny-%') = 0,
+  'no idempotent-operation row is created for any RPC call denied by the pilot gate'
+);
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.rete_requests WHERE product_code = 'X' AND product_description = 'X') = 0,
+  'no request row is created by the denied rete_request_publish attempt'
+);
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.rete_audit_events WHERE actor_user_id = :nonpilot_id::uuid) = 0,
+  'no audit event is ever written for a caller denied by the pilot gate'
+);
+
+-- Direct table write of pilot_enabled by authenticated is denied (no UPDATE
+-- policy exists at all on rete_memberships for authenticated - verified here
+-- structurally; the equivalent real-REST-path proof lives in the Python
+-- suite).
+SELECT pg_temp.assert_true(
+  NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'rete_memberships' AND cmd = 'UPDATE'
+  ),
+  'rete_memberships has no UPDATE policy for authenticated at all, so pilot_enabled cannot be changed by a direct client write'
+);
+
+-- ---------------------------------------------------------------------------
+-- Kill-switch semantics: a call that succeeded while pilot_enabled was true
+-- must NOT be replayable (via the same idempotency key) once pilot_enabled
+-- is later set back to false for that identity - the authorization check
+-- (including the pilot gate) runs strictly before the idempotency cache is
+-- ever consulted, for every one of the nine RPCs.
+-- ---------------------------------------------------------------------------
+
+SET ROLE authenticated;
+SET request.jwt.claim.sub = :central_id;
+SELECT public.rete_request_publish(3::smallint, 'KILLSWITCH', 'Kill switch test wine', 5, 'NORMALE', NULL, 'killswitch-publish-1') AS result \gset ks_req_
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT (:'ks_req_result'::jsonb ->> 'request_id') AS ks_req_id \gset
+
+SET ROLE authenticated;
+SET request.jwt.claim.sub = :malta_id;
+SELECT public.rete_offer_create(:'ks_req_id'::uuid, 3, 'killswitch-offer-1') AS result \gset ks_offer_
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.assert_true(:'ks_offer_result' IS NOT NULL, 'kill-switch setup: Malta offer succeeds while pilot_enabled is true');
+
+-- Operator-style direct disable (this script runs as postgres outside the
+-- impersonated blocks, exactly like the documented emergency kill switch).
+UPDATE public.rete_memberships SET pilot_enabled = false WHERE user_id = :malta_id;
+
+SET ROLE authenticated;
+SET request.jwt.claim.sub = :malta_id;
+SELECT pg_temp.assert_raises(
+  format($sql$ SELECT public.rete_offer_create('%s'::uuid, 3, 'killswitch-offer-1') $sql$, :'ks_req_id'),
+  'retrying the SAME idempotency key after pilot_enabled was set back to false is rejected, not served from cache'
+);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Re-enable Malta: the rest of this suite continues to use malta_id for the
+-- ordinary lifecycle below and must not be affected by this isolated probe.
+UPDATE public.rete_memberships SET pilot_enabled = true WHERE user_id = :malta_id;
+
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.rete_offers WHERE request_id = :'ks_req_id'::uuid) = 1,
+  'kill-switch retry did not create a second offer row (idempotency was correctly bypassed by denial, not by a duplicate real operation)'
 );
 
 -- ===========================================================================
