@@ -45,10 +45,22 @@ MALTA_ID = "11111111-0000-0000-0000-000000000002"
 SESTRI_ID = "11111111-0000-0000-0000-000000000003"
 NOMEMBERSHIP_ID = "11111111-0000-0000-0000-000000000005"
 INACTIVE_ID = "11111111-0000-0000-0000-000000000006"
+NONPILOT_ID = "11111111-0000-0000-0000-000000000008"
 
 
 def local_jwt(sub):
     return jwt.encode({"sub": sub, "role": "authenticated", "aud": "authenticated"}, LOCAL_JWT_SECRET, algorithm="HS256")
+
+
+def run_psql(sql):
+    """Direct local psql execution - the same operator-style path used to
+    flip pilot_enabled in production (never the RPC path, never RLS)."""
+    subprocess.run(
+        ["psql", "-h", "127.0.0.1", "-p", "54322", "-U", "postgres", "-d", "postgres",
+         "-v", "ON_ERROR_STOP=1", "-c", sql],
+        env={**os.environ, "PGPASSWORD": "postgres"},
+        check=True, capture_output=True,
+    )
 
 
 def call_rpc(function_name, payload, token):
@@ -174,6 +186,66 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
         }, token_sestri)
         self.assertEqual(status, 400)
         self.assertIn("operation not permitted", body.get("message", ""))
+
+    def test_nonpilot_denied_on_every_public_rpc(self):
+        """An active, correctly-membershipped store with pilot_enabled=false
+        must be denied by every one of the 9 RPCs, via the real REST path,
+        with the exact same generic message used for missing/inactive
+        membership - proving the server (not the frontend) enforces the
+        pilot allowlist."""
+        token = local_jwt(NONPILOT_ID)
+        rpcs = [
+            ("rete_request_publish", {"p_requesting_location_id": 1, "p_product_code": "X", "p_product_description": "X", "p_requested_quantity": 1, "p_idempotency_key": "nonpilot-rest-k1"}),
+            ("rete_offer_create", {"p_request_id": "00000000-0000-0000-0000-000000000000", "p_offered_quantity": 1, "p_idempotency_key": "nonpilot-rest-k2"}),
+            ("rete_offer_withdraw", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "nonpilot-rest-k3"}),
+            ("rete_offer_approve", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_approved_quantity": 1, "p_idempotency_key": "nonpilot-rest-k4"}),
+            ("rete_offer_reject", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "nonpilot-rest-k5"}),
+            ("rete_transfer_mark_ready", {"p_transfer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "nonpilot-rest-k6"}),
+            ("rete_transfer_mark_departed", {"p_transfer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "nonpilot-rest-k7"}),
+            ("rete_transfer_receive", {"p_transfer_id": "00000000-0000-0000-0000-000000000000", "p_received_quantity": 1, "p_idempotency_key": "nonpilot-rest-k8"}),
+            ("rete_trasta_arrival_record", {"p_target_request_id": "00000000-0000-0000-0000-000000000000", "p_product_code": "X", "p_quantity": 1, "p_idempotency_key": "nonpilot-rest-k9"}),
+        ]
+        for name, payload in rpcs:
+            with self.subTest(rpc=name):
+                status, body = call_rpc(name, payload, token)
+                self.assertEqual(status, 400, f"{name} should be denied to a non-pilot active member")
+                self.assertIn("no active membership", body.get("message", ""), f"{name} must use the generic denial message")
+
+    def test_pilot_kill_switch_rejects_idempotent_replay_after_disable(self):
+        """A call that succeeded while pilot_enabled=true must not be
+        replayable via the same idempotency key once pilot_enabled is set
+        back to false for that identity: authorization (including the pilot
+        gate) is checked strictly before the idempotency cache is ever
+        consulted."""
+        token_central = local_jwt(CENTRAL_ID)
+        _, publish_body = call_rpc("rete_request_publish", {
+            "p_requesting_location_id": 3,
+            "p_product_code": "PYTEST-KILLSWITCH",
+            "p_product_description": "Pytest kill switch wine",
+            "p_requested_quantity": 5,
+            "p_idempotency_key": "central-publish-killswitch-rest-test",
+        }, token_central)
+        request_id = publish_body["request_id"]
+
+        token_malta = local_jwt(MALTA_ID)
+        status, body = call_rpc("rete_offer_create", {
+            "p_request_id": request_id,
+            "p_offered_quantity": 2,
+            "p_idempotency_key": "malta-killswitch-offer-rest-test",
+        }, token_malta)
+        self.assertEqual(status, 200, "setup: Malta's offer must succeed while pilot_enabled is true")
+
+        run_psql(f"UPDATE public.rete_memberships SET pilot_enabled = false WHERE user_id = '{MALTA_ID}';")
+        try:
+            status, body = call_rpc("rete_offer_create", {
+                "p_request_id": request_id,
+                "p_offered_quantity": 2,
+                "p_idempotency_key": "malta-killswitch-offer-rest-test",
+            }, token_malta)
+            self.assertEqual(status, 400, "retry with the same idempotency key must be rejected, not served from cache, once pilot_enabled is false")
+            self.assertIn("no active membership", body.get("message", ""))
+        finally:
+            run_psql(f"UPDATE public.rete_memberships SET pilot_enabled = true WHERE user_id = '{MALTA_ID}';")
 
 
 if __name__ == "__main__":
