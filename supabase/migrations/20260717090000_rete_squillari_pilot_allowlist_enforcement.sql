@@ -141,11 +141,114 @@ REVOKE ALL ON FUNCTION "public"."rete_require_active_membership"() FROM "anon";
 REVOKE ALL ON FUNCTION "public"."rete_require_active_membership"() FROM "authenticated";
 
 -- ---------------------------------------------------------------------------
+-- 2b. Idempotency actor/payload binding (closes F-1 and F-2 from the PR #14
+--     human review: a claimed idempotency key was previously replayable by
+--     ANY caller with ANY payload, because rete_claim_idempotency_key only
+--     ever compared (operation, idempotency_key) and blindly returned
+--     whatever jsonb had been cached the first time - actor_user_id was
+--     captured but never checked, and no payload was captured at all.
+--
+--     Fix: rete_idempotent_operations gains a payload_canonical jsonb column.
+--     Every RPC builds a canonical jsonb object from its own semantically
+--     relevant parameters (built server-side, inside the SECURITY DEFINER
+--     function body - the client never supplies or influences this value)
+--     and passes it into rete_claim_idempotency_key alongside the operation
+--     and key. On a second claim attempt for the same (operation, key):
+--       * if actor_user_id does not match auth.uid() -> rejected, generic
+--         message, cached result never returned, no hint that the key
+--         belongs to someone else;
+--       * else if payload_canonical is NULL (a "legacy" row written before
+--         this fix existed - relevant only to pre-existing local dev
+--         databases, since the remote table is verified empty) -> rejected,
+--         fail-closed: a row with no recorded payload binding can never be
+--         proven safe to replay, so it is never replayable, by anyone, ever
+--         again, regardless of whose it is or what payload is offered;
+--       * else if payload_canonical does not match (jsonb equality - proven
+--         key-order-independent and numeric-type-independent, so no
+--         cryptographic hash is needed or introduced) -> rejected, generic
+--         message;
+--       * else (same actor, same canonical payload) -> the cached result is
+--         returned, exactly as before.
+--
+--     Design choice (PK stays (operation, idempotency_key), not extended
+--     with actor_user_id): a global collision on (operation, idempotency_key)
+--     across two different actors is now always an explicit, generic
+--     rejection, never a silently-independent second claim. Extending the PK
+--     to include actor_user_id would let two different actors both
+--     "successfully" claim what looks like the same key without either ever
+--     being told about the other - weaker, not stronger, because it removes
+--     the only signal that a key collision (accidental or malicious) ever
+--     happened at all.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE "public"."rete_idempotent_operations"
+    ADD COLUMN IF NOT EXISTS "payload_canonical" "jsonb";
+
+COMMENT ON COLUMN "public"."rete_idempotent_operations"."payload_canonical" IS
+    'Server-side canonical jsonb snapshot of the semantically relevant RPC parameters, built inside the SECURITY DEFINER function body - never supplied or influenced by the client. A replay of (operation, idempotency_key) is only ever honoured when payload_canonical matches (jsonb equality, key-order and numeric-representation independent) AND actor_user_id matches auth.uid(). Rows with payload_canonical IS NULL predate this binding and are permanently unreplayable (fail-closed), never treated as a wildcard match.';
+
+DROP FUNCTION IF EXISTS "public"."rete_claim_idempotency_key"("text", "text");
+
+CREATE OR REPLACE FUNCTION "public"."rete_claim_idempotency_key"(
+    "p_operation" "text",
+    "p_idempotency_key" "text",
+    "p_payload" "jsonb"
+)
+RETURNS "jsonb"
+LANGUAGE "plpgsql"
+SET "search_path" = "public", "pg_temp"
+AS $$
+DECLARE
+  v_existing public.rete_idempotent_operations;
+BEGIN
+  IF p_idempotency_key IS NULL OR length(trim(p_idempotency_key)) = 0 THEN
+    RAISE EXCEPTION 'idempotency_key is required';
+  END IF;
+
+  BEGIN
+    INSERT INTO public.rete_idempotent_operations (operation, idempotency_key, actor_user_id, payload_canonical, result)
+    VALUES (p_operation, p_idempotency_key, auth.uid(), p_payload, 'null'::jsonb);
+    RETURN NULL;
+  EXCEPTION WHEN unique_violation THEN
+    SELECT * INTO v_existing
+    FROM public.rete_idempotent_operations
+    WHERE operation = p_operation AND idempotency_key = p_idempotency_key;
+
+    -- Fail-closed, generic on every mismatch: cross-actor collision, payload
+    -- mismatch, and unbound legacy rows all raise the identical exception
+    -- used elsewhere for authorization failures - the caller never learns
+    -- which of the three actually applied, and the cached result is never
+    -- returned in any of these cases.
+    IF v_existing.actor_user_id IS DISTINCT FROM auth.uid() THEN
+      RAISE EXCEPTION 'operation not permitted';
+    END IF;
+
+    IF v_existing.payload_canonical IS NULL THEN
+      RAISE EXCEPTION 'operation not permitted';
+    END IF;
+
+    IF v_existing.payload_canonical IS DISTINCT FROM p_payload THEN
+      RAISE EXCEPTION 'operation not permitted';
+    END IF;
+
+    RETURN coalesce(v_existing.result, 'null'::jsonb);
+  END;
+END;
+$$;
+
+ALTER FUNCTION "public"."rete_claim_idempotency_key"("text", "text", "jsonb") OWNER TO "postgres";
+REVOKE ALL ON FUNCTION "public"."rete_claim_idempotency_key"("text", "text", "jsonb") FROM PUBLIC;
+REVOKE ALL ON FUNCTION "public"."rete_claim_idempotency_key"("text", "text", "jsonb") FROM "anon";
+REVOKE ALL ON FUNCTION "public"."rete_claim_idempotency_key"("text", "text", "jsonb") FROM "authenticated";
+
+-- ---------------------------------------------------------------------------
 -- 3. Re-order all nine RPCs: membership/pilot/role gate before the
---    idempotency claim. Bodies are otherwise byte-for-byte identical to
---    migration 20260716142429_rete_squillari_real_operations_rpc.sql: same
---    SECURITY DEFINER, same search_path, same validation, same locking,
---    same audit events, same idempotency store calls, same error messages.
+--    idempotency claim, and pass each RPC's own canonical payload jsonb
+--    (built server-side from its own parameters) into
+--    rete_claim_idempotency_key. All other logic (SECURITY DEFINER,
+--    search_path, validation, locking, audit events, idempotency store
+--    calls, error messages) is otherwise byte-for-byte identical to
+--    migration 20260716142429_rete_squillari_real_operations_rpc.sql.
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION "public"."rete_request_publish"(
@@ -165,6 +268,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_request_id uuid;
   v_result jsonb;
 BEGIN
@@ -173,7 +277,18 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_request_publish', p_idempotency_key);
+  -- Canonical payload: every parameter that affects what gets created (all
+  -- of them - none are excluded). Built server-side; the client never
+  -- supplies this jsonb directly.
+  v_payload := jsonb_build_object(
+    'requesting_location_id', p_requesting_location_id,
+    'product_code', p_product_code,
+    'product_description', p_product_description,
+    'requested_quantity', p_requested_quantity,
+    'urgency', p_urgency,
+    'notes', p_notes
+  );
+  v_cached := public.rete_claim_idempotency_key('rete_request_publish', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -215,6 +330,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_request public.rete_requests;
   v_offer_id uuid;
   v_result jsonb;
@@ -224,7 +340,11 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_offer_create', p_idempotency_key);
+  v_payload := jsonb_build_object(
+    'request_id', p_request_id,
+    'offered_quantity', p_offered_quantity
+  );
+  v_cached := public.rete_claim_idempotency_key('rete_offer_create', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -266,6 +386,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_offer public.rete_offers;
   v_result jsonb;
 BEGIN
@@ -274,7 +395,8 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_offer_withdraw', p_idempotency_key);
+  v_payload := jsonb_build_object('offer_id', p_offer_id);
+  v_cached := public.rete_claim_idempotency_key('rete_offer_withdraw', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -312,6 +434,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_offer public.rete_offers;
   v_request public.rete_requests;
   v_transfer_id uuid;
@@ -322,7 +445,11 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_offer_approve', p_idempotency_key);
+  v_payload := jsonb_build_object(
+    'offer_id', p_offer_id,
+    'approved_quantity', p_approved_quantity
+  );
+  v_cached := public.rete_claim_idempotency_key('rete_offer_approve', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -389,6 +516,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_offer public.rete_offers;
   v_result jsonb;
 BEGIN
@@ -397,7 +525,8 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_offer_reject', p_idempotency_key);
+  v_payload := jsonb_build_object('offer_id', p_offer_id);
+  v_cached := public.rete_claim_idempotency_key('rete_offer_reject', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -430,6 +559,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_transfer public.rete_transfers;
   v_result jsonb;
 BEGIN
@@ -438,7 +568,8 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_transfer_mark_ready', p_idempotency_key);
+  v_payload := jsonb_build_object('transfer_id', p_transfer_id);
+  v_cached := public.rete_claim_idempotency_key('rete_transfer_mark_ready', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -475,6 +606,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_transfer public.rete_transfers;
   v_result jsonb;
 BEGIN
@@ -483,7 +615,8 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_transfer_mark_departed', p_idempotency_key);
+  v_payload := jsonb_build_object('transfer_id', p_transfer_id);
+  v_cached := public.rete_claim_idempotency_key('rete_transfer_mark_departed', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -523,6 +656,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_transfer public.rete_transfers;
   v_result jsonb;
 BEGIN
@@ -531,7 +665,12 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_transfer_receive', p_idempotency_key);
+  v_payload := jsonb_build_object(
+    'transfer_id', p_transfer_id,
+    'received_quantity', p_received_quantity,
+    'anomaly_note', p_anomaly_note
+  );
+  v_cached := public.rete_claim_idempotency_key('rete_transfer_receive', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
@@ -582,6 +721,7 @@ AS $$
 DECLARE
   v_membership public.rete_memberships;
   v_cached jsonb;
+  v_payload jsonb;
   v_request public.rete_requests;
   v_arrival_id uuid;
   v_applied integer;
@@ -593,7 +733,13 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  v_cached := public.rete_claim_idempotency_key('rete_trasta_arrival_record', p_idempotency_key);
+  v_payload := jsonb_build_object(
+    'target_request_id', p_target_request_id,
+    'product_code', p_product_code,
+    'quantity', p_quantity,
+    'source_reference', p_source_reference
+  );
+  v_cached := public.rete_claim_idempotency_key('rete_trasta_arrival_record', p_idempotency_key, v_payload);
   IF v_cached IS NOT NULL AND v_cached <> 'null'::jsonb THEN
     RETURN v_cached;
   END IF;
