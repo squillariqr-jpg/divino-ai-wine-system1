@@ -197,17 +197,25 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   function setBanner(mode) {
     var main = document.querySelector('.main');
     if (!main) return;
-    var old = main.querySelector('.governed-banner, .public-demo-banner.governed-mode-marker');
+    var old = main.querySelector('.governed-banner');
     if (old) old.remove();
     if (mode === adapter.MODE.GOVERNED_BACKEND) {
+      // The pre-existing "PROTOTIPO DIMOSTRATIVO" banner (injected
+      // unconditionally by the earlier remediation layer, for every session
+      // regardless of mode) explicitly claims "i dati inseriti restano
+      // esclusivamente in questo browser" / "non utilizzare per trasferimenti
+      // reali di merce" - both false for a governed session, where mutations
+      // create real rows via RPCs. It must be hidden here, not just have a
+      // governed banner added alongside it.
+      var demoBanners = main.querySelectorAll('.public-demo-banner');
+      for (var i = 0; i < demoBanners.length; i++) { demoBanners[i].remove(); }
       var b = document.createElement('div');
       b.className = 'governed-banner';
       b.innerHTML = '<strong>BACKEND GOVERNATO — PILOTA ATTIVO</strong><br>Le operazioni chiamano le funzioni Supabase reali (rete_*). Nessuna scrittura locale.';
       main.prepend(b);
     }
-    // In DEMO_LOCAL mode the pre-existing "PROTOTIPO DIMOSTRATIVO" banner
-    // (installed by the earlier remediation layer) already makes the mode
-    // unambiguous; nothing further to add here.
+    // In DEMO_LOCAL mode the pre-existing "PROTOTIPO DIMOSTRATIVO" banner is
+    // accurate as-is and is left untouched.
   }
 
   async function refreshFromBackend() {
