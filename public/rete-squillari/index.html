@@ -150,7 +150,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   const originalDetail=window.detail; window.detail=function(id){originalDetail(id);const r=db.requests.find(x=>x.id===id);if(r?.trastaArrivalDate){const p=document.createElement('p');p.className='muted';p.textContent='Data arrivo a Trasta: '+r.trastaArrivalDate;document.querySelector('#modal')?.appendChild(p);}}
   const originalApprove=window.approve; window.approve=function(){originalApprove();document.querySelectorAll('button').forEach(b=>{if(b.textContent.trim()==='Approva'){const row=b.closest('.row');const text=row?.textContent||'';const offer=db.offers.find(o=>text.includes(o.from));if(offer)b.dataset.approveId=offer.id;}});}; document.addEventListener('click',e=>{const b=e.target.closest('button[data-approve-id]');if(b){e.preventDefault();approvePrompt(Number(b.dataset.approveId));}});
 })();
-</script><style>.squillari-logo{display:block;width:112px;height:auto;max-width:100%;object-fit:contain;margin-bottom:10px}.logo{display:flex;flex-direction:column;align-items:flex-start}.logo small{display:block}.public-demo-banner{background:#fae8bb;border:1px solid #d7ad5d;color:#4a3518;border-radius:10px;padding:12px 14px;margin:0 0 18px;font:12px Arial;line-height:1.45}.public-demo-banner strong{font-size:11px;letter-spacing:.1em}.public-demo-banner span{color:#70552c}@media(max-width:720px){.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-top:14px}.side .nav button{font-size:11px;padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side{padding-bottom:10px}.squillari-logo{width:86px;margin-bottom:6px}.logo small{font-size:9px}.main{position:relative}.mobile{position:absolute;right:15px;top:15px;float:none;max-width:145px}.public-demo-banner{margin-top:10px;font-size:11px}}@media(min-width:721px) and (max-width:900px){.app{display:block}.side{width:100%;display:block;padding:18px 24px}.side .role{display:block;float:right}.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:14px}.side .foot{display:none}.main{padding:24px}.grid{grid-template-columns:1fr}}@media print{body *{visibility:hidden!important}.print-sheet.active,.print-sheet.active *{visibility:visible!important}.print-sheet.active{display:block!important;position:absolute;inset:0;padding:20mm;background:#fff;color:#111}}</style><script src="/rete-squillari/location-model.js"></script><script>
+</script><style>.squillari-logo{display:block;width:112px;height:auto;max-width:100%;object-fit:contain;margin-bottom:10px}.logo{display:flex;flex-direction:column;align-items:flex-start}.logo small{display:block}.public-demo-banner{background:#fae8bb;border:1px solid #d7ad5d;color:#4a3518;border-radius:10px;padding:12px 14px;margin:0 0 18px;font:12px Arial;line-height:1.45}.public-demo-banner strong{font-size:11px;letter-spacing:.1em}.public-demo-banner span{color:#70552c}.governed-banner{background:#e2eee3;border:1px solid #9ec3a6;color:#20422c;border-radius:10px;padding:12px 14px;margin:0 0 18px;font:12px Arial;line-height:1.45}.governed-banner strong{font-size:11px;letter-spacing:.1em}@media(max-width:720px){.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-top:14px}.side .nav button{font-size:11px;padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.side{padding-bottom:10px}.squillari-logo{width:86px;margin-bottom:6px}.logo small{font-size:9px}.main{position:relative}.mobile{position:absolute;right:15px;top:15px;float:none;max-width:145px}.public-demo-banner{margin-top:10px;font-size:11px}}@media(min-width:721px) and (max-width:900px){.app{display:block}.side{width:100%;display:block;padding:18px 24px}.side .role{display:block;float:right}.side .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:14px}.side .foot{display:none}.main{padding:24px}.grid{grid-template-columns:1fr}}@media print{body *{visibility:hidden!important}.print-sheet.active,.print-sheet.active *{visibility:visible!important}.print-sheet.active{display:block!important;position:absolute;inset:0;padding:20mm;background:#fff;color:#111}}</style><script src="/rete-squillari/location-model.js"></script><script src="/rete-squillari/rete-backend-adapter.js"></script><script>
 (function(){
   'use strict';
   var model=window.RETE_LOCATION_MODEL, profileMap={'2 – Malta':'malta','4 – Sestri':'sestri','5 – Cantore':'cantore','6 – Trento':'trento','7 – De Ferrari':'de_ferrari','8 – Armenia':'armenia','Trasta':'trasta'};
@@ -174,5 +174,214 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   window.printShortage=function(requestId){var r=db.shortageRequests.find(function(x){return (x.request_number||x.request_id)===requestId});if(!r)return;var v=model.buildRequestPrintViewModel(r);printSheet('<h1>Scheda ammanco demo</h1><p><b>Numero scheda:</b> '+esc(v.request_number)+'</p><p><b>Data e ora creazione:</b> '+esc(v.created_at)+'</p><p><b>Data e ora ultimo aggiornamento:</b> '+esc(v.updated_at)+'</p><p><b>Tipo sede:</b> '+esc(v.requesting_location_type)+'</p><p><b>Sede richiedente:</b> '+esc(v.requesting_location)+'</p><p><b>Codice articolo:</b> '+esc(v.product_code)+'</p><p><b>Descrizione articolo:</b> '+esc(v.product_description)+'</p><p><b>Quantità richiesta:</b> '+esc(v.requested_quantity)+'</p><p><b>Motivazione:</b> '+esc(v.reason)+'</p><p><b>Commento:</b> '+esc(v.comment)+'</p><p><b>Priorità:</b> '+esc(v.priority)+'</p><p><b>Stato:</b> '+esc(v.status)+'</p><p><b>Sede fornitrice:</b> '+esc(v.supplier_location)+'</p><p><b>Quantità confermata:</b> '+esc(v.confirmed_quantity)+'</p><p><b>Data prevista trasferimento:</b> '+esc(v.expected_transfer_date)+'</p><p><small>DEMO LOCALE · Nessuna operazione reale</small></p>')};
   window.printTransferLabel=function(requestId){var r=db.shortageRequests.find(function(x){return (x.request_number||x.request_id)===requestId});if(!r||!model.canPrintTransferLabel(r))return toast('Etichetta disponibile dopo conferma di sede fornitrice, quantità e destinazione.');var v=model.buildTransferLabelViewModel(r);printSheet('<h1>Etichetta trasferimento demo</h1><p><b>Numero scheda:</b> '+esc(v.request_number)+'</p><p><b>Sede mittente:</b> '+esc(v.sender)+' · '+esc(v.sender_type)+'</p><p><b>Sede destinataria:</b> '+esc(v.destination)+' · '+esc(v.destination_type)+'</p><p><b>Codice articolo:</b> '+esc(v.product_code)+'</p><p><b>Descrizione articolo:</b> '+esc(v.product_description)+'</p><p><b>Quantità confermata:</b> '+esc(v.confirmed_quantity)+'</p><p><b>Motivazione:</b> '+esc(v.reason)+'</p><p><b>Priorità:</b> '+esc(v.priority)+'</p><p><b>Data prevista trasferimento:</b> '+esc(v.expected_transfer_date)+'</p>')};
   document.addEventListener('DOMContentLoaded',function(){var banner=document.querySelector('.public-demo-banner span');if(banner)banner.textContent='Le schede sono salvate solo in questo browser. Nessun trasferimento reale viene creato o notificato.';});
+})();
+</script><script>
+// Governed backend wiring layer. Explicit mode selection only: this block
+// NEVER falls back from GOVERNED_BACKEND to the local demo write path.
+// Mode is decided once per session, from the caller's own pilot_enabled
+// value (RLS-restricted to the caller's own membership row), and stays
+// fixed for the lifetime of the session.
+(function () {
+  'use strict';
+  // If the adapter script failed to load (network issue, unexpected serving
+  // path, etc.) this layer must degrade to a no-op rather than throw an
+  // uncaught error - the existing demo-local session already rendered by
+  // loadSession()/boot() before this script ran keeps working unmodified.
+  if (!window.RETE_BACKEND_ADAPTER) { return; }
+  var adapter = window.RETE_BACKEND_ADAPTER.create(supabaseClient);
+  var GOVERNED_ONLY_MGR_PAGES = ['dashboard', 'published', 'approve', 'arrivals'];
+  var GOVERNED_ONLY_STORE_PAGES = ['home', 'mine', 'offers', 'prepare', 'transfers'];
+
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function setBanner(mode) {
+    var main = document.querySelector('.main');
+    if (!main) return;
+    var old = main.querySelector('.governed-banner');
+    if (old) old.remove();
+    if (mode === adapter.MODE.GOVERNED_BACKEND) {
+      // The pre-existing "PROTOTIPO DIMOSTRATIVO" banner (injected
+      // unconditionally by the earlier remediation layer, for every session
+      // regardless of mode) explicitly claims "i dati inseriti restano
+      // esclusivamente in questo browser" / "non utilizzare per trasferimenti
+      // reali di merce" - both false for a governed session, where mutations
+      // create real rows via RPCs. It must be hidden here, not just have a
+      // governed banner added alongside it.
+      var demoBanners = main.querySelectorAll('.public-demo-banner');
+      for (var i = 0; i < demoBanners.length; i++) { demoBanners[i].remove(); }
+      var b = document.createElement('div');
+      b.className = 'governed-banner';
+      b.innerHTML = '<strong>BACKEND GOVERNATO — PILOTA ATTIVO</strong><br>Le operazioni chiamano le funzioni Supabase reali (rete_*). Nessuna scrittura locale.';
+      main.prepend(b);
+    }
+    // In DEMO_LOCAL mode the pre-existing "PROTOTIPO DIMOSTRATIVO" banner is
+    // accurate as-is and is left untouched.
+  }
+
+  async function refreshFromBackend() {
+    try {
+      db = await adapter.loadDashboard();
+    } catch (e) {
+      console.error('[rete-backend-adapter] loadDashboard failed', e);
+      toast(e.message || 'Impossibile caricare i dati dal backend governato.');
+      db = { requests: [], offers: [], transfers: [], emails: [], audit: [] };
+    }
+    boot();
+  }
+
+  function pruneNav(list, allowed) {
+    for (var i = list.length - 1; i >= 0; i--) { if (allowed.indexOf(list[i][0]) === -1) list.splice(i, 1); }
+  }
+
+  function installGovernedActionOverrides() {
+    window.save = function () { /* backend is the source of truth in governed mode; no local persistence */ };
+
+    window.saveOffer = async function (id) {
+      var q = Number(document.getElementById('oq').value);
+      if (!Number.isInteger(q) || q < 1) return toast('Inserisci una quantità intera maggiore di zero.');
+      try {
+        await adapter.createOffer({ requestLocalId: id, quantity: q });
+        closeModal(); toast('Disponibilità inviata.'); await refreshFromBackend(); go('home');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.withdrawOffer = async function (id) {
+      try {
+        await adapter.withdrawOffer({ offerLocalId: id });
+        toast('Offerta ritirata.'); await refreshFromBackend(); go('offers');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.approveOffer = async function (id, requested) {
+      try {
+        await adapter.approveOffer({ offerLocalId: id, approvedQuantity: requested });
+        closeModal(); toast('Disponibilità approvata.'); await refreshFromBackend(); go('approve');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.rejectOffer = async function (id) {
+      try {
+        await adapter.rejectOffer({ offerLocalId: id });
+        toast('Offerta rifiutata.'); await refreshFromBackend(); go('approve');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.setTransfer = async function (id, status) {
+      try {
+        if (status === 'PREPARATA') await adapter.markTransferReady({ transferLocalId: id });
+        else if (status === 'IN TRASFERIMENTO') await adapter.markTransferDeparted({ transferLocalId: id });
+        else return toast('Transizione non supportata dal backend governato.');
+        toast('Stato trasferimento aggiornato.'); await refreshFromBackend(); go(page);
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.saveReceive = async function (id) {
+      var q = Number(document.getElementById('rq').value);
+      var t = db.transfers.find(function (x) { return x.id === id; });
+      if (!t || !Number.isInteger(q) || q < 0 || q > t.qty) return toast('Quantità non valida: deve essere tra 0 e ' + (t ? t.qty : '?') + '.');
+      try {
+        await adapter.receiveTransfer({ transferLocalId: id, receivedQuantity: q });
+        closeModal(); toast('Ricezione registrata.'); await refreshFromBackend(); go('transfers');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    // Request withdrawal (Ritira richiesta) has no governed RPC (rete_request_publish
+    // has no corresponding cancel/withdraw counterpart among the 9 governed
+    // RPCs). Rather than silently write to a local/demo path, the action is
+    // disabled outright in governed mode.
+    window.withdrawReq = function () { toast('Ritiro richiesta non disponibile nel backend governato (nessuna funzione dedicata).'); };
+
+    window.addArrival = async function () {
+      var reqLocalId = Number(document.getElementById('arreq').value);
+      var q = Number(document.getElementById('arqty').value);
+      var source = document.getElementById('arsource').value;
+      var req = db.requests.find(function (x) { return x.id === reqLocalId; });
+      if (!Number.isInteger(q) || q < 1) return toast('Inserisci una quantità valida.');
+      if (!req) return toast('Richiesta non trovata.');
+      try {
+        await adapter.recordTrastaArrival({ targetRequestLocalId: reqLocalId, productCode: req.code, quantity: q, sourceReference: source });
+        toast('Arrivo registrato.'); await refreshFromBackend(); go('arrivals');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    // New governed-only entry point for rete_request_publish (central only).
+    // The demo's original "email review -> publish" flow has no backend
+    // equivalent (no email ingestion RPC exists) and is hidden in governed
+    // mode; this replaces it with a direct publish form.
+    window.openPublishRequestForm = function () {
+      var locs = adapter.getLocations().filter(function (l) { return l.active; });
+      var options = locs.map(function (l) { return '<option value="' + l.id + '">' + esc(l.label) + '</option>'; }).join('');
+      open('<h2>Nuova richiesta</h2><div class="form">' +
+        '<label>Negozio richiedente<select id="pr-loc">' + options + '</select></label>' +
+        '<label>Codice prodotto<input id="pr-code" maxlength="64"></label>' +
+        '<label>Descrizione<input id="pr-desc" maxlength="240"></label>' +
+        '<label>Quantità<input id="pr-qty" type="number" min="1" step="1" value="1"></label>' +
+        '<label>Urgenza<select id="pr-urgency"><option value="NORMALE">Normale</option><option value="ALTA">Alta</option><option value="BASSA">Bassa</option></select></label>' +
+        '<label>Note<input id="pr-notes" maxlength="500"></label>' +
+        '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="primary" onclick="submitPublishRequest()">Pubblica</button></div></div>');
+    };
+    window.submitPublishRequest = async function () {
+      var locationId = Number(document.getElementById('pr-loc').value);
+      var code = document.getElementById('pr-code').value.trim();
+      var desc = document.getElementById('pr-desc').value.trim();
+      var qty = Number(document.getElementById('pr-qty').value);
+      var urgency = document.getElementById('pr-urgency').value;
+      var notes = document.getElementById('pr-notes').value.trim();
+      if (!code || !desc) return toast('Codice e descrizione sono obbligatori.');
+      if (!Number.isInteger(qty) || qty < 1) return toast('Quantità non valida.');
+      try {
+        await adapter.publishRequest({ locationId: locationId, productCode: code, productDescription: desc, quantity: qty, urgency: urgency, notes: notes || null });
+        closeModal(); toast('Richiesta pubblicata.'); await refreshFromBackend(); go('published');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+  }
+
+  function installGovernedPublishedPageButton() {
+    var originalPublished = window.published;
+    window.published = function () {
+      originalPublished();
+      var bar = document.querySelector('.bar');
+      if (bar && !document.getElementById('pr-new-btn')) {
+        var b = document.createElement('button');
+        b.id = 'pr-new-btn'; b.className = 'primary'; b.textContent = '+ Nuova richiesta';
+        b.onclick = function () { openPublishRequestForm(); };
+        bar.appendChild(b);
+      }
+    };
+  }
+
+  async function applyGovernedMode(actor) {
+    setBanner(actor.mode);
+    if (actor.mode !== adapter.MODE.GOVERNED_BACKEND) return; // DEMO_LOCAL: leave the existing local-demo path fully untouched.
+    pruneNav(mgrNav, GOVERNED_ONLY_MGR_PAGES);
+    pruneNav(storeNav, GOVERNED_ONLY_STORE_PAGES);
+    installGovernedActionOverrides();
+    installGovernedPublishedPageButton();
+    await refreshFromBackend();
+  }
+
+  var originalLoadSession = window.loadSession;
+  window.loadSession = async function (session) {
+    await originalLoadSession(session);
+    var mainVisible = !document.getElementById('main-app').classList.contains('hidden');
+    if (!mainVisible) return; // original auth/membership validation failed or signed out; nothing to wire.
+    try {
+      var actor = await adapter.initialize(session);
+      await applyGovernedMode(actor);
+    } catch (e) {
+      // Adapter-level mode determination failed. This does NOT downgrade an
+      // already-active governed session (mode is only ever applied forward,
+      // never reversed mid-session) - it means governed mode was never
+      // entered for this session, which already rendered in demo mode.
+      console.error('[rete-backend-adapter] initialize failed', e);
+    }
+  };
+
+  // picker()'s "Disconnetti" button already signs out directly and then
+  // reloads the page. That reload already discards all adapter in-memory
+  // state (actor, location cache, idempotency slots), so no additional
+  // sign-out wiring is required here. adapter.signOut() remains available
+  // as part of the required interface for any caller that needs to clear
+  // adapter state without a page reload.
 })();
 </script></body></html>
