@@ -176,6 +176,49 @@ were ever inserted into any database, local or remote.
   visibility fix for `DA_CONFERMARE` (verified a second store reads 0
   rows for another store's unconfirmed suggestion).
 
+## Rollback
+
+The migration is purely additive (new columns, new/replaced functions, one
+replaced RLS policy, no destructive DDL against any pre-existing object),
+so reverting it never requires restoring deleted data. If this migration
+needs to be reverted after being applied:
+
+1. **Restore the original RLS policy** on `rete_requests`:
+   ```sql
+   DROP POLICY IF EXISTS "active members read requests" ON "public"."rete_requests";
+   CREATE POLICY "active members read requests" ON "public"."rete_requests" FOR SELECT TO "authenticated" USING (
+     EXISTS (SELECT 1 FROM "public"."rete_memberships" "m"
+       WHERE "m"."user_id" = (SELECT "auth"."uid"()) AND "m"."active")
+   );
+   ```
+2. **Restore the original `rete_transfer_receive`** (4-arg signature, no
+   `p_discrepancy_type`) and **drop the 9 new/extended functions**:
+   `rete_wbos_suggestion_ingest`, `rete_request_confirm`,
+   `rete_request_update_quantity`, `rete_manual_request_create`,
+   `rete_request_central_confirm`, `rete_request_cancel`,
+   `rete_request_mark_no_longer_needed`,
+   `rete_transfer_resolve_discrepancy`, `rete_wbos_publication_budget_check`.
+3. **Restore the original `rete_request_recompute_status` and
+   `rete_guard_protected_columns`** (drop the discrepancy-aware closure
+   condition and the extended guarded-column list).
+4. **Drop the new columns**: `rete_locations.wbos_location_id`;
+   `rete_requests.operational_request_key`/`score`/`score_version`/
+   `source_document_date`/`hard_exclusion_reason`/`warning_codes`/
+   `requires_central_confirmation`/`confirmed_by`/`confirmed_at`/
+   `cancelled_by`/`cancelled_at`/`cancel_reason`/`version`;
+   `rete_transfers.discrepancy_type`/`discrepancy_acknowledged`/
+   `discrepancy_resolved_by`/`discrepancy_resolved_at`/
+   `discrepancy_resolution_note`/`version`.
+5. **Restore the original `source` check constraint** on `rete_requests`
+   (drop the `WBOS_AUTO` allowed value).
+
+Any `rete_requests` row with `source = 'WBOS_AUTO'` or `status =
+'DA_CONFERMARE'` created after this migration was applied would need a
+business decision before rollback (this pilot never inserts real
+WBOS-sourced rows, so in practice there should be none outside test
+fixtures). No `auth.*` table or `pilot_enabled` value is ever touched by
+this migration or by rolling it back.
+
 ## Pilot scope (unchanged)
 
 No chat, comments, photographs, attachments, voice notes, reactions,
