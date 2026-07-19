@@ -19,12 +19,12 @@
 --   6. immutable audit actions for all of the above (rete_audit_events'
 --      event_type is free text with only a length check - no schema change
 --      needed there, only new event_type string values used by new RPCs);
---   7. explicit WBOS-canonical-store-id <-> application-location-id
---      translation (the two numbering schemes do NOT match: WBOS uses
---      {2,4,5,6,7,8} for Malta/Sestri/Cantore/Trento/De Ferrari/Armenia;
---      this schema uses sequential {1..6} for the same six stores in the
---      same order - conflating them by raw integer value would silently
---      corrupt every location reference from a future WBOS integration).
+--   7. WBOS-suggestion ingestion resolves the requesting store directly via
+--      rete_locations.id, since id already IS the WBOS canonical retail
+--      location ID (Malta=2, Sestri=4, Cantore=5, Trento=6, De Ferrari=7,
+--      Armenia=8 - see 20260719130000_rete_squillari_canonical_location_
+--      reconciliation.sql for how this was established and reconciled).
+--      No separate translation column exists or is needed.
 --
 -- Nothing in this migration is applied to the remote project. It is
 -- replayed exclusively against the local Supabase stack via
@@ -42,32 +42,16 @@
 -- docs/RETE_SQUILLARI_OPEN_TO_OFFERS_EXTENSION.md under "Rollback".
 
 -- =============================================================================
--- 1. WBOS location translation
+-- 1. WBOS location resolution
 -- =============================================================================
--- Explicit, queryable mapping instead of a hardcoded array buried in
--- application or future ingestion code. NULL for any location that does not
--- (yet) have a WBOS counterpart - there is none today, but the column stays
--- nullable on principle (never force a mapping that might not exist).
-
-ALTER TABLE "public"."rete_locations"
-    ADD COLUMN IF NOT EXISTS "wbos_location_id" smallint;
-
-ALTER TABLE "public"."rete_locations"
-    ADD CONSTRAINT "rete_locations_wbos_location_id_key" UNIQUE ("wbos_location_id");
-
-COMMENT ON COLUMN "public"."rete_locations"."wbos_location_id" IS
-    'WBOS canonical store id (scripts/active_transfer_opportunity_filter.py CANONICAL_STORES). Deliberately NOT the same numbering as this table''s own id/code: WBOS uses {2,4,5,6,7,8}, this table uses sequential {1..6}. Never assume id equality across systems - always translate through this column.';
-
-UPDATE "public"."rete_locations" SET "wbos_location_id" = CASE "code"
-    WHEN 101 THEN 2  -- Malta
-    WHEN 102 THEN 4  -- Sestri
-    WHEN 103 THEN 5  -- Cantore
-    WHEN 104 THEN 6  -- Trento
-    WHEN 105 THEN 7  -- De Ferrari
-    WHEN 106 THEN 8  -- Armenia
-    ELSE NULL
-END
-WHERE "wbos_location_id" IS NULL;
+-- rete_locations.id already IS the WBOS canonical retail location ID for
+-- all six stores (established and reconciled in
+-- 20260719130000_rete_squillari_canonical_location_reconciliation.sql - see
+-- that migration for the root-cause history). No mapping column is added
+-- here: a column that only ever duplicates id would be a redundant
+-- indirection, not a real compatibility boundary. rete_wbos_suggestion_
+-- ingest() below resolves the requesting store with
+-- "WHERE id = p_requesting_location_wbos_id AND active" directly.
 
 -- =============================================================================
 -- 2. New columns on rete_requests for the WBOS suggestion lifecycle
@@ -410,7 +394,7 @@ BEGIN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
 
-  SELECT id INTO v_location_id FROM public.rete_locations WHERE wbos_location_id = p_requesting_location_wbos_id AND active;
+  SELECT id INTO v_location_id FROM public.rete_locations WHERE id = p_requesting_location_wbos_id AND active;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'operation not permitted';
   END IF;
