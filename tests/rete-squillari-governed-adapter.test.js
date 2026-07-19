@@ -176,6 +176,128 @@ async function checkAsync(name, fn) {
     catch (e) { assert.strictEqual(e.code, 'RESULT_UNKNOWN'); }
   });
 
+  // --- Category D: open-to-offers pilot extension ---
+  await checkAsync('D1: confirmRequest issues exactly one rete_request_confirm call with expected_version', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'store', location_id: 1, active: true, pilot_enabled: true, rete_locations: { code: 101, name: 'Malta', active: true } }, error: null },
+      rete_locationsList: { data: [{ id: 1, code: 101, name: 'Malta', active: true }], error: null },
+      rpc: function () { return { data: { status: 'DA_TROVARE' }, error: null }; }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    await adapter.loadDashboard();
+    // Force a known local id -> uuid mapping via a request row.
+    client.from = function (table) {
+      var self = { _table: table };
+      self.select = function () { return self; };
+      self.order = function () { return Promise.resolve({ data: table === 'rete_requests' ? [{ id: 'req-uuid-1', requesting_location_id: 1, product_code: 'C', product_description: 'D', requested_quantity: 6, remaining_quantity: 6, status: 'DA_CONFERMARE', version: 0 }] : [], error: null }); };
+      return self;
+    };
+    var dashboard = await adapter.loadDashboard();
+    var localId = dashboard.requests[0].id;
+    await adapter.confirmRequest({ requestLocalId: localId, expectedVersion: 0 });
+    var call = client.__rpcCalls[client.__rpcCalls.length - 1];
+    assert.strictEqual(call.name, 'rete_request_confirm');
+    assert.strictEqual(call.params.p_request_id, 'req-uuid-1');
+    assert.strictEqual(call.params.p_expected_version, 0);
+  });
+
+  await checkAsync('D2: confirmRequest rejects a central caller client-side (store-only action)', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'central', location_id: null, active: true, pilot_enabled: true, rete_locations: null }, error: null },
+      rete_locationsList: { data: [], error: null }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    try { await adapter.confirmRequest({ requestLocalId: 999, expectedVersion: 0 }); assert.fail('should have thrown'); }
+    catch (e) { assert.strictEqual(e.code, 'WRONG_ROLE'); }
+  });
+
+  await checkAsync('D3: createManualRequest is store-only and issues rete_manual_request_create', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'store', location_id: 1, active: true, pilot_enabled: true, rete_locations: { code: 101, name: 'Malta', active: true } }, error: null },
+      rete_locationsList: { data: [{ id: 1, code: 101, name: 'Malta', active: true }], error: null },
+      rpc: function () { return { data: { request_id: 'r1', status: 'DA_TROVARE', requires_central_confirmation: false }, error: null }; }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    await adapter.createManualRequest({ productCode: 'M1', productDescription: 'Manual', quantity: 6, reason: 'urgent' });
+    assert.strictEqual(client.__rpcCalls[0].name, 'rete_manual_request_create');
+    assert.strictEqual(client.__rpcCalls[0].params.p_product_code, 'M1');
+  });
+
+  await checkAsync('D4: cancelRequest issues rete_request_cancel with a reason and expected_version', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'central', location_id: null, active: true, pilot_enabled: true, rete_locations: null }, error: null },
+      rete_locationsList: { data: [], error: null },
+      rpc: function () { return { data: { status: 'ANNULLATA' }, error: null }; }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    var originalFrom = client.from;
+    client.from = function (table) {
+      if (table !== 'rete_requests') return originalFrom(table);
+      var self = { _table: table };
+      self.select = function () { return self; };
+      self.order = function () { return Promise.resolve({ data: [{ id: 'req-uuid-2', requesting_location_id: 1, product_code: 'C', product_description: 'D', requested_quantity: 6, remaining_quantity: 6, status: 'DA_TROVARE', version: 2 }], error: null }); };
+      return self;
+    };
+    var dashboard = await adapter.loadDashboard();
+    var localId = dashboard.requests[0].id;
+    await adapter.cancelRequest({ requestLocalId: localId, reason: 'not needed', expectedVersion: 2 });
+    var call = client.__rpcCalls[client.__rpcCalls.length - 1];
+    assert.strictEqual(call.name, 'rete_request_cancel');
+    assert.strictEqual(call.params.p_reason, 'not needed');
+    assert.strictEqual(call.params.p_expected_version, 2);
+  });
+
+  await checkAsync('D5: markRequestNoLongerNeeded is store-only', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'central', location_id: null, active: true, pilot_enabled: true, rete_locations: null }, error: null },
+      rete_locationsList: { data: [], error: null }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    try { await adapter.markRequestNoLongerNeeded({ requestLocalId: 999, expectedVersion: 0 }); assert.fail('should have thrown'); }
+    catch (e) { assert.strictEqual(e.code, 'WRONG_ROLE'); }
+  });
+
+  await checkAsync('D6: resolveDiscrepancy is central-only and issues rete_transfer_resolve_discrepancy', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'store', location_id: 1, active: true, pilot_enabled: true, rete_locations: { code: 101, name: 'Malta', active: true } }, error: null },
+      rete_locationsList: { data: [{ id: 1, code: 101, name: 'Malta', active: true }], error: null }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    try { await adapter.resolveDiscrepancy({ transferLocalId: 999, resolutionNote: 'ok' }); assert.fail('should have thrown'); }
+    catch (e) { assert.strictEqual(e.code, 'WRONG_ROLE'); }
+  });
+
+  await checkAsync('D7: receiveTransfer forwards discrepancy_type alongside received_quantity', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'store', location_id: 1, active: true, pilot_enabled: true, rete_locations: { code: 101, name: 'Malta', active: true } }, error: null },
+      rete_locationsList: { data: [{ id: 1, code: 101, name: 'Malta', active: true }], error: null },
+      rpc: function () { return { data: { status: 'RICEVUTA' }, error: null }; }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    var originalFrom2 = client.from;
+    client.from = function (table) {
+      if (table !== 'rete_transfers') return originalFrom2(table);
+      var self = { _table: table };
+      self.select = function () { return self; };
+      self.order = function () { return Promise.resolve({ data: [{ id: 'transfer-uuid-1', request_id: 'r1', offer_id: null, from_location_id: 2, to_location_id: 1, quantity: 6, status: 'IN_TRASFERIMENTO', created_at: '2026-07-19' }], error: null }); };
+      return self;
+    };
+    var dashboard = await adapter.loadDashboard();
+    var localId = dashboard.transfers[0].id;
+    await adapter.receiveTransfer({ transferLocalId: localId, receivedQuantity: 4, anomalyNote: 'short', discrepancyType: 'SHORT' });
+    var call = client.__rpcCalls[client.__rpcCalls.length - 1];
+    assert.strictEqual(call.name, 'rete_transfer_receive');
+    assert.strictEqual(call.params.p_discrepancy_type, 'SHORT');
+    assert.strictEqual(call.params.p_received_quantity, 4);
+  });
+
   console.log('\n=== ' + pass + '/' + (pass + fail) + ' passed ===');
   if (fail > 0) process.exitCode = 1;
 })();
