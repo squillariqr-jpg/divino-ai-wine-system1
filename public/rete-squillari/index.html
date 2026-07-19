@@ -175,7 +175,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   window.printTransferLabel=function(requestId){var r=db.shortageRequests.find(function(x){return (x.request_number||x.request_id)===requestId});if(!r||!model.canPrintTransferLabel(r))return toast('Etichetta disponibile dopo conferma di sede fornitrice, quantità e destinazione.');var v=model.buildTransferLabelViewModel(r);printSheet('<h1>Etichetta trasferimento demo</h1><p><b>Numero scheda:</b> '+esc(v.request_number)+'</p><p><b>Sede mittente:</b> '+esc(v.sender)+' · '+esc(v.sender_type)+'</p><p><b>Sede destinataria:</b> '+esc(v.destination)+' · '+esc(v.destination_type)+'</p><p><b>Codice articolo:</b> '+esc(v.product_code)+'</p><p><b>Descrizione articolo:</b> '+esc(v.product_description)+'</p><p><b>Quantità confermata:</b> '+esc(v.confirmed_quantity)+'</p><p><b>Motivazione:</b> '+esc(v.reason)+'</p><p><b>Priorità:</b> '+esc(v.priority)+'</p><p><b>Data prevista trasferimento:</b> '+esc(v.expected_transfer_date)+'</p>')};
   document.addEventListener('DOMContentLoaded',function(){var banner=document.querySelector('.public-demo-banner span');if(banner)banner.textContent='Le schede sono salvate solo in questo browser. Nessun trasferimento reale viene creato o notificato.';});
 })();
-</script><script>
+
 // Governed backend wiring layer. Explicit mode selection only: this block
 // NEVER falls back from GOVERNED_BACKEND to the local demo write path.
 // Mode is decided once per session, from the caller's own pilot_enabled
