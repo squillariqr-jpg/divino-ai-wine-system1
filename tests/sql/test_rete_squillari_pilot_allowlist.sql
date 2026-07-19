@@ -101,7 +101,7 @@ SET ROLE authenticated;
 SET request.jwt.claim.sub = :nonpilot_id;
 
 SELECT pg_temp.assert_raises_matching(
-  $sql$ SELECT public.rete_request_publish(4::smallint,'NP','NP test',1,'NORMALE',NULL,'pd-rp') $sql$,
+  $sql$ SELECT public.rete_request_publish(6::smallint,'NP','NP test',1,'NORMALE',NULL,'pd-rp') $sql$,
   'no active membership', '1a rete_request_publish: pilot=false → denied with generic message');
 SELECT pg_temp.assert_raises_matching(
   $sql$ SELECT public.rete_offer_create('00000000-0000-0000-0000-000000000000'::uuid,1,'pd-oc') $sql$,
@@ -152,14 +152,14 @@ SELECT pg_temp.assert_true(
 -- Create base resources for coherence tests
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'COHERENCE-TEST','Coherence wine',10,'NORMALE',NULL,'coherence-req-base') AS result \gset coh_req_
+SELECT public.rete_request_publish(5::smallint,'COHERENCE-TEST','Coherence wine',10,'NORMALE',NULL,'coherence-req-base') AS result \gset coh_req_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'coh_req_result'::jsonb->>'request_id') AS coh_req_id \gset
 
 -- 2a. store → rete_request_publish (central-only)
 SET ROLE authenticated; SET request.jwt.claim.sub = :malta_id;
 SELECT pg_temp.assert_raises_matching(
-  $sql$ SELECT public.rete_request_publish(1::smallint,'X','X',1,'NORMALE',NULL,'coh-store-as-central') $sql$,
+  $sql$ SELECT public.rete_request_publish(2::smallint,'X','X',1,'NORMALE',NULL,'coh-store-as-central') $sql$,
   'operation not permitted','2a pilot=true + store → rete_request_publish → operation not permitted');
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -211,7 +211,7 @@ SELECT pg_temp.assert_raises_matching(
   'operation not permitted','2g pilot=true + wrong from-store (location mismatch) → operation not permitted');
 RESET ROLE; RESET request.jwt.claim.sub;
 
--- 2h. Self-offer: Cantore (requesting_location_id=3) tries to offer on own request
+-- 2h. Self-offer: Cantore (requesting_location_id=5) tries to offer on own request
 SET ROLE authenticated; SET request.jwt.claim.sub = :cantore_id;
 SELECT pg_temp.assert_raises_matching(
   format($sql$ SELECT public.rete_offer_create('%s'::uuid,5,'coh-self-offer') $sql$, :'coh_req_id'),
@@ -277,7 +277,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Case A: spoofer has NO membership row at all
 SET ROLE authenticated; SET request.jwt.claim.sub = '11111111-0000-0000-0000-000000000099';
 SELECT pg_temp.assert_raises_matching(
-  $sql$ SELECT public.rete_request_publish(1::smallint,'SP','Spoof wine',1,'NORMALE',NULL,'spoof-rp-1') $sql$,
+  $sql$ SELECT public.rete_request_publish(2::smallint,'SP','Spoof wine',1,'NORMALE',NULL,'spoof-rp-1') $sql$,
   'no active membership',
   '3A no membership: user_metadata.pilot_enabled=true/role=central has no effect on rete_request_publish');
 SELECT pg_temp.assert_raises_matching(
@@ -292,12 +292,12 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 -- Case B: spoofer has a real membership with pilot_enabled=false
 INSERT INTO public.rete_memberships (user_id, role, location_id, display_name, active, pilot_enabled)
-VALUES ('11111111-0000-0000-0000-000000000099','store',1,'Spoofer',true,false)
+VALUES ('11111111-0000-0000-0000-000000000099','store',2,'Spoofer',true,false)
 ON CONFLICT (user_id) DO UPDATE SET pilot_enabled=false, active=true;
 
 SET ROLE authenticated; SET request.jwt.claim.sub = '11111111-0000-0000-0000-000000000099';
 SELECT pg_temp.assert_raises_matching(
-  $sql$ SELECT public.rete_request_publish(1::smallint,'SP2','Spoof2',1,'NORMALE',NULL,'spoof-rp-2') $sql$,
+  $sql$ SELECT public.rete_request_publish(2::smallint,'SP2','Spoof2',1,'NORMALE',NULL,'spoof-rp-2') $sql$,
   'no active membership',
   '3B DB pilot_enabled=false overrides user_metadata.pilot_enabled=true claim');
 SELECT pg_temp.assert_raises_matching(
@@ -359,7 +359,7 @@ $$;
 
 -- 5a. Successful call while Malta pilot=true
 SET ROLE authenticated; SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'KS-WINE','Kill-switch wine',8,'NORMALE',NULL,'ks-central-req-pilot') AS result \gset ks_central_req_
+SELECT public.rete_request_publish(5::smallint,'KS-WINE','Kill-switch wine',8,'NORMALE',NULL,'ks-central-req-pilot') AS result \gset ks_central_req_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'ks_central_req_result'::jsonb->>'request_id') AS ks_req_id \gset
 
@@ -414,7 +414,7 @@ SELECT pg_temp.assert_true(
 -- 5h. Re-enable → normal operation resumes
 UPDATE public.rete_memberships SET pilot_enabled=true WHERE user_id=:malta_id;
 SET ROLE authenticated; SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'KS-WINE-2','Kill-switch wine 2',8,'NORMALE',NULL,'ks-central-req-pilot-2') AS result \gset ks_central_req_2_
+SELECT public.rete_request_publish(5::smallint,'KS-WINE-2','Kill-switch wine 2',8,'NORMALE',NULL,'ks-central-req-pilot-2') AS result \gset ks_central_req_2_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'ks_central_req_2_result'::jsonb->>'request_id') AS ks_req_id_2 \gset
 
@@ -480,7 +480,7 @@ DELETE FROM public.rete_idempotent_operations WHERE idempotency_key='idem-order-
 -- fresh request (coh_req_id from Section 2 is already fully covered/closed
 -- by this point in the script).
 SET ROLE authenticated; SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'IDEM-BOUND','Idem bound wine',10,'NORMALE',NULL,'idem-bound-req-publish') AS result \gset idem_bound_req_
+SELECT public.rete_request_publish(5::smallint,'IDEM-BOUND','Idem bound wine',10,'NORMALE',NULL,'idem-bound-req-publish') AS result \gset idem_bound_req_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'idem_bound_req_result'::jsonb->>'request_id') AS idem_bound_req_id \gset
 
@@ -518,7 +518,7 @@ VALUES ('11111111-0000-0000-0000-000000000097','sql-test-default-pilot@local.inv
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.rete_memberships (user_id, role, location_id, display_name, active)
-VALUES ('11111111-0000-0000-0000-000000000097','store',1,'Default-False Test',true)
+VALUES ('11111111-0000-0000-0000-000000000097','store',2,'Default-False Test',true)
 ON CONFLICT (user_id) DO NOTHING;
 
 SELECT pg_temp.assert_true(
@@ -557,7 +557,7 @@ SELECT pg_temp.assert_true(
 
 -- Fresh base request for these tests (own product code, avoids collisions).
 SET ROLE authenticated; SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'F12-BASE','F1/F2 base wine',20,'NORMALE',NULL,'f12-base-publish') AS result \gset f12_req_
+SELECT public.rete_request_publish(5::smallint,'F12-BASE','F1/F2 base wine',20,'NORMALE',NULL,'f12-base-publish') AS result \gset f12_req_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'f12_req_result'::jsonb->>'request_id') AS f12_req_id \gset
 
@@ -590,7 +590,7 @@ SELECT pg_temp.assert_raises_matching(
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.assert_true(
-  (SELECT count(*) FROM public.rete_offers WHERE request_id=:'f12_req_id'::uuid AND offering_location_id=2)=0,
+  (SELECT count(*) FROM public.rete_offers WHERE request_id=:'f12_req_id'::uuid AND offering_location_id=4)=0,
   '9.3/9.4-SE: Sestri never actually created an offer via the collided key');
 
 -- 9.5 same key, DIFFERENT operation -> independent (PK includes operation)
@@ -602,9 +602,9 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 -- 9.6 NULL vs empty string in payload -> different canonical payload, no bleed
 SET ROLE authenticated; SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'F12-NULLEMPTY','desc',5,'NORMALE',NULL,'f12-null-key') AS result \gset f12_null_
+SELECT public.rete_request_publish(5::smallint,'F12-NULLEMPTY','desc',5,'NORMALE',NULL,'f12-null-key') AS result \gset f12_null_
 SELECT pg_temp.assert_raises_matching(
-  $sql$ SELECT public.rete_request_publish(3::smallint,'F12-NULLEMPTY','desc',5,'NORMALE','','f12-null-key') $sql$,
+  $sql$ SELECT public.rete_request_publish(5::smallint,'F12-NULLEMPTY','desc',5,'NORMALE','','f12-null-key') $sql$,
   'operation not permitted',
   '9.6 same key, p_notes NULL vs empty string '''' -> treated as different payload, rejected, not silently merged');
 RESET ROLE; RESET request.jwt.claim.sub;
@@ -614,8 +614,8 @@ SELECT pg_temp.assert_true(
 
 -- 9.7 different quantity (already covered by 9.2) + 9.8 different target UUID -> reject
 SET ROLE authenticated; SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint,'F12-UUID-A','wine A',5,'NORMALE',NULL,'f12-uuid-a-key') AS result \gset f12_ua_
-SELECT public.rete_request_publish(3::smallint,'F12-UUID-B','wine B',5,'NORMALE',NULL,'f12-uuid-b-key') AS result \gset f12_ub_
+SELECT public.rete_request_publish(5::smallint,'F12-UUID-A','wine A',5,'NORMALE',NULL,'f12-uuid-a-key') AS result \gset f12_ua_
+SELECT public.rete_request_publish(5::smallint,'F12-UUID-B','wine B',5,'NORMALE',NULL,'f12-uuid-b-key') AS result \gset f12_ub_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'f12_ua_result'::jsonb->>'request_id') AS f12_ua_id \gset
 SELECT (:'f12_ub_result'::jsonb->>'request_id') AS f12_ub_id \gset

@@ -22,14 +22,17 @@ ON CONFLICT (id) DO NOTHING;
 -- correctly-membershipped but non-pilot identity is still denied by every
 -- RPC. inactive is both inactive AND non-pilot (irrelevant which check
 -- fires first, both must deny).
+-- location_id values are the certified canonical WBOS retail location IDs
+-- (Malta=2, Sestri=4, Cantore=5, Trento=6 - see
+-- 20260719130000_rete_squillari_canonical_location_reconciliation.sql).
 INSERT INTO public.rete_memberships (user_id, role, location_id, display_name, active, pilot_enabled)
 VALUES
   ('11111111-0000-0000-0000-000000000001', 'central', NULL, 'SQL Test Central', true, true),
-  ('11111111-0000-0000-0000-000000000002', 'store', 1, 'SQL Test Malta', true, true),
-  ('11111111-0000-0000-0000-000000000003', 'store', 2, 'SQL Test Sestri', true, true),
-  ('11111111-0000-0000-0000-000000000004', 'store', 3, 'SQL Test Cantore', true, true),
-  ('11111111-0000-0000-0000-000000000006', 'store', 1, 'SQL Test Inactive', false, false),
-  ('11111111-0000-0000-0000-000000000008', 'store', 4, 'SQL Test Non-Pilot', true, false)
+  ('11111111-0000-0000-0000-000000000002', 'store', 2, 'SQL Test Malta', true, true),
+  ('11111111-0000-0000-0000-000000000003', 'store', 4, 'SQL Test Sestri', true, true),
+  ('11111111-0000-0000-0000-000000000004', 'store', 5, 'SQL Test Cantore', true, true),
+  ('11111111-0000-0000-0000-000000000006', 'store', 2, 'SQL Test Inactive', false, false),
+  ('11111111-0000-0000-0000-000000000008', 'store', 6, 'SQL Test Non-Pilot', true, false)
 ON CONFLICT (user_id) DO UPDATE SET
   role = EXCLUDED.role,
   location_id = EXCLUDED.location_id,

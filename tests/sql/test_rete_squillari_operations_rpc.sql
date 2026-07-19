@@ -66,15 +66,18 @@ BEGIN
   -- perfectly valid, active store membership with pilot_enabled=false, used
   -- exclusively to prove that an active, correctly-membershipped identity
   -- that is simply not in the pilot allowlist is still denied by every RPC.
+  -- location_id values are the certified canonical WBOS retail location IDs
+  -- (Malta=2, Sestri=4, Cantore=5, Trento=6 - see
+  -- 20260719130000_rete_squillari_canonical_location_reconciliation.sql).
   INSERT INTO public.rete_memberships (user_id, role, location_id, display_name, active, pilot_enabled)
   VALUES
     ('11111111-0000-0000-0000-000000000001', 'central', NULL, 'SQL Test Central', true, true),
-    ('11111111-0000-0000-0000-000000000002', 'store', 1, 'SQL Test Malta', true, true),
-    ('11111111-0000-0000-0000-000000000003', 'store', 2, 'SQL Test Sestri', true, true),
-    ('11111111-0000-0000-0000-000000000004', 'store', 3, 'SQL Test Cantore', true, true),
-    ('11111111-0000-0000-0000-000000000006', 'store', 1, 'SQL Test Inactive', false, false),
-    ('11111111-0000-0000-0000-000000000007', 'store', 1, 'SQL Test Malta Device2', true, true),
-    ('11111111-0000-0000-0000-000000000008', 'store', 4, 'SQL Test Non-Pilot', true, false)
+    ('11111111-0000-0000-0000-000000000002', 'store', 2, 'SQL Test Malta', true, true),
+    ('11111111-0000-0000-0000-000000000003', 'store', 4, 'SQL Test Sestri', true, true),
+    ('11111111-0000-0000-0000-000000000004', 'store', 5, 'SQL Test Cantore', true, true),
+    ('11111111-0000-0000-0000-000000000006', 'store', 2, 'SQL Test Inactive', false, false),
+    ('11111111-0000-0000-0000-000000000007', 'store', 2, 'SQL Test Malta Device2', true, true),
+    ('11111111-0000-0000-0000-000000000008', 'store', 6, 'SQL Test Non-Pilot', true, false)
   ON CONFLICT (user_id) DO UPDATE SET
     role = EXCLUDED.role,
     location_id = EXCLUDED.location_id,
@@ -139,7 +142,7 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :malta_id;
 SELECT pg_temp.assert_raises(
-  $sql$ SELECT public.rete_request_publish(1::smallint, 'X1', 'Test product', 5, 'NORMALE', NULL, 'store-as-central-key') $sql$,
+  $sql$ SELECT public.rete_request_publish(2::smallint, 'X1', 'Test product', 5, 'NORMALE', NULL, 'store-as-central-key') $sql$,
   'a store cannot call rete_request_publish (central-only)'
 );
 RESET ROLE; RESET request.jwt.claim.sub;
@@ -171,7 +174,7 @@ SELECT pg_temp.assert_true(
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :nonpilot_id;
 SELECT pg_temp.assert_raises(
-  $sql$ SELECT public.rete_request_publish(1::smallint, 'X', 'X', 1, 'NORMALE', NULL, 'pilot-deny-publish') $sql$,
+  $sql$ SELECT public.rete_request_publish(2::smallint, 'X', 'X', 1, 'NORMALE', NULL, 'pilot-deny-publish') $sql$,
   'pilot_enabled=false denies rete_request_publish even though the caller is an active store'
 );
 SELECT pg_temp.assert_raises(
@@ -245,7 +248,7 @@ SELECT pg_temp.assert_true(
 
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint, 'KILLSWITCH', 'Kill switch test wine', 5, 'NORMALE', NULL, 'killswitch-publish-1') AS result \gset ks_req_
+SELECT public.rete_request_publish(5::smallint, 'KILLSWITCH', 'Kill switch test wine', 5, 'NORMALE', NULL, 'killswitch-publish-1') AS result \gset ks_req_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'ks_req_result'::jsonb ->> 'request_id') AS ks_req_id \gset
 
@@ -283,7 +286,7 @@ SELECT pg_temp.assert_true(
 -- richiesta valida (central publishes)
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(3::smallint, 'SQLTEST-001', 'Test wine A', 10, 'NORMALE', NULL, 'req-create-1') AS result \gset req1_
+SELECT public.rete_request_publish(5::smallint, 'SQLTEST-001', 'Test wine A', 10, 'NORMALE', NULL, 'req-create-1') AS result \gset req1_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.assert_true(:'req1_result' IS NOT NULL, 'request published successfully');
 
@@ -291,11 +294,11 @@ SELECT pg_temp.assert_true(:'req1_result' IS NOT NULL, 'request published succes
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :central_id;
 SELECT pg_temp.assert_raises(
-  $sql$ SELECT public.rete_request_publish(3::smallint, 'SQLTEST-BAD', 'Bad qty', 0, 'NORMALE', NULL, 'req-bad-qty-1') $sql$,
+  $sql$ SELECT public.rete_request_publish(5::smallint, 'SQLTEST-BAD', 'Bad qty', 0, 'NORMALE', NULL, 'req-bad-qty-1') $sql$,
   'zero requested_quantity is rejected'
 );
 SELECT pg_temp.assert_raises(
-  $sql$ SELECT public.rete_request_publish(3::smallint, 'SQLTEST-BAD2', 'Bad qty', -5, 'NORMALE', NULL, 'req-bad-qty-2') $sql$,
+  $sql$ SELECT public.rete_request_publish(5::smallint, 'SQLTEST-BAD2', 'Bad qty', -5, 'NORMALE', NULL, 'req-bad-qty-2') $sql$,
   'negative requested_quantity is rejected'
 );
 RESET ROLE; RESET request.jwt.claim.sub;
@@ -339,7 +342,7 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(2::smallint, 'SQLTEST-002', 'Test wine B', 5, 'NORMALE', NULL, 'req-create-2') AS result \gset req2_
+SELECT public.rete_request_publish(4::smallint, 'SQLTEST-002', 'Test wine B', 5, 'NORMALE', NULL, 'req-create-2') AS result \gset req2_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'req2_result'::jsonb ->> 'request_id') AS req2_id \gset
 
@@ -536,7 +539,7 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 SET ROLE authenticated;
 SET request.jwt.claim.sub = :central_id;
-SELECT public.rete_request_publish(1::smallint, 'SQLTEST-TRASTA', 'Trasta test wine', 10, 'NORMALE', NULL, 'req-trasta-1') AS result \gset req_trasta_
+SELECT public.rete_request_publish(2::smallint, 'SQLTEST-TRASTA', 'Trasta test wine', 10, 'NORMALE', NULL, 'req-trasta-1') AS result \gset req_trasta_
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT (:'req_trasta_result'::jsonb ->> 'request_id') AS req_trasta_id \gset
 
@@ -594,7 +597,7 @@ SELECT count(*) AS n FROM public.rete_audit_events WHERE payload::text ~ '[0-9]{
 SELECT payload ->> 'actor_role' AS actor_role, (payload ->> 'actor_location_id')::int AS actor_location_id
 FROM public.rete_audit_events WHERE entity_type = 'offer' AND entity_id = :'offer_malta_id' AND event_type = 'offer_created' \gset audit_actor_
 SELECT pg_temp.assert_true(:'audit_actor_actor_role' = 'store', 'audit event records the correct actor_role (derived server-side, never client-supplied)');
-SELECT pg_temp.assert_true(:audit_actor_actor_location_id = 1, 'audit event records the correct actor_location_id (Malta = 1)');
+SELECT pg_temp.assert_true(:audit_actor_actor_location_id = 2, 'audit event records the correct actor_location_id (Malta = 2)');
 
 -- audit non duplicato al retry: already checked above (audit_count_ = 1 after
 -- the idempotent approve retry); re-asserted here for the receive path.
