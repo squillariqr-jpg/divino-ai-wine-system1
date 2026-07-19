@@ -31,6 +31,15 @@
 -- `supabase db reset --local`. No pilot store is activated by this
 -- migration - pilot_enabled stays exactly as it already is for every
 -- existing membership row.
+--
+-- Rollback: purely additive (new columns, new/replaced functions, one
+-- replaced RLS policy - no destructive DDL against any pre-existing
+-- object), so reverting never requires restoring deleted data. Full
+-- step-by-step rollback plan (restore the original RLS policy, restore
+-- the original 4-arg rete_transfer_receive, drop the 9 new/extended
+-- functions, drop the new columns, restore the original source check
+-- constraint) is documented in
+-- docs/RETE_SQUILLARI_OPEN_TO_OFFERS_EXTENSION.md under "Rollback".
 
 -- =============================================================================
 -- 1. WBOS location translation
@@ -426,6 +435,16 @@ BEGIN
   -- An existing active MANUAL request for the same store+product prevents
   -- an automatic suggestion for the same pair, so a store's own already-
   -- expressed need is never duplicated by an automatic one.
+  --
+  -- Same advisory-lock key convention as rete_manual_request_create(), so
+  -- the two functions are mutually serialized for the same (location,
+  -- product) pair - without this, a concurrent manual-request creation and
+  -- WBOS ingestion for the same store+product could each observe "no
+  -- cross-source duplicate" before either commits, defeating this check
+  -- exactly like the same-function race found and fixed in
+  -- rete_manual_request_create().
+  PERFORM pg_advisory_xact_lock(hashtext('rete_manual_request_create:' || v_location_id || ':' || p_product_code));
+
   IF EXISTS (
     SELECT 1 FROM public.rete_requests
     WHERE requesting_location_id = v_location_id
@@ -634,6 +653,18 @@ BEGIN
   -- requests for the same product, whether manual or WBOS-sourced, ever
   -- silently discarding the new attempt - this is an explicit rejection the
   -- caller can see, not a silent no-op.
+  --
+  -- Serialized via advisory lock (same pattern as
+  -- rete_wbos_publication_budget_check): a plain "SELECT ... EXISTS" check
+  -- here is a check-then-act race - two concurrent calls for the same
+  -- (location, product) can both observe "no active duplicate" before
+  -- either has inserted its row, both then insert, and the duplicate this
+  -- check exists to prevent is created anyway. Verified exploitable in
+  -- review before this lock was added. The lock key combines location_id
+  -- and product_code so unrelated store/product pairs never block each
+  -- other.
+  PERFORM pg_advisory_xact_lock(hashtext('rete_manual_request_create:' || v_membership.location_id || ':' || p_product_code));
+
   IF EXISTS (
     SELECT 1 FROM public.rete_requests
     WHERE requesting_location_id = v_membership.location_id
