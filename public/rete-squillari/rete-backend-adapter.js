@@ -220,13 +220,20 @@
         id: localIdFor('request', row.id),
         backendId: row.id,
         store: locationLabel(row.requesting_location_id),
+        storeLocationId: row.requesting_location_id,
         code: row.product_code,
         name: row.product_description,
         original: row.requested_quantity,
         remaining: row.remaining_quantity,
         status: STATUS_LABEL[row.status] || row.status,
         urgent: row.urgency === 'ALTA',
-        rawStatus: row.status
+        rawStatus: row.status,
+        source: row.source,
+        version: row.version || 0,
+        requiresCentralConfirmation: row.requires_central_confirmation === true,
+        cancelReason: row.cancel_reason || null,
+        score: row.score,
+        sourceDocumentDate: row.source_document_date
       };
     }
     function mapOfferRow(row) {
@@ -235,6 +242,7 @@
         backendId: row.id,
         request: localIdFor('request', row.request_id),
         from: locationLabel(row.offering_location_id),
+        fromLocationId: row.offering_location_id,
         qty: row.offered_quantity,
         approved: row.approved_quantity || 0,
         status: STATUS_LABEL[row.status] || row.status,
@@ -249,11 +257,17 @@
         request: localIdFor('request', row.request_id),
         offer: row.offer_id ? localIdFor('offer', row.offer_id) : null,
         from: locationLabel(row.from_location_id),
+        fromLocationId: row.from_location_id,
         to: locationLabel(row.to_location_id),
+        toLocationId: row.to_location_id,
         qty: row.quantity,
         status: STATUS_LABEL[row.status] || row.status,
         rawStatus: row.status,
-        date: (row.created_at || '').slice(0, 10)
+        date: (row.created_at || '').slice(0, 10),
+        receivedQuantity: row.received_quantity,
+        discrepancyType: row.discrepancy_type,
+        discrepancyAcknowledged: row.discrepancy_acknowledged === true,
+        version: row.version || 0
       };
     }
 
@@ -339,8 +353,71 @@
       var a = requireGovernedMode();
       if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo il negozio destinatario può confermare la ricezione.', 'role=' + a.role);
       var transferUuid = uuidFor('transfer', input.transferLocalId);
-      var params = { p_transfer_id: transferUuid, p_received_quantity: input.receivedQuantity, p_anomaly_note: input.anomalyNote || null };
+      var params = {
+        p_transfer_id: transferUuid, p_received_quantity: input.receivedQuantity,
+        p_anomaly_note: input.anomalyNote || null, p_discrepancy_type: input.discrepancyType || null
+      };
       return callRpc('receiveTransfer', transferUuid, 'rete_transfer_receive', params);
+    }
+
+    // --- Open-to-offers pilot extension: requesting-store confirmation,
+    // manual requests, cancellation, and discrepancy resolution. ---
+
+    async function confirmRequest(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo il negozio richiedente può confermare la propria richiesta.', 'role=' + a.role);
+      var requestUuid = uuidFor('request', input.requestLocalId);
+      var params = { p_request_id: requestUuid, p_expected_version: input.expectedVersion };
+      return callRpc('confirmRequest', requestUuid, 'rete_request_confirm', params);
+    }
+
+    async function updateRequestQuantity(input) {
+      requireGovernedMode();
+      var requestUuid = uuidFor('request', input.requestLocalId);
+      var params = { p_request_id: requestUuid, p_new_quantity: input.newQuantity, p_expected_version: input.expectedVersion };
+      return callRpc('updateRequestQuantity', requestUuid, 'rete_request_update_quantity', params);
+    }
+
+    async function createManualRequest(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo un negozio può creare una richiesta manuale.', 'role=' + a.role);
+      var params = {
+        p_product_code: input.productCode, p_product_description: input.productDescription,
+        p_requested_quantity: input.quantity, p_reason: input.reason || null,
+        p_requires_central_confirmation: input.requiresCentralConfirmation || false,
+        p_warning_codes: input.warningCodes || []
+      };
+      return callRpc('createManualRequest', 'loc:' + a.locationId + ':' + input.productCode, 'rete_manual_request_create', params);
+    }
+
+    async function centralConfirmRequest(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'central') throw new AdapterError('WRONG_ROLE', 'Solo il responsabile centrale può confermare la richiesta.', 'role=' + a.role);
+      var requestUuid = uuidFor('request', input.requestLocalId);
+      return callRpc('centralConfirmRequest', requestUuid, 'rete_request_central_confirm', { p_request_id: requestUuid });
+    }
+
+    async function cancelRequest(input) {
+      requireGovernedMode();
+      var requestUuid = uuidFor('request', input.requestLocalId);
+      var params = { p_request_id: requestUuid, p_reason: input.reason || null, p_expected_version: input.expectedVersion };
+      return callRpc('cancelRequest', requestUuid, 'rete_request_cancel', params);
+    }
+
+    async function markRequestNoLongerNeeded(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo il negozio richiedente può segnalare che la richiesta non serve più.', 'role=' + a.role);
+      var requestUuid = uuidFor('request', input.requestLocalId);
+      var params = { p_request_id: requestUuid, p_expected_version: input.expectedVersion };
+      return callRpc('markRequestNoLongerNeeded', requestUuid, 'rete_request_mark_no_longer_needed', params);
+    }
+
+    async function resolveDiscrepancy(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'central') throw new AdapterError('WRONG_ROLE', 'Solo il responsabile centrale può risolvere una discrepanza.', 'role=' + a.role);
+      var transferUuid = uuidFor('transfer', input.transferLocalId);
+      var params = { p_transfer_id: transferUuid, p_resolution_note: input.resolutionNote };
+      return callRpc('resolveDiscrepancy', transferUuid, 'rete_transfer_resolve_discrepancy', params);
     }
 
     async function recordTrastaArrival(input) {
@@ -380,7 +457,11 @@
       publishRequest: publishRequest, createOffer: createOffer, withdrawOffer: withdrawOffer,
       approveOffer: approveOffer, rejectOffer: rejectOffer, markTransferReady: markTransferReady,
       markTransferDeparted: markTransferDeparted, receiveTransfer: receiveTransfer,
-      recordTrastaArrival: recordTrastaArrival, signOut: signOut
+      recordTrastaArrival: recordTrastaArrival, signOut: signOut,
+      confirmRequest: confirmRequest, updateRequestQuantity: updateRequestQuantity,
+      createManualRequest: createManualRequest, centralConfirmRequest: centralConfirmRequest,
+      cancelRequest: cancelRequest, markRequestNoLongerNeeded: markRequestNoLongerNeeded,
+      resolveDiscrepancy: resolveDiscrepancy
     };
   }
 

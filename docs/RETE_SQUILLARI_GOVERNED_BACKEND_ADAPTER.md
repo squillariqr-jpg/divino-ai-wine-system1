@@ -1,8 +1,12 @@
 # Rete Squillari — governed backend adapter
 
 `public/rete-squillari/rete-backend-adapter.js` wires the existing card-UI
-demo (`public/rete-squillari/index.html`) to the 9 governed Supabase RPCs
-defined in `supabase/migrations/20260717090000_rete_squillari_pilot_allowlist_enforcement.sql`.
+demo (`public/rete-squillari/index.html`) to the governed Supabase RPCs: the
+original 9 defined in
+`supabase/migrations/20260717090000_rete_squillari_pilot_allowlist_enforcement.sql`,
+plus the 9 added by the WBOS open-to-offers pilot extension in
+`supabase/migrations/20260719120000_rete_squillari_open_to_offers_pilot_extension.sql`
+(see `docs/RETE_SQUILLARI_OPEN_TO_OFFERS_EXTENSION.md`).
 
 ## Modes
 
@@ -37,14 +41,18 @@ failure to *enter* governed mode in the first place.
 | "Rifiuta" | `rete_offer_reject` | central |
 | "Segna preparata" | `rete_transfer_mark_ready` | store, from-location |
 | "Segna partita" | `rete_transfer_mark_departed` | store, from-location |
-| "Conferma quantità ricevuta" | `rete_transfer_receive` | store, to-location |
+| "Conferma quantità ricevuta" | `rete_transfer_receive` (now 5 args: adds `p_discrepancy_type`) | store, to-location |
 | "Registra arrivo" | `rete_trasta_arrival_record` | central |
+| "Conferma richiesta" (WBOS suggestion) | `rete_request_confirm` | store, requesting location |
+| "Modifica quantità" | `rete_request_update_quantity` | store (own request) or central |
+| "+ Nuova richiesta manuale" | `rete_manual_request_create` | store |
+| Central clears a manual request's confirmation flag | `rete_request_central_confirm` | central |
+| "Ritira richiesta" / "Annulla" | `rete_request_cancel` | store (own) or central |
+| "Non serve più" | `rete_request_mark_no_longer_needed` | store, requesting location |
+| "Risolvi discrepanza" | `rete_transfer_resolve_discrepancy` | central |
 
 ## Known, deliberate gaps (not RPC-backed, left out of governed mode)
 
-- **Request withdrawal** ("Ritira richiesta"): no corresponding RPC exists
-  among the 9 governed operations. Disabled in `GOVERNED_BACKEND` mode
-  rather than emulated with a direct table write.
 - **Email inbox / verify-extraction / conflict management**: demo-only
   concepts with no backend equivalent. Hidden from the nav in governed mode.
 - **"Schede ammanco" (shortage requests)**: a separate, pre-existing,

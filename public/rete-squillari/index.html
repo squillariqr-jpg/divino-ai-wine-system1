@@ -175,7 +175,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   window.printTransferLabel=function(requestId){var r=db.shortageRequests.find(function(x){return (x.request_number||x.request_id)===requestId});if(!r||!model.canPrintTransferLabel(r))return toast('Etichetta disponibile dopo conferma di sede fornitrice, quantità e destinazione.');var v=model.buildTransferLabelViewModel(r);printSheet('<h1>Etichetta trasferimento demo</h1><p><b>Numero scheda:</b> '+esc(v.request_number)+'</p><p><b>Sede mittente:</b> '+esc(v.sender)+' · '+esc(v.sender_type)+'</p><p><b>Sede destinataria:</b> '+esc(v.destination)+' · '+esc(v.destination_type)+'</p><p><b>Codice articolo:</b> '+esc(v.product_code)+'</p><p><b>Descrizione articolo:</b> '+esc(v.product_description)+'</p><p><b>Quantità confermata:</b> '+esc(v.confirmed_quantity)+'</p><p><b>Motivazione:</b> '+esc(v.reason)+'</p><p><b>Priorità:</b> '+esc(v.priority)+'</p><p><b>Data prevista trasferimento:</b> '+esc(v.expected_transfer_date)+'</p>')};
   document.addEventListener('DOMContentLoaded',function(){var banner=document.querySelector('.public-demo-banner span');if(banner)banner.textContent='Le schede sono salvate solo in questo browser. Nessun trasferimento reale viene creato o notificato.';});
 })();
-</script><script>
+
 // Governed backend wiring layer. Explicit mode selection only: this block
 // NEVER falls back from GOVERNED_BACKEND to the local demo write path.
 // Mode is decided once per session, from the caller's own pilot_enabled
@@ -236,6 +236,65 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   function installGovernedActionOverrides() {
     window.save = function () { /* backend is the source of truth in governed mode; no local persistence */ };
 
+    // The demo's own/not-own distinction compares the display-label string
+    // (r.store === role); role is the demo's own hardcoded convention
+    // ('2 – Malta', built from the STORES array by name match) while
+    // r.store in governed mode is built from the real rete_locations.code
+    // ('101 – Malta') - these never match, so "own" was always false for
+    // every request in governed mode, pre-dating this extension. Fixed here
+    // with a robust location-id comparison (r.storeLocationId, populated by
+    // mapRequestRow) rather than a fragile label string. Needed for the new
+    // confirm/edit/cancel actions (added by this extension) to ever be
+    // reachable at all - without this, "own" is permanently false and no
+    // request-level action ever renders for anyone.
+    function isOwnRequest(r) {
+      var a = adapter.getCurrentActor();
+      return a.role === 'central' || r.storeLocationId === a.locationId;
+    }
+    var originalMineFn = window.mine;
+    window.mine = function () {
+      var rs = db.requests.filter(isOwnRequest);
+      document.getElementById('view').innerHTML = '<div class="bar"><h2>Le richieste di ' + esc(role) + '</h2></div><div class="grid">' +
+        (rs.length ? rs.map(function (r) { return reqCard(r, true); }).join('') : '<div class="empty">Nessuna richiesta associata al tuo negozio.</div>') + '</div>';
+    };
+    var originalHomeFn = window.home;
+    window.home = function () {
+      originalHomeFn();
+      // Re-render the grid using the correct own/not-own split (originalHomeFn
+      // already computed stats correctly; only the per-card "own" flag,
+      // derived the same fragile way, needs correcting).
+      var grid = document.querySelector('.grid');
+      if (!grid) return;
+      var rs = db.requests.filter(function (r) { return manager() || r.status !== 'DA VERIFICARE'; });
+      grid.innerHTML = rs.map(function (r) { return reqCard(r, isOwnRequest(r)); }).join('');
+    };
+
+    // Governed-only reqCard: adds confirm/edit/cancel actions driven by
+    // rawStatus (the true backend enum, populated only in governed mode by
+    // the adapter's mapRequestRow) rather than the demo's label-string
+    // comparisons, which never match the real DA_CONFERMARE/DA_TROVARE
+    // enum values.
+    var originalReqCard = window.reqCard;
+    window.reqCard = function (r, own) {
+      if (own === undefined) own = false;
+      var html = originalReqCard(r, own);
+      if (!own) return html;
+      var extra = '';
+      if (r.rawStatus === 'DA_CONFERMARE') {
+        extra = '<button class="primary" onclick="confirmSuggestion(' + r.id + ')">Conferma richiesta</button>' +
+          '<button class="secondary" onclick="openEditQuantityForm(' + r.id + ')">Modifica quantità</button>' +
+          '<button class="danger" onclick="withdrawReq(' + r.id + ')">Annulla</button>';
+      } else if (r.rawStatus === 'DA_TROVARE') {
+        extra = '<button class="secondary" onclick="openEditQuantityForm(' + r.id + ')">Modifica quantità</button>' +
+          '<button class="danger" onclick="withdrawReq(' + r.id + ')">Non serve più</button>';
+      }
+      if (r.requiresCentralConfirmation) {
+        extra = '<span class="tag gold">In attesa di conferma centrale</span>' + extra;
+      }
+      if (!extra) return html;
+      return html.replace('</div></article>', extra + '</div></article>');
+    };
+
     window.saveOffer = async function (id) {
       var q = Number(document.getElementById('oq').value);
       if (!Number.isInteger(q) || q < 1) return toast('Inserisci una quantità intera maggiore di zero.');
@@ -259,6 +318,24 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
       } catch (e) { toast(e.message); console.error(e); }
     };
 
+    window.receive = function (id) {
+      var t = db.transfers.find(function (x) { return x.id === id; });
+      if (!t) return;
+      open('<h2>Conferma ricezione</h2><p>' + esc(t.from) + ' → ' + esc(t.to) + '<br>Quantità trasferita: ' + t.qty + '</p>' +
+        '<input id="rq" type="number" min="0" max="' + t.qty + '" value="' + t.qty + '" onchange="toggleDiscrepancyFields(' + t.qty + ')">' +
+        '<div id="rq-discrepancy-fields" class="hidden">' +
+        '<label>Tipo discrepanza<select id="rq-discrepancy-type"><option value="">—</option><option value="SHORT">Quantità inferiore</option><option value="DAMAGED">Danneggiata</option><option value="OTHER">Altro</option></select></label>' +
+        '<label>Nota<textarea id="rq-note" maxlength="2000" placeholder="Descrivi la discrepanza"></textarea></label>' +
+        '</div>' +
+        '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button>' +
+        '<button class="primary" onclick="saveReceive(' + id + ')">Conferma quantità ricevuta</button></div>');
+    };
+    window.toggleDiscrepancyFields = function (transferQty) {
+      var q = Number(document.getElementById('rq').value);
+      var fields = document.getElementById('rq-discrepancy-fields');
+      if (fields) fields.classList.toggle('hidden', q === transferQty);
+    };
+
     window.rejectOffer = async function (id) {
       try {
         await adapter.rejectOffer({ offerLocalId: id });
@@ -279,17 +356,104 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
       var q = Number(document.getElementById('rq').value);
       var t = db.transfers.find(function (x) { return x.id === id; });
       if (!t || !Number.isInteger(q) || q < 0 || q > t.qty) return toast('Quantità non valida: deve essere tra 0 e ' + (t ? t.qty : '?') + '.');
+      var discrepancyType = null;
+      if (q !== t.qty) {
+        var typeEl = document.getElementById('rq-discrepancy-type');
+        discrepancyType = typeEl ? typeEl.value : null;
+        if (!discrepancyType) return toast('Seleziona il tipo di discrepanza (quantità inferiore al trasferito).');
+      }
+      var noteEl = document.getElementById('rq-note');
       try {
-        await adapter.receiveTransfer({ transferLocalId: id, receivedQuantity: q });
-        closeModal(); toast('Ricezione registrata.'); await refreshFromBackend(); go('transfers');
+        await adapter.receiveTransfer({ transferLocalId: id, receivedQuantity: q, anomalyNote: noteEl ? (noteEl.value.trim() || null) : null, discrepancyType: discrepancyType });
+        closeModal(); toast(discrepancyType ? 'Ricezione registrata con discrepanza: richiede risoluzione del responsabile.' : 'Ricezione registrata.'); await refreshFromBackend(); go('transfers');
       } catch (e) { toast(e.message); console.error(e); }
     };
 
-    // Request withdrawal (Ritira richiesta) has no governed RPC (rete_request_publish
-    // has no corresponding cancel/withdraw counterpart among the 9 governed
-    // RPCs). Rather than silently write to a local/demo path, the action is
-    // disabled outright in governed mode.
-    window.withdrawReq = function () { toast('Ritiro richiesta non disponibile nel backend governato (nessuna funzione dedicata).'); };
+    // Request withdrawal now has a governed RPC (rete_request_mark_no_longer_needed
+    // for the requesting store, rete_request_cancel for central) - the
+    // previous "not available" disablement is superseded.
+    window.withdrawReq = async function (id) {
+      var req = db.requests.find(function (x) { return x.id === id; });
+      if (!req) return toast('Richiesta non trovata.');
+      try {
+        if (adapter.getCurrentActor().role === 'store') {
+          await adapter.markRequestNoLongerNeeded({ requestLocalId: id, expectedVersion: req.version });
+        } else {
+          await adapter.cancelRequest({ requestLocalId: id, reason: 'Annullata dal responsabile centrale', expectedVersion: req.version });
+        }
+        toast('Richiesta annullata.'); await refreshFromBackend(); go('mine');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    // --- Open-to-offers pilot extension actions ---
+
+    window.confirmSuggestion = async function (id) {
+      var req = db.requests.find(function (x) { return x.id === id; });
+      if (!req) return toast('Richiesta non trovata.');
+      try {
+        await adapter.confirmRequest({ requestLocalId: id, expectedVersion: req.version });
+        toast('Richiesta confermata: ora è visibile agli altri negozi.'); await refreshFromBackend(); go('mine');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.openEditQuantityForm = function (id) {
+      var req = db.requests.find(function (x) { return x.id === id; });
+      if (!req) return toast('Richiesta non trovata.');
+      open('<h2>Modifica quantità</h2><p>' + esc(req.name) + '</p>' +
+        '<input id="eq-qty" type="number" min="1" step="1" value="' + req.remaining + '">' +
+        '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button>' +
+        '<button class="primary" onclick="submitEditQuantity(' + id + ')">Salva quantità</button></div>');
+    };
+    window.submitEditQuantity = async function (id) {
+      var req = db.requests.find(function (x) { return x.id === id; });
+      var q = Number(document.getElementById('eq-qty').value);
+      if (!Number.isInteger(q) || q < 1) return toast('Inserisci una quantità intera maggiore di zero.');
+      try {
+        await adapter.updateRequestQuantity({ requestLocalId: id, newQuantity: q, expectedVersion: req.version });
+        closeModal(); toast('Quantità aggiornata.'); await refreshFromBackend(); go('mine');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.openManualRequestForm = function () {
+      open('<h2>Nuova richiesta manuale</h2><div class="form">' +
+        '<label>Codice prodotto<input id="mr-code" maxlength="64"></label>' +
+        '<label>Descrizione<input id="mr-desc" maxlength="240"></label>' +
+        '<label>Quantità<input id="mr-qty" type="number" min="1" step="1" value="6"></label>' +
+        '<label>Motivo (facoltativo)<input id="mr-reason" maxlength="500"></label>' +
+        '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button>' +
+        '<button class="primary" onclick="submitManualRequest()">Crea richiesta</button></div></div>');
+    };
+    window.submitManualRequest = async function () {
+      var code = document.getElementById('mr-code').value.trim();
+      var desc = document.getElementById('mr-desc').value.trim();
+      var qty = Number(document.getElementById('mr-qty').value);
+      var reason = document.getElementById('mr-reason').value.trim();
+      if (!code || !desc) return toast('Codice e descrizione sono obbligatori.');
+      if (!Number.isInteger(qty) || qty < 1) return toast('Quantità non valida.');
+      try {
+        var result = await adapter.createManualRequest({ productCode: code, productDescription: desc, quantity: qty, reason: reason || null });
+        closeModal();
+        toast(result.requires_central_confirmation
+          ? 'Richiesta creata: in attesa di conferma del responsabile centrale (possibile carenza generale).'
+          : 'Richiesta manuale creata.');
+        await refreshFromBackend(); go('mine');
+      } catch (e) { toast(e.message); console.error(e); }
+    };
+
+    window.resolveDiscrepancyPrompt = function (transferId) {
+      open('<h2>Risolvi discrepanza</h2><p>Registra la nota di risoluzione (es. accredito concordato con il negozio mittente).</p>' +
+        '<textarea id="rd-note" maxlength="2000" placeholder="Nota di risoluzione"></textarea>' +
+        '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button>' +
+        '<button class="primary" onclick="submitResolveDiscrepancy(' + transferId + ')">Conferma risoluzione</button></div>');
+    };
+    window.submitResolveDiscrepancy = async function (transferId) {
+      var note = document.getElementById('rd-note').value.trim();
+      if (!note) return toast('Inserisci una nota di risoluzione.');
+      try {
+        await adapter.resolveDiscrepancy({ transferLocalId: transferId, resolutionNote: note });
+        closeModal(); toast('Discrepanza risolta: la richiesta può ora chiudersi.'); await refreshFromBackend(); go(page);
+      } catch (e) { toast(e.message); console.error(e); }
+    };
 
     window.addArrival = async function () {
       var reqLocalId = Number(document.getElementById('arreq').value);
@@ -350,6 +514,38 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     };
   }
 
+  // "mine" (Le mie richieste) gains a "+ Nuova richiesta manuale" button for
+  // store identities - the store-side counterpart to central's "+ Nuova
+  // richiesta" on the published page.
+  function installGovernedManualRequestButton() {
+    var originalMine = window.mine;
+    window.mine = function () {
+      originalMine();
+      if (adapter.getCurrentActor().role !== 'store') return;
+      var bar = document.querySelector('.bar');
+      if (bar && !document.getElementById('mr-new-btn')) {
+        var b = document.createElement('button');
+        b.id = 'mr-new-btn'; b.className = 'primary'; b.textContent = '+ Nuova richiesta manuale';
+        b.onclick = function () { openManualRequestForm(); };
+        bar.appendChild(b);
+      }
+    };
+  }
+
+  // transferRow gains a "Risolvi discrepanza" action for central whenever a
+  // RICEVUTA transfer has an unresolved discrepancy.
+  function installGovernedDiscrepancyResolution() {
+    var originalTransferRow = window.transferRow;
+    window.transferRow = function (t, action) {
+      var html = originalTransferRow(t, action);
+      if (adapter.getCurrentActor().role === 'central' && t.discrepancyType && !t.discrepancyAcknowledged) {
+        var btn = '<button class="danger" onclick="resolveDiscrepancyPrompt(' + t.id + ')">Risolvi discrepanza</button>';
+        return html.replace('</div></div>', btn + '</div></div>');
+      }
+      return html;
+    };
+  }
+
   async function applyGovernedMode(actor) {
     setBanner(actor.mode);
     if (actor.mode !== adapter.MODE.GOVERNED_BACKEND) return; // DEMO_LOCAL: leave the existing local-demo path fully untouched.
@@ -357,6 +553,8 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     pruneNav(storeNav, GOVERNED_ONLY_STORE_PAGES);
     installGovernedActionOverrides();
     installGovernedPublishedPageButton();
+    installGovernedManualRequestButton();
+    installGovernedDiscrepancyResolution();
     await refreshFromBackend();
   }
 
