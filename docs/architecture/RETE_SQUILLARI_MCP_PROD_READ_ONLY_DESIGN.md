@@ -61,9 +61,60 @@ A dedicated Postgres role, `rete_mcp_reader`, is created by
 Verified live (both manually and in
 `tests/test_rete_squillari_mcp_prod.py`, the
 `test_reader_role_cannot_*` cases): `INSERT`, `UPDATE`, `DELETE`,
-`TRUNCATE`, execution of a mutation RPC, `auth.*` access, and selecting a
-column outside the grant list are all rejected directly by Postgres with
-`permission denied` — independent of any bug in this server's own code.
+`TRUNCATE`, `CREATE TABLE`/`ALTER TABLE`/`DROP TABLE`, `CREATE FUNCTION`,
+`COPY` (read and write), `SET ROLE` to any other role, execution of a
+mutation RPC, `auth.*` access, and selecting a column outside the grant
+list are all rejected directly by Postgres with `permission denied` —
+independent of any bug in this server's own code.
+
+### Two layers of protection, and where each one's boundary actually is
+
+Two distinct guarantees are stacked, and it matters which one is doing the
+work for which capability:
+
+1. **Grant-level** (independent of the application, holds even for a raw
+   `psql` connection): every `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE`/DDL/
+   mutation-RPC/`auth.*`/forbidden-column attempt above is blocked here,
+   permanently, regardless of session settings.
+2. **Session-level** (`db.py` opens every pooled connection with
+   `default_transaction_read_only=on`): `CREATE TEMP TABLE` and large-object
+   creation (`lo_create`) are *not* blockable at the grant level at all -
+   both are granted to `PUBLIC` by every Postgres database by default, and
+   revoking a PUBLIC-inherited privilege from one specific role is a no-op
+   in Postgres (verified live: the `REVOKE` succeeds with a "no privileges
+   could be revoked" warning and changes nothing). Only Postgres's own
+   read-only-transaction enforcement blocks them (verified live: `ERROR:
+   cannot execute CREATE TABLE/lo_create() in a read-only transaction`)
+   - meaning this specific guarantee depends on the application's own
+     connection configuration, not on something independent of it.
+
+### Two capabilities that cannot be blocked at all, by Postgres design
+
+`LISTEN`/`NOTIFY` and `pg_advisory_lock` (session-scoped, non-transactional)
+succeed for `rete_mcp_reader` even under a read-only session - Postgres
+deliberately permits both in read-only transactions, and neither has any
+GRANT/REVOKE-based permission model at all; every authenticated role can
+always use them. This is a real, verified, accepted residual, not an
+oversight:
+
+- **`LISTEN`/`NOTIFY`**: gives no access to any table, column, or row -
+  at most a pub/sub coordination side-channel with zero persistent state.
+- **`pg_advisory_lock`** (as opposed to the `pg_advisory_xact_lock` the
+  governed RPCs use, which releases automatically at transaction end):
+  a session holding this role's credential *could* acquire a lock using
+  the same key convention the application's own concurrency control uses
+  (`hashtext('rete_manual_request_create:' || location_id || ':' ||
+  product_code)`, see the `rete_squillari_open_to_offers_pilot_extension`
+  migration) and hold it indefinitely, blocking legitimate concurrent
+  writes - a theoretical denial-of-service, never a data-integrity or
+  confidentiality breach. This requires already possessing the
+  `rete_mcp_reader` password (itself a protected, never-committed secret)
+  *and* independently knowing this internal lock-key naming convention,
+  which no tool or output in this MCP ever exposes.  No code in
+  `scripts/rete_squillari_mcp_prod/` calls `pg_advisory_lock` or any
+  advisory-lock function anywhere - this residual describes what the
+  *credential* could do if used outside this application, not anything
+  this MCP itself does or exposes through its own surface.
 
 ## Tool contract
 

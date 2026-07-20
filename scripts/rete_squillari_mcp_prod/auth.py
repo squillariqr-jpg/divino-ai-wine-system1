@@ -90,6 +90,26 @@ class TokenVerifier:
         if not token:
             raise AuthError("MISSING_TOKEN")
         try:
+            # algorithms=["HS256"] is an explicit allowlist, not a hint -
+            # PyJWT never trusts the token's own header to pick the
+            # algorithm, which is what blocks both the classic "alg:none"
+            # attack and algorithm-confusion attacks. No `leeway` is
+            # passed (defaults to 0 seconds): zero clock-skew tolerance is
+            # the more conservative choice for a service issuing and
+            # validating tokens on infrastructure the operator controls
+            # directly - the alternative (a grace window) would mean
+            # sometimes accepting an expired token, never the reverse.
+            # `nbf` is deliberately not required or issued: every token
+            # this service issues is valid immediately from `iat`, and
+            # PyJWT already ignores nbf validation entirely when nbf is
+            # absent from a token, so there is nothing to relax or
+            # tighten either way. This algorithm/secret pairing also means
+            # a real Supabase user JWT (signed with the project's own,
+            # separate JWT secret) can never be accepted here by
+            # accident - signature verification fails immediately - as
+            # long as RETE_MCP_JWT_SECRET is generated independently and
+            # is never set to the Supabase project's own JWT secret (see
+            # the runbook: `openssl rand -base64 48`, a fresh value).
             claims = jwt.decode(
                 token,
                 self._secret,
