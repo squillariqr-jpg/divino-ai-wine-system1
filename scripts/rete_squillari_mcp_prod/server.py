@@ -175,12 +175,33 @@ def run_http(server: MCPServer):
 
         def do_GET(self):
             if self.path == "/healthz":
+                # Pure liveness - the process is up and answering HTTP.
+                # Deliberately does not touch the database: a liveness
+                # probe should never fail because a downstream dependency
+                # is unavailable, only because this process itself is
+                # wedged - that distinction is what /readyz is for.
                 self._send_json(200, {"status": "ok"})
             elif self.path == "/readyz":
                 if server._shutting_down:
                     self._send_json(503, {"status": "shutting_down"})
-                else:
+                    return
+                # Readiness must reflect whether this instance can
+                # actually serve a tool call, not just that the process
+                # hasn't been asked to shut down - a database outage
+                # (network partition, credential expiry, Supabase-side
+                # issue) must flip this to unready so an orchestrator or
+                # load balancer stops routing traffic here. Bounded by the
+                # same statement_timeout as every other query; any
+                # exception is caught and reported generically - never the
+                # exception text itself, which could include the DSN.
+                try:
+                    reachable = server.database.health_check()
+                except Exception:
+                    reachable = False
+                if reachable:
                     self._send_json(200, {"status": "ready"})
+                else:
+                    self._send_json(503, {"status": "database_unreachable"})
             else:
                 self._send_json(404, {"error": "NOT_FOUND"})
 
