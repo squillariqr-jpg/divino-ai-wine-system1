@@ -1,0 +1,52 @@
+[Unit]
+Description=Rete Squillari production read-only MCP server
+Documentation=file:///opt/rete-squillari-mcp-prod/docs/architecture/RETE_SQUILLARI_MCP_PROD_DEPLOYMENT.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=rete-mcp
+Group=rete-mcp
+WorkingDirectory=/opt/rete-squillari-mcp-prod/current
+EnvironmentFile=/opt/rete-squillari-mcp-prod/shared/rete-mcp.env
+ExecStart=/opt/rete-squillari-mcp-prod/shared/venv/bin/python3 scripts/rete_squillari_mcp_prod_server.py
+Restart=on-failure
+RestartSec=5
+StartLimitAction=none
+
+# Startup validation is enforced by the application itself
+# (MCPConfig.validate() runs before the process ever binds a socket) - a
+# misconfigured or missing secret exits 1 immediately rather than starting
+# in a broken state, so systemd's Restart=on-failure will retry rather
+# than silently serve a half-initialized server.
+
+# Filesystem/privilege isolation - this process needs no write access
+# anywhere except its own log output (via journald), no new privileges,
+# and no capabilities at all.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/opt/rete-squillari-mcp-prod
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Resource ceilings - this is a small, single-purpose read-only service.
+MemoryMax=512M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
