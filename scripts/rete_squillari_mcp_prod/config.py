@@ -4,11 +4,15 @@ demo/fallback source, no hardcoded credentials anywhere in this file or
 committed to the repository.
 """
 from dataclasses import dataclass, field
+from urllib.parse import urlparse, parse_qs
 import os
 
 
 class ConfigError(ValueError):
     pass
+
+
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,25 @@ class MCPConfig:
                 "DATABASE_URL must not use the service_role or postgres superuser credential; "
                 "use the dedicated rete_mcp_reader role"
             )
+        parsed = urlparse(self.database_url)
+        if parsed.hostname not in _LOOPBACK_HOSTS:
+            # A remote database connection (e.g. the linked Supabase
+            # project) must be both encrypted and certificate-verified.
+            # sslmode=require alone only encrypts the connection - it does
+            # NOT validate the server certificate against a CA, so it does
+            # not protect against a MITM presenting a spoofed certificate.
+            # sslmode=verify-full validates both the certificate chain and
+            # that the hostname matches. Loopback connections (local dev/
+            # test against the local Supabase stack) are exempt, matching
+            # the same reasoning already applied to bind_host below.
+            qs = parse_qs(parsed.query)
+            sslmode = (qs.get("sslmode") or [""])[0]
+            if sslmode != "verify-full":
+                raise ConfigError(
+                    "DATABASE_URL must use sslmode=verify-full for any non-loopback host - "
+                    f"got sslmode={sslmode!r}. sslmode=require alone encrypts the connection "
+                    "but does not verify the server certificate."
+                )
         if not self.jwt_secret or len(self.jwt_secret) < 32:
             raise ConfigError("MCP_JWT_SECRET is required and must be at least 32 characters")
         if self.bind_host not in ("127.0.0.1", "::1", "localhost"):
