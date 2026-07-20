@@ -71,10 +71,21 @@ def clamp_offset(requested: int) -> int:
 class ReadOnlyDB:
     def __init__(self, database_url: str, min_size: int, max_size: int,
                  statement_timeout_ms: int, connect_timeout_s: int):
+        # Every cursor use below sets autocommit=True, so under normal
+        # operation no explicit multi-statement transaction is ever left
+        # open by this application's own code - idle_in_transaction_
+        # session_timeout is still set explicitly as defense-in-depth
+        # against a connection somehow left mid-transaction (a driver bug,
+        # a network partition mid-query, etc.) holding locks/resources
+        # indefinitely.
         self._pool = psycopg2.pool.ThreadedConnectionPool(
             min_size, max_size, dsn=database_url,
             connect_timeout=connect_timeout_s,
-            options=f"-c statement_timeout={statement_timeout_ms} -c default_transaction_read_only=on",
+            options=(
+                f"-c statement_timeout={statement_timeout_ms} "
+                f"-c idle_in_transaction_session_timeout={statement_timeout_ms} "
+                "-c default_transaction_read_only=on"
+            ),
         )
 
     def close(self) -> None:
