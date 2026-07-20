@@ -14,6 +14,23 @@ class ConfigError(ValueError):
 
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 
+# Reverse-proxy reachability exception, added for the Hetzner
+# (ubuntu-4gb-fsn1-1) deployment: on that host Caddy itself runs inside a
+# Docker container (n8n-caddy-1, on the n8n_default network,
+# 172.18.0.0/16) rather than natively, so a strictly-loopback bind is
+# unreachable from Caddy - 127.0.0.1 inside that container is the
+# container's own loopback, not the host's. 172.17.0.1 is the default
+# docker0 bridge gateway on that exact host (verified live via `docker
+# network inspect bridge`); Docker's inter-bridge routing was empirically
+# confirmed to deliver traffic from a container on a different
+# user-defined network to this address. This is intentionally a single
+# named IP, not a general "allow any non-loopback bind_host" carve-out:
+# anything reachable via the default bridge gateway is reachable by any
+# container on that host's default bridge network, a materially wider
+# boundary than "only Caddy" - narrower than binding to a public
+# interface, but every call still requires a valid bearer JWT regardless.
+_DOCKER_BRIDGE_GATEWAY_EXCEPTIONS = {"172.17.0.1"}
+
 
 @dataclass(frozen=True)
 class MCPConfig:
@@ -76,10 +93,11 @@ class MCPConfig:
                 )
         if not self.jwt_secret or len(self.jwt_secret) < 32:
             raise ConfigError("MCP_JWT_SECRET is required and must be at least 32 characters")
-        if self.bind_host not in ("127.0.0.1", "::1", "localhost"):
+        if self.bind_host not in _LOOPBACK_HOSTS | _DOCKER_BRIDGE_GATEWAY_EXCEPTIONS:
             raise ConfigError(
-                "bind_host must be a loopback address - this server is designed to sit behind "
-                "a TLS-terminating reverse proxy, never bound directly to a public interface"
+                "bind_host must be a loopback address (or the documented Docker-bridge-gateway "
+                "exception) - this server is designed to sit behind a TLS-terminating reverse "
+                "proxy, never bound directly to a public interface"
             )
         if self.max_list_limit > 100:
             raise ConfigError("max_list_limit must not exceed 100")

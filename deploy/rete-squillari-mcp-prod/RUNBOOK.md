@@ -35,18 +35,48 @@ sudo chown -R rete-mcp:rete-mcp /opt/rete-squillari-mcp-prod
 
 ### 1.3 Firewall
 
-Only the reverse proxy (Caddy, already running on this host for other
-services) needs to reach the MCP process, and it does so over loopback —
-the MCP's own port (8791) must **never** be exposed on a public interface.
+Only the reverse proxy (Caddy) needs to reach the MCP process, and the
+MCP's own port (8791) must **never** be exposed on a public interface.
+Two cases, depending on how Caddy runs on the target host:
+
+**Case A — Caddy runs natively on the host (the default assumption
+throughout this design):**
 
 ```bash
-# ufw example — adjust to whatever this host actually uses
 sudo ufw deny 8791/tcp        # explicit: never reachable except via 127.0.0.1
 ```
 
+**Case B — Caddy runs inside a Docker container** (verified true for
+`ubuntu-4gb-fsn1-1` / 188.245.173.244: Caddy is the `n8n-caddy-1`
+container, part of the `/opt/n8n/` compose stack). A strictly-loopback
+bind is then unreachable from Caddy — `127.0.0.1` inside that container
+is the container's own loopback, not the host's. On that host the MCP
+binds to `172.17.0.1` instead (the docker0 bridge gateway, confirmed via
+`docker network inspect bridge`), matching the existing precedent set by
+this host's own `bot` service. Caddy reaches it despite being on a
+*different* user-defined network (`n8n_default`, 172.18.0.0/16) — Docker
+routes container traffic addressed to the host's own docker0 IP back to
+the host, which was verified live (an HTTP request from inside
+`n8n-caddy-1` to `172.17.0.1:9100` round-tripped successfully). Scope the
+firewall rule to the docker bridge subnet only, not the whole host:
+
+```bash
+# Deny by default, then allow only the docker bridge subnet - never the
+# public or Tailscale interface.
+sudo ufw deny 8791/tcp
+sudo ufw allow from 172.17.0.0/16 to any port 8791 proto tcp comment 'rete-mcp: docker bridge only'
+```
+
+This widens the reachable set from "only Caddy" (Case A) to "any
+container on this host's default bridge network" (Case B) — still never
+the public internet or the Tailscale mesh, and every call still requires
+a valid bearer JWT regardless of network path. `MCPConfig.validate()`
+only accepts this exact IP as a named exception (see `config.py`,
+`_DOCKER_BRIDGE_GATEWAY_EXCEPTIONS`), not bind_host generally.
+
 Public firewall surface for this service is exactly Caddy's existing
 443/tcp (HTTPS) and 80/tcp (ACME challenge / redirect to HTTPS) — nothing
-new to open.
+new to open at the edge.
 
 ## 2. Per-release deployment
 
@@ -73,7 +103,7 @@ sudo -u rete-mcp /opt/rete-squillari-mcp-prod/shared/venv/bin/pip install \
 sudo -u rete-mcp ln -sfn "$RELEASE_DIR" /opt/rete-squillari-mcp-prod/current
 sudo systemctl restart rete-squillari-mcp-prod
 sudo systemctl status rete-squillari-mcp-prod --no-pager
-curl -sf http://127.0.0.1:8791/healthz
+curl -sf "http://${RETE_MCP_BIND_HOST:-127.0.0.1}:8791/healthz"  # use the host's actual RETE_MCP_BIND_HOST (172.17.0.1 for Case B)
 ```
 
 ### 2.1 First-time systemd install
@@ -150,7 +180,7 @@ PREVIOUS_SHA=<the-git-sha-that-was-live-before-the-bad-release>
 sudo -u rete-mcp ln -sfn /opt/rete-squillari-mcp-prod/releases/$PREVIOUS_SHA \
   /opt/rete-squillari-mcp-prod/current
 sudo systemctl restart rete-squillari-mcp-prod
-curl -sf http://127.0.0.1:8791/healthz
+curl -sf "http://${RETE_MCP_BIND_HOST:-127.0.0.1}:8791/healthz"  # use the host's actual RETE_MCP_BIND_HOST (172.17.0.1 for Case B)
 ```
 
 No database rollback is ever required for an MCP-only release, since this
