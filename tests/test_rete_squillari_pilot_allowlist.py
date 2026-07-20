@@ -116,7 +116,7 @@ def psql_scalar(sql):
 
 # All 9 RPC names with minimal payloads sufficient to reach the auth gate
 ALL_9_RPCS_NONPILOT = [
-    ("rete_request_publish",   {"p_requesting_location_id": 4, "p_product_code": "NP", "p_product_description": "NP", "p_requested_quantity": 1, "p_idempotency_key": "anon-np-rp"}),
+    ("rete_request_publish",   {"p_requesting_location_id": 6, "p_product_code": "NP", "p_product_description": "NP", "p_requested_quantity": 1, "p_idempotency_key": "anon-np-rp"}),
     ("rete_offer_create",      {"p_request_id": "00000000-0000-0000-0000-000000000000", "p_offered_quantity": 1, "p_idempotency_key": "anon-np-oc"}),
     ("rete_offer_withdraw",    {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "anon-np-ow"}),
     ("rete_offer_approve",     {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_approved_quantity": 1, "p_idempotency_key": "anon-np-oa"}),
@@ -231,7 +231,7 @@ class TestUserMetadataSpoofing(unittest.TestCase):
             "app_metadata": {"pilot_enabled": True, "role": "central"},
         })
         status, body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 1,
+            "p_requesting_location_id": 2,
             "p_product_code": "SPOOF-PY",
             "p_product_description": "Spoof wine py",
             "p_requested_quantity": 1,
@@ -258,7 +258,7 @@ class TestKillSwitchREST(unittest.TestCase):
         """Create a request to work against."""
         token_central = local_jwt(CENTRAL_ID)
         status, body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PY-KS-WINE",
             "p_product_description": "Python kill-switch wine",
             "p_requested_quantity": 5,
@@ -336,7 +336,7 @@ class TestConcurrency(unittest.TestCase):
         """Create a reusable base request for concurrency tests."""
         token = local_jwt(CENTRAL_ID)
         status, body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PY-CONCURRENT",
             "p_product_description": "Concurrency test wine",
             "p_requested_quantity": 20,
@@ -363,7 +363,7 @@ class TestConcurrency(unittest.TestCase):
         request.)"""
         token_central = local_jwt(CENTRAL_ID)
         _, pub_body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PY-CONC-DEDICATED",
             "p_product_description": "Dedicated concurrency wine",
             "p_requested_quantity": 20,
@@ -459,7 +459,7 @@ class TestConcurrency(unittest.TestCase):
         # Make a fresh request for Sestri concurrency test
         token_central = local_jwt(CENTRAL_ID)
         _, req_body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PY-KS-CONCURRENT",
             "p_product_description": "Kill-switch concurrent wine",
             "p_requested_quantity": 10,
@@ -526,7 +526,7 @@ class TestConcurrency(unittest.TestCase):
 
         # Create a fresh request and a fresh offer to approve twice
         _, req_body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PY-DOUBLEAPPROVE",
             "p_product_description": "Double-approve wine",
             "p_requested_quantity": 5,
@@ -585,7 +585,7 @@ class TestConcurrency(unittest.TestCase):
 
         # Create request and offer
         _, req_body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PY-WITHDRAW-APPROVE",
             "p_product_description": "Withdraw-vs-approve wine",
             "p_requested_quantity": 10,
@@ -650,7 +650,7 @@ class TestIdempotencyActorPayloadBindingConcurrency(unittest.TestCase):
         requests return the identical result."""
         token_central = local_jwt(CENTRAL_ID)
         _, pub = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3, "p_product_code": "F12-CONC-10",
+            "p_requesting_location_id": 5, "p_product_code": "F12-CONC-10",
             "p_product_description": "x", "p_requested_quantity": 10,
             "p_idempotency_key": "f12-conc10-publish",
         }, token_central)
@@ -686,7 +686,7 @@ class TestIdempotencyActorPayloadBindingConcurrency(unittest.TestCase):
         first), the other is rejected (F-1 protection under concurrency)."""
         token_central = local_jwt(CENTRAL_ID)
         _, pub = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3, "p_product_code": "F12-CONC-11",
+            "p_requesting_location_id": 5, "p_product_code": "F12-CONC-11",
             "p_product_description": "x", "p_requested_quantity": 10,
             "p_idempotency_key": "f12-conc11-publish",
         }, token_central)
@@ -723,7 +723,7 @@ class TestIdempotencyActorPayloadBindingConcurrency(unittest.TestCase):
         leak (F-2 protection under concurrency)."""
         token_central = local_jwt(CENTRAL_ID)
         _, pub = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3, "p_product_code": "F12-CONC-12",
+            "p_requesting_location_id": 5, "p_product_code": "F12-CONC-12",
             "p_product_description": "x", "p_requested_quantity": 10,
             "p_idempotency_key": "f12-conc12-publish",
         }, token_central)
@@ -752,10 +752,10 @@ class TestIdempotencyActorPayloadBindingConcurrency(unittest.TestCase):
 
         # Whichever actor lost must not have an offer row of their own
         malta_offers = int(psql_scalar(
-            f"SELECT count(*) FROM public.rete_offers WHERE request_id='{request_id}' AND offering_location_id=1"
+            f"SELECT count(*) FROM public.rete_offers WHERE request_id='{request_id}' AND offering_location_id=2"
         ))
         sestri_offers = int(psql_scalar(
-            f"SELECT count(*) FROM public.rete_offers WHERE request_id='{request_id}' AND offering_location_id=2"
+            f"SELECT count(*) FROM public.rete_offers WHERE request_id='{request_id}' AND offering_location_id=4"
         ))
         self.assertEqual(malta_offers + sestri_offers, 1,
             "exactly one real offer row total - the loser never actually created one, regardless of the response body it received")

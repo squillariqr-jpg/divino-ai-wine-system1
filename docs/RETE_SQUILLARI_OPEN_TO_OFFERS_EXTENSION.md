@@ -22,23 +22,33 @@ only the specific capabilities WBOS's model requires that this schema
 did not yet have, reusing every existing table, enum, and RPC wherever
 possible.
 
-## WBOS-to-application location translation
+## WBOS location resolution
 
-WBOS's canonical store IDs (`scripts/active_transfer_opportunity_filter.py`
-`CANONICAL_STORES`) do **not** match this schema's `rete_locations.id`:
+`rete_locations.id` **is** the WBOS canonical retail location ID directly
+(`scripts/active_transfer_opportunity_filter.py` `CANONICAL_STORES`) for
+all six stores, and `rete_locations.code` mirrors `id` — there is no
+separate translation column or numbering scheme:
 
-| Store | WBOS id | `rete_locations.id` | `rete_locations.code` |
-|---|---|---|---|
-| Malta | 2 | 1 | 101 |
-| Sestri | 4 | 2 | 102 |
-| Cantore | 5 | 3 | 103 |
-| Trento | 6 | 4 | 104 |
-| De Ferrari | 7 | 5 | 105 |
-| Armenia | 8 | 6 | 106 |
+| Store | `rete_locations.id` = `code` = WBOS id |
+|---|---|
+| Malta | 2 |
+| Sestri | 4 |
+| Cantore | 5 |
+| Trento | 6 |
+| De Ferrari | 7 |
+| Armenia | 8 |
 
-`rete_locations.wbos_location_id` is the explicit, queryable mapping —
-`rete_wbos_suggestion_ingest()` translates through it internally; no
-caller should ever assume raw ID equality between the two systems.
+This is the certified production model (verified live against the
+`ljuyolwnlbqlfxjujfrq` project and against `scripts/provision_rete_squillari.js`,
+which enforces and fails closed on any other numbering). An earlier
+version of this extension introduced a `wbos_location_id` mapping column
+under the mistaken premise that `rete_locations.id`/`code` used a
+sequential `{1..6}`/`{101..106}` scheme unrelated to WBOS's ids — that
+premise was wrong (see
+`20260719130000_rete_squillari_canonical_location_reconciliation.sql` for
+the root-cause history and reconciliation). `rete_wbos_suggestion_ingest()`
+resolves the requesting store with `WHERE id = p_requesting_location_wbos_id
+AND active` directly; no mapping column exists.
 
 ## New domain state reused, not reinvented
 
@@ -101,7 +111,7 @@ existing type.
    `central_confirmation_required`, `central_confirmed`,
    `request_cancelled`, `request_marked_no_longer_needed`,
    `receipt_discrepancy_recorded`, `receipt_discrepancy_resolved`.
-7. **WBOS-to-application location translation** — see above.
+7. **WBOS location resolution** — see above.
 
 ## RLS: unconfirmed suggestions are not broadly visible
 
@@ -119,8 +129,6 @@ as before. Verified live: a second store cannot read another store's
 `DA_CONFERMARE` row via direct `SELECT`.
 
 ## New columns
-
-`rete_locations`: `wbos_location_id` (unique, nullable).
 
 `rete_requests`: `operational_request_key` (unique, nullable — WBOS
 dedup key), `score`, `score_version`, `source_document_date`,
@@ -201,7 +209,7 @@ needs to be reverted after being applied:
 3. **Restore the original `rete_request_recompute_status` and
    `rete_guard_protected_columns`** (drop the discrepancy-aware closure
    condition and the extended guarded-column list).
-4. **Drop the new columns**: `rete_locations.wbos_location_id`;
+4. **Drop the new columns**:
    `rete_requests.operational_request_key`/`score`/`score_version`/
    `source_document_date`/`hard_exclusion_reason`/`warning_codes`/
    `requires_central_confirmation`/`confirmed_by`/`confirmed_at`/
@@ -218,6 +226,32 @@ business decision before rollback (this pilot never inserts real
 WBOS-sourced rows, so in practice there should be none outside test
 fixtures). No `auth.*` table or `pilot_enabled` value is ever touched by
 this migration or by rolling it back.
+
+## Canonical location model
+
+`rete_locations.id` is the immutable WBOS canonical retail location ID;
+`code` mirrors `id`. Names (`Malta`, `Sestri`, ...) are display labels only —
+never a join key, and never assumed unique except as a diagnostic anchor
+during the one-time reconciliation described below. Trasta is a hub, not a
+requesting retail location, and is intentionally not a `rete_locations` row.
+
+The certified production project (`ljuyolwnlbqlfxjujfrq`) has always used
+this model. The original `20260715075948_create_rete_squillari_core_schema.sql`
+migration's tracked seed used a stale, unrelated sequential `{1..6}`/
+`{101..106}` scheme that was never what actually ran against the certified
+project (Supabase tracks applied migrations by version/filename, not
+content hash, so the file's content could diverge from history without
+detection). That seed has been corrected in place — this is safe because
+it only affects future fresh installs/resets, never an already-migrated
+environment. `20260719130000_rete_squillari_canonical_location_
+reconciliation.sql` reconciles any environment that already ran the old
+seed (a clean local reset performed before this fix) to the canonical
+model: a no-op if already canonical, a guarded re-key if in the exact known
+legacy state, and a fail-closed `RAISE EXCEPTION` (full rollback) for any
+other state — it never guesses, never invents a missing store, and never
+uses `ON DELETE`/`ON UPDATE CASCADE` as a shortcut. Legacy `101-106` codes
+are invalid everywhere; nothing in this schema should ever produce or
+accept them again.
 
 ## Pilot scope (unchanged)
 

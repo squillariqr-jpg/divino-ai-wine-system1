@@ -36,7 +36,7 @@ RESET role;
 SET request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000004", "role": "authenticated"}';
 SET role authenticated;
 SELECT public.rete_offer_create(:'req1', 4, 'idem-sec-offer-armenia') AS offer1 \gset
-SELECT id AS armenia_offer FROM rete_offers WHERE request_id = :'req1' AND offering_location_id = 6 \gset
+SELECT id AS armenia_offer FROM rete_offers WHERE request_id = :'req1' AND offering_location_id = 8 \gset
 
 \echo ''
 \echo '=== TEST 1: Malta cannot confirm the Sestri suggestion (req2) ==='

@@ -585,10 +585,21 @@ GRANT ALL ON TABLE "public"."rete_trasta_arrivals" TO "service_role";
 
 -- Insert the six certified store locations. Trasta is not a store and is
 -- intentionally not part of rete_locations.
+--
+-- id/code use the WBOS canonical retail location ID directly (matching
+-- scripts/active_transfer_opportunity_filter.py CANONICAL_STORES in the
+-- wbos repository and the certified remote project, verified live against
+-- ljuyolwnlbqlfxjujfrq on 2026-07-16). An earlier draft of this migration
+-- used a sequential id (1-6) with an unrelated code (101-106); that draft
+-- was never what actually ran against the certified project - this seed
+-- corrects the tracked file to match reality, it does not change any
+-- already-migrated environment's actual state. Environments that already
+-- ran the old draft content are reconciled by
+-- 20260719130000_rete_squillari_canonical_location_reconciliation.sql.
 INSERT INTO public.rete_locations (id, code, name, active) VALUES
-(1, 101, 'Malta', true),
-(2, 102, 'Sestri', true),
-(3, 103, 'Cantore', true),
-(4, 104, 'Trento', true),
-(5, 105, 'De Ferrari', true),
-(6, 106, 'Armenia', true) ON CONFLICT DO NOTHING;
+(2, 2, 'Malta', true),
+(4, 4, 'Sestri', true),
+(5, 5, 'Cantore', true),
+(6, 6, 'Trento', true),
+(7, 7, 'De Ferrari', true),
+(8, 8, 'Armenia', true) ON CONFLICT DO NOTHING;

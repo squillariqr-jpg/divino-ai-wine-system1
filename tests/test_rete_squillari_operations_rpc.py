@@ -106,7 +106,7 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
 
     def test_anon_denied_on_every_public_rpc(self):
         rpcs = [
-            ("rete_request_publish", {"p_requesting_location_id": 1, "p_product_code": "X", "p_product_description": "X", "p_requested_quantity": 1, "p_idempotency_key": "k"}),
+            ("rete_request_publish", {"p_requesting_location_id": 2, "p_product_code": "X", "p_product_description": "X", "p_requested_quantity": 1, "p_idempotency_key": "k"}),
             ("rete_offer_create", {"p_request_id": "00000000-0000-0000-0000-000000000000", "p_offered_quantity": 1, "p_idempotency_key": "k"}),
             ("rete_offer_withdraw", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "k"}),
             ("rete_offer_approve", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_approved_quantity": 1, "p_idempotency_key": "k"}),
@@ -145,7 +145,7 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
     def test_store_cannot_impersonate_central(self):
         token = local_jwt(MALTA_ID)
         status, body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 1,
+            "p_requesting_location_id": 2,
             "p_product_code": "X",
             "p_product_description": "X",
             "p_requested_quantity": 1,
@@ -157,7 +157,7 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
     def test_central_can_publish_via_real_rest_api(self):
         token = local_jwt(CENTRAL_ID)
         status, body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 2,
+            "p_requesting_location_id": 4,
             "p_product_code": "PYTEST-001",
             "p_product_description": "Pytest wine",
             "p_requested_quantity": 5,
@@ -170,7 +170,7 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
     def test_self_offer_denied_via_real_rest_api(self):
         token_central = local_jwt(CENTRAL_ID)
         _, publish_body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 2,
+            "p_requesting_location_id": 4,
             "p_product_code": "PYTEST-002",
             "p_product_description": "Pytest self-offer wine",
             "p_requested_quantity": 5,
@@ -195,7 +195,7 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
         pilot allowlist."""
         token = local_jwt(NONPILOT_ID)
         rpcs = [
-            ("rete_request_publish", {"p_requesting_location_id": 1, "p_product_code": "X", "p_product_description": "X", "p_requested_quantity": 1, "p_idempotency_key": "nonpilot-rest-k1"}),
+            ("rete_request_publish", {"p_requesting_location_id": 2, "p_product_code": "X", "p_product_description": "X", "p_requested_quantity": 1, "p_idempotency_key": "nonpilot-rest-k1"}),
             ("rete_offer_create", {"p_request_id": "00000000-0000-0000-0000-000000000000", "p_offered_quantity": 1, "p_idempotency_key": "nonpilot-rest-k2"}),
             ("rete_offer_withdraw", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_idempotency_key": "nonpilot-rest-k3"}),
             ("rete_offer_approve", {"p_offer_id": "00000000-0000-0000-0000-000000000000", "p_approved_quantity": 1, "p_idempotency_key": "nonpilot-rest-k4"}),
@@ -219,7 +219,7 @@ class RealOperationsRpcAuthorizationTests(unittest.TestCase):
         consulted."""
         token_central = local_jwt(CENTRAL_ID)
         _, publish_body = call_rpc("rete_request_publish", {
-            "p_requesting_location_id": 3,
+            "p_requesting_location_id": 5,
             "p_product_code": "PYTEST-KILLSWITCH",
             "p_product_description": "Pytest kill switch wine",
             "p_requested_quantity": 5,

@@ -240,7 +240,9 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     // (r.store === role); role is the demo's own hardcoded convention
     // ('2 – Malta', built from the STORES array by name match) while
     // r.store in governed mode is built from the real rete_locations.code
-    // ('101 – Malta') - these never match, so "own" was always false for
+    // (which, before the location-model reconciliation, was the stale
+    // 101-106 scheme, e.g. '101 – Malta') - these never matched, so "own"
+    // was always false for
     // every request in governed mode, pre-dating this extension. Fixed here
     // with a robust location-id comparison (r.storeLocationId, populated by
     // mapRequestRow) rather than a fragile label string. Needed for the new

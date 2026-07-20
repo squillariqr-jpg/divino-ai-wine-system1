@@ -8,7 +8,7 @@
 \set armenia '00000000-0000-0000-0000-000000000004'
 \set trento '00000000-0000-0000-0000-000000000005'
 
-\echo '--- Step 1: central ingests a synthetic WBOS suggestion for Malta (wbos_location_id=2), qty 6 ---'
+\echo '--- Step 1: central ingests a synthetic WBOS suggestion for Malta (WBOS/rete_locations id=2), qty 6 ---'
 SET request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"}';
 SET role authenticated;
 SELECT public.rete_wbos_suggestion_ingest(
@@ -54,19 +54,19 @@ SELECT public.rete_offer_create(:'request_id', 3, 'idem-offer-sestri') AS offer_
 RESET role;
 SET request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"}';
 SET role authenticated;
-SELECT id AS armenia_offer_id FROM rete_offers WHERE request_id = :'request_id' AND offering_location_id = 6 \gset
+SELECT id AS armenia_offer_id FROM rete_offers WHERE request_id = :'request_id' AND offering_location_id = 8 \gset
 SELECT public.rete_offer_approve(:'armenia_offer_id', 4, 'idem-approve-armenia');
 
 \echo '--- Step 9: Central partially approves Sestri 2 (remaining) ---'
-SELECT id AS sestri_offer_id FROM rete_offers WHERE request_id = :'request_id' AND offering_location_id = 2 \gset
+SELECT id AS sestri_offer_id FROM rete_offers WHERE request_id = :'request_id' AND offering_location_id = 4 \gset
 SELECT public.rete_offer_approve(:'sestri_offer_id', 2, 'idem-approve-sestri');
 
 \echo '--- Step 10: remaining_quantity should now be 0, status DA_PREPARARE ---'
 SELECT remaining_quantity, status FROM rete_requests WHERE id = :'request_id';
 
 \echo '--- Step 11: both donors mark prepared ---'
-SELECT id AS transfer_armenia FROM rete_transfers WHERE request_id = :'request_id' AND from_location_id = 6 \gset
-SELECT id AS transfer_sestri FROM rete_transfers WHERE request_id = :'request_id' AND from_location_id = 2 \gset
+SELECT id AS transfer_armenia FROM rete_transfers WHERE request_id = :'request_id' AND from_location_id = 8 \gset
+SELECT id AS transfer_sestri FROM rete_transfers WHERE request_id = :'request_id' AND from_location_id = 4 \gset
 
 RESET role;
 SET request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000004", "role": "authenticated"}';
