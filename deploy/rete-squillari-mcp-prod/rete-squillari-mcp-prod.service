@@ -12,6 +12,18 @@ User=rete-mcp
 Group=rete-mcp
 WorkingDirectory=/opt/rete-squillari-mcp-prod/current
 EnvironmentFile=/opt/rete-squillari-mcp-prod/shared/rete-mcp.env
+# ProtectHome=true (below) makes /home, /root and /run/user return
+# EACCES rather than ENOENT to this process. libpq unconditionally
+# probes ~/.postgresql/postgresql.crt for an optional client
+# certificate (unrelated to sslmode=verify-full's server-certificate
+# verification) even when no client cert is configured, and treats
+# EACCES on that probe as a hard connection error rather than "no
+# client cert present, proceed without one". rete-mcp has no home
+# directory (--no-create-home) by design, so point HOME at a path this
+# service can actually stat (still read-only, still inside
+# ReadOnlyPaths) - the probe then correctly gets ENOENT and libpq
+# proceeds without a client certificate, as intended.
+Environment=HOME=/opt/rete-squillari-mcp-prod/shared
 ExecStart=/opt/rete-squillari-mcp-prod/shared/venv/bin/python3 scripts/rete_squillari_mcp_prod_server.py
 Restart=on-failure
 RestartSec=5
