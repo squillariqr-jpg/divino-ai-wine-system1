@@ -13,6 +13,12 @@
 mcp-rete-squillari.example.com {
 	# Only the single /mcp JSON-RPC endpoint and the two health endpoints
 	# are proxied - there is nothing else to expose.
+	#
+	# Upstream below assumes Caddy runs natively on the host (loopback
+	# reachable). If Caddy itself runs inside a Docker container (verified
+	# true for ubuntu-4gb-fsn1-1's n8n-caddy-1), replace 127.0.0.1 with
+	# 172.17.0.1 (the docker0 bridge gateway) on every line below - see
+	# RUNBOOK.md 1.3 Case B for the matching MCPConfig/firewall changes.
 	reverse_proxy /mcp* 127.0.0.1:8791
 	reverse_proxy /healthz 127.0.0.1:8791
 	reverse_proxy /readyz 127.0.0.1:8791

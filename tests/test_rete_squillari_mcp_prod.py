@@ -634,3 +634,27 @@ def test_remote_database_url_accepts_verify_full():
 
 def test_loopback_database_url_exempt_from_tls_requirement():
     _cfg("postgresql://rete_mcp_reader:x@127.0.0.1:54322/postgres").validate()
+
+
+# ---------------------------------------------------------------------------
+# Config validation: bind_host - loopback, plus the single named Docker-
+# bridge-gateway exception for hosts where Caddy runs in a container
+# ---------------------------------------------------------------------------
+def test_bind_host_rejects_public_interface():
+    from rete_squillari_mcp_prod.config import ConfigError
+    with pytest.raises(ConfigError):
+        _cfg("postgresql://rete_mcp_reader:x@127.0.0.1:54322/postgres", bind_host="0.0.0.0").validate()
+
+
+def test_bind_host_rejects_arbitrary_non_loopback_ip():
+    from rete_squillari_mcp_prod.config import ConfigError
+    with pytest.raises(ConfigError):
+        _cfg("postgresql://rete_mcp_reader:x@127.0.0.1:54322/postgres", bind_host="172.18.0.4").validate()
+
+
+def test_bind_host_accepts_docker_bridge_gateway_exception():
+    _cfg("postgresql://rete_mcp_reader:x@127.0.0.1:54322/postgres", bind_host="172.17.0.1").validate()
+
+
+def test_bind_host_still_accepts_loopback():
+    _cfg("postgresql://rete_mcp_reader:x@127.0.0.1:54322/postgres", bind_host="127.0.0.1").validate()
