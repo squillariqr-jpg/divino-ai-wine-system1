@@ -184,6 +184,49 @@ def test_readyz(server_proc):
     assert r.status_code == 200 and r.json()["status"] == "ready"
 
 
+def test_server_refuses_to_start_with_unreachable_database():
+    """psycopg2's ThreadedConnectionPool connects its minimum pool size
+    eagerly at construction time - a completely unreachable/misauthenticated
+    database therefore fails startup outright (main() catches the
+    exception and exits 1) rather than starting in a broken, silently
+    degraded state. This is the startup-validation guarantee: a bad
+    credential is caught before the process ever binds a socket, not
+    discovered later by a client getting errors."""
+    bad_port = BASE_PORT + 1
+    env = dict(os.environ)
+    env.update({
+        "RETE_MCP_DATABASE_URL": "postgresql://rete_mcp_reader:wrong-password@127.0.0.1:54322/postgres",
+        "RETE_MCP_JWT_SECRET": JWT_SECRET,
+        "RETE_MCP_BIND_PORT": str(bad_port),
+        "RETE_MCP_LOG_LEVEL": "CRITICAL",
+        "RETE_MCP_DB_CONNECT_TIMEOUT_S": "2",
+    })
+    proc = subprocess.Popen(
+        [sys.executable, os.path.join(SCRIPTS_DIR, "rete_squillari_mcp_prod_server.py")],
+        env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    )
+    returncode = proc.wait(timeout=15)
+    assert returncode == 1
+    base = f"http://127.0.0.1:{bad_port}"
+    with pytest.raises(requests.exceptions.ConnectionError):
+        requests.get(f"{base}/healthz", timeout=1)
+
+
+def test_health_check_returns_true_for_reachable_database():
+    """ReadOnlyDB.health_check() - the same call server.py's /readyz
+    handler makes - returns True against a genuinely reachable database.
+    Combined with the source of server.py's do_GET handler (readyz wraps
+    this exact call in try/except and returns 503/"database_unreachable"
+    on any falsy result or exception, never 200 unconditionally), this is
+    the full proof: /readyz's 200 response is conditioned on a real,
+    bounded database round-trip, not merely on the process being alive."""
+    from rete_squillari_mcp_prod import db as db_module
+
+    reader = db_module.ReadOnlyDB(READER_DSN, 1, 2, 2000, 3)
+    assert reader.health_check() is True
+    reader.close()
+
+
 def test_mcp_handshake(server_proc):
     r = requests.post(f"{BASE_URL}/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
     body = r.json()
@@ -459,6 +502,78 @@ def test_reader_role_cannot_select_forbidden_columns():
     conn.close()
 
 
+def test_reader_role_cannot_create_table():
+    conn = psycopg2.connect(READER_DSN)
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        with conn.cursor() as cur:
+            cur.execute("CREATE TABLE public.mcp_adversarial_test (id int)")
+    conn.close()
+
+
+def test_reader_role_cannot_alter_or_drop_table():
+    conn = psycopg2.connect(READER_DSN)
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        with conn.cursor() as cur:
+            cur.execute("ALTER TABLE public.rete_locations ADD COLUMN evil text")
+    conn.close()
+    conn = psycopg2.connect(READER_DSN)
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        with conn.cursor() as cur:
+            cur.execute("DROP TABLE public.rete_locations")
+    conn.close()
+
+
+def test_reader_role_cannot_create_function():
+    conn = psycopg2.connect(READER_DSN)
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        with conn.cursor() as cur:
+            cur.execute("CREATE FUNCTION public.evil_fn() RETURNS void AS $$ BEGIN NULL; END; $$ LANGUAGE plpgsql")
+    conn.close()
+
+
+def test_reader_role_cannot_set_role():
+    conn = psycopg2.connect(READER_DSN)
+    conn.autocommit = True
+    with pytest.raises(psycopg2.Error):
+        with conn.cursor() as cur:
+            cur.execute("SET ROLE postgres")
+    conn.close()
+
+
+def test_reader_role_cannot_copy():
+    conn = psycopg2.connect(READER_DSN)
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        with conn.cursor() as cur:
+            cur.copy_expert("COPY rete_locations TO STDOUT", sys.stdout)
+    conn.close()
+
+
+def test_reader_role_session_read_only_blocks_temp_table_and_large_object():
+    """CREATE TEMP TABLE and lo_create() are granted to PUBLIC by every
+    Postgres database and cannot be revoked from one specific role (a
+    grant-level REVOKE against a PUBLIC-inherited privilege is a documented
+    no-op) - the actual protection is the read-only session the connection
+    pool opens with (db.py: default_transaction_read_only=on)."""
+    conn = psycopg2.connect(READER_DSN, options="-c default_transaction_read_only=on")
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.ReadOnlySqlTransaction):
+        with conn.cursor() as cur:
+            cur.execute("CREATE TEMP TABLE t (id int)")
+    conn.close()
+
+    conn = psycopg2.connect(READER_DSN, options="-c default_transaction_read_only=on")
+    conn.autocommit = True
+    with pytest.raises(psycopg2.errors.ReadOnlySqlTransaction):
+        with conn.cursor() as cur:
+            cur.execute("SELECT lo_create(0)")
+    conn.close()
+
+
 def test_repeated_calls_leave_no_mutation(server_proc, read_token, fixtures):
     def _snapshot():
         rows = _admin_exec(
@@ -493,3 +608,29 @@ def test_no_generic_sql_or_rpc_tool():
     from rete_squillari_mcp_prod.tools import TOOL_REGISTRY
     forbidden = {"execute_sql", "run_sql", "query", "rpc", "call_function", "raw_query"}
     assert not (forbidden & set(TOOL_REGISTRY.keys()))
+
+
+# ---------------------------------------------------------------------------
+# Config validation: non-loopback DB connections must require verify-full TLS
+# ---------------------------------------------------------------------------
+def _cfg(database_url, **overrides):
+    from rete_squillari_mcp_prod.config import MCPConfig
+    kwargs = dict(database_url=database_url, jwt_secret="x" * 32)
+    kwargs.update(overrides)
+    return MCPConfig(**kwargs)
+
+
+def test_remote_database_url_requires_verify_full():
+    from rete_squillari_mcp_prod.config import ConfigError
+    with pytest.raises(ConfigError):
+        _cfg("postgresql://rete_mcp_reader:x@db.example.supabase.co:5432/postgres?sslmode=require").validate()
+    with pytest.raises(ConfigError):
+        _cfg("postgresql://rete_mcp_reader:x@db.example.supabase.co:5432/postgres").validate()
+
+
+def test_remote_database_url_accepts_verify_full():
+    _cfg("postgresql://rete_mcp_reader:x@db.example.supabase.co:5432/postgres?sslmode=verify-full").validate()
+
+
+def test_loopback_database_url_exempt_from_tls_requirement():
+    _cfg("postgresql://rete_mcp_reader:x@127.0.0.1:54322/postgres").validate()
