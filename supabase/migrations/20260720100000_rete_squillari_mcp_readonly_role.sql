@@ -43,7 +43,9 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rete_mcp_reader') THEN
-    CREATE ROLE rete_mcp_reader NOLOGIN NOINHERIT;
+    CREATE ROLE rete_mcp_reader NOLOGIN NOINHERIT CONNECTION LIMIT 10;
+  ELSE
+    ALTER ROLE rete_mcp_reader CONNECTION LIMIT 10;
   END IF;
 END;
 $$;
@@ -53,6 +55,33 @@ $$;
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM rete_mcp_reader;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM rete_mcp_reader;
 REVOKE ALL ON SCHEMA public FROM rete_mcp_reader;
+
+-- Every database grants CREATE TEMP TABLE and CONNECT to PUBLIC by
+-- default, and both apply to this role - unlike a table/schema grant,
+-- PUBLIC-inherited database privileges cannot be revoked from one
+-- specific role (verified: REVOKE TEMP ON DATABASE ... FROM
+-- rete_mcp_reader is silently a no-op, since the role still holds the
+-- privilege via PUBLIC); only a database-wide REVOKE ... FROM PUBLIC
+-- would remove it, which would affect anon/authenticated/service_role
+-- too and is out of scope for this migration. CONNECT is required to use
+-- the role at all regardless.
+--
+-- The actual protection against CREATE TEMP TABLE is enforced at the
+-- session level instead: scripts/rete_squillari_mcp_prod/db.py opens
+-- every connection with `default_transaction_read_only=on`, and Postgres
+-- rejects CREATE TABLE - including CREATE TEMP TABLE - in a read-only
+-- transaction (verified live: "ERROR: cannot execute CREATE TABLE in a
+-- read-only transaction"). This means the guarantee for this one vector
+-- is enforced by the application's own connection configuration rather
+-- than being independent of it like every other grant in this file - a
+-- direct connection to rete_mcp_reader from outside this application
+-- (which requires possessing its password, itself a protected secret
+-- never committed here) could create a session-local temporary table.
+-- Accepted as a documented, low-severity residual: a temp table is
+-- visible only within the single session that created it, is dropped
+-- automatically when that session ends, and cannot touch, read, or
+-- persist any real application data - it is a fresh, empty, unrelated
+-- object.
 
 GRANT USAGE ON SCHEMA public TO rete_mcp_reader;
 
