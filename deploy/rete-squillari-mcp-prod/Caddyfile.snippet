@@ -1,0 +1,59 @@
+# Add this block to the host's existing Caddyfile (do not create a second
+# Caddy instance - this Hetzner host already runs Caddy for other
+# services). Replace mcp-rete-squillari.example.com with the real
+# subdomain once assigned; do not use a subdomain that implies this is
+# demo/public data.
+#
+# Caddy handles automatic TLS certificate acquisition/renewal (ACME/Let's
+# Encrypt) - no manual certbot step is required. The MCP server itself
+# binds only to 127.0.0.1 (enforced by MCPConfig.validate(), which refuses
+# to start if RETE_MCP_BIND_HOST is not a loopback address) - it is never
+# reachable except through this reverse proxy.
+
+mcp-rete-squillari.example.com {
+	# Only the single /mcp JSON-RPC endpoint and the two health endpoints
+	# are proxied - there is nothing else to expose.
+	reverse_proxy /mcp* 127.0.0.1:8791
+	reverse_proxy /healthz 127.0.0.1:8791
+	reverse_proxy /readyz 127.0.0.1:8791
+
+	# Anything else 404s at the edge rather than reaching the application.
+	handle {
+		respond 404
+	}
+
+	# Request body size limit - matches RETE_MCP_MAX_PAYLOAD_BYTES
+	# (32KB default); reject oversized bodies before they even reach the
+	# application process.
+	request_body {
+		max_size 32KB
+	}
+
+	# Basic edge rate limiting in addition to the application's own
+	# per-client (per-token) limiter - this one is per-IP and catches
+	# unauthenticated flooding before a token is ever checked. Requires
+	# the caddy-ratelimit plugin already used elsewhere on this host; if
+	# it is not yet installed, install it before enabling this block.
+	rate_limit {
+		zone rete_mcp_edge {
+			key {remote_host}
+			events 300
+			window 1m
+		}
+	}
+
+	encode gzip
+
+	log {
+		output file /var/log/caddy/rete-squillari-mcp-prod.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		# Caddy's default access log format does not include request
+		# bodies or the Authorization header value, only its presence -
+		# no token is ever written to this log by Caddy or by the
+		# application (see auth.py: only reason_code and sub are logged,
+		# never the raw token).
+	}
+}
