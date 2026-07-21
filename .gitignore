@@ -5,6 +5,11 @@ npm-debug.log*
 .DS_Store
 .vercel
 
+# Local env / secrets - never committed
+.env
+.env.local
+.env.*.local
+
 # Supabase Local
 supabase/.temp/
 supabase/.branches/
