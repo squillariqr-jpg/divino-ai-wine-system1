@@ -122,6 +122,8 @@ class GovernedBackendBrowserTests(unittest.TestCase):
                          intercept_static("public/rete-squillari/rete-backend-adapter.js", "application/javascript"))
         self.page.route("**/rete-squillari/location-model.js",
                          intercept_static("public/rete-squillari/location-model.js", "application/javascript"))
+        self.page.route("**/rete-squillari/rete-mcp-product-cards.js",
+                         intercept_static("public/rete-squillari/rete-mcp-product-cards.js", "application/javascript"))
         self.page.route("**/rete-squillari/assets/logo-squillari.png",
                          lambda route: route.fulfill(status=200, content_type="image/png", body=""))
         self.page.route(
