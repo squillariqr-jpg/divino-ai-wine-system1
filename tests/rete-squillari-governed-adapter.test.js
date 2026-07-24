@@ -226,6 +226,53 @@ async function checkAsync(name, fn) {
     assert.strictEqual(client.__rpcCalls[0].params.p_product_code, 'M1');
   });
 
+  await checkAsync('D8: createManualRequest forwards p_request_reason / p_request_reason_note, defaulting to null', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'store', location_id: 1, active: true, pilot_enabled: true, rete_locations: { code: 101, name: 'Malta', active: true } }, error: null },
+      rete_locationsList: { data: [{ id: 1, code: 101, name: 'Malta', active: true }], error: null },
+      rpc: function () { return { data: { request_id: 'r1', status: 'DA_TROVARE', requires_central_confirmation: false, request_reason: 'SALE' }, error: null }; }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    await adapter.createManualRequest({ productCode: 'M1', productDescription: 'Manual', quantity: 6, requestReason: 'SALE' });
+    assert.strictEqual(client.__rpcCalls[0].params.p_request_reason, 'SALE');
+    assert.strictEqual(client.__rpcCalls[0].params.p_request_reason_note, null);
+
+    await adapter.createManualRequest({ productCode: 'M2', productDescription: 'Manual 2', quantity: 6 });
+    assert.strictEqual(client.__rpcCalls[1].params.p_request_reason, null, 'omitted requestReason must default to null, not undefined or a fabricated value');
+  });
+
+  await checkAsync('D9: mapRequestRow surfaces request_reason/request_reason_note; null when absent (legacy/email rows)', async function () {
+    var client = mockClient({
+      membership: { data: { role: 'store', location_id: 1, active: true, pilot_enabled: true, rete_locations: { code: 101, name: 'Malta', active: true } }, error: null },
+      rete_locationsList: { data: [{ id: 1, code: 101, name: 'Malta', active: true }], error: null }
+    });
+    var adapter = ADAPTER.create(client);
+    await adapter.initialize({ user: { id: 'u1' } });
+    client.from = function (table) {
+      var self = { _table: table };
+      self.select = function () { return self; };
+      self.order = function () {
+        if (table !== 'rete_requests') return Promise.resolve({ data: [], error: null });
+        return Promise.resolve({
+          data: [
+            { id: 'r-sale', requesting_location_id: 1, product_code: 'C1', product_description: 'D1', requested_quantity: 6, remaining_quantity: 6, status: 'DA_TROVARE', version: 0, source: 'MANUAL', request_reason: 'SALE', request_reason_note: null },
+            { id: 'r-other', requesting_location_id: 1, product_code: 'C2', product_description: 'D2', requested_quantity: 6, remaining_quantity: 6, status: 'DA_TROVARE', version: 0, source: 'MANUAL', request_reason: 'OTHER', request_reason_note: 'Evento locale' },
+            { id: 'r-email', requesting_location_id: 1, product_code: 'C3', product_description: 'D3', requested_quantity: 6, remaining_quantity: 6, status: 'DA_TROVARE', version: 0, source: 'EMAIL' },
+          ], error: null
+        });
+      };
+      return self;
+    };
+    var dashboard = await adapter.loadDashboard();
+    var byCode = {}; dashboard.requests.forEach(function (r) { byCode[r.code] = r; });
+    assert.strictEqual(byCode.C1.requestReason, 'SALE');
+    assert.strictEqual(byCode.C1.requestReasonNote, null);
+    assert.strictEqual(byCode.C2.requestReason, 'OTHER');
+    assert.strictEqual(byCode.C2.requestReasonNote, 'Evento locale');
+    assert.strictEqual(byCode.C3.requestReason, null, 'an email-sourced row with no request_reason column value must map to null, never an invented reason');
+  });
+
   await checkAsync('D4: cancelRequest issues rete_request_cancel with a reason and expected_version', async function () {
     var client = mockClient({
       membership: { data: { role: 'central', location_id: null, active: true, pilot_enabled: true, rete_locations: null }, error: null },
