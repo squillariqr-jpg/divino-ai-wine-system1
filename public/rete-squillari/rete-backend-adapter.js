@@ -233,7 +233,9 @@
         requiresCentralConfirmation: row.requires_central_confirmation === true,
         cancelReason: row.cancel_reason || null,
         score: row.score,
-        sourceDocumentDate: row.source_document_date
+        sourceDocumentDate: row.source_document_date,
+        requestReason: row.request_reason || null,
+        requestReasonNote: row.request_reason_note || null
       };
     }
     function mapOfferRow(row) {
@@ -385,7 +387,9 @@
         p_product_code: input.productCode, p_product_description: input.productDescription,
         p_requested_quantity: input.quantity, p_reason: input.reason || null,
         p_requires_central_confirmation: input.requiresCentralConfirmation || false,
-        p_warning_codes: input.warningCodes || []
+        p_warning_codes: input.warningCodes || [],
+        p_request_reason: input.requestReason || null,
+        p_request_reason_note: input.requestReasonNote || null
       };
       return callRpc('createManualRequest', 'loc:' + a.locationId + ':' + input.productCode, 'rete_manual_request_create', params);
     }

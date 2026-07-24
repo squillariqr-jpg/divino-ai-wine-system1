@@ -26,7 +26,7 @@
   </div>
 </div>
 
-<div class="app hidden" id="main-app"><aside class="side"><div class="logo">Rete Squillari<small>Aiuta un negozio</small></div><button class="role" id="role"><small>PROFILO DEMO</small><b id="who"></b>⌄</button><nav class="nav" id="nav"></nav><div class="foot">Solo dati dimostrativi<br>Nessuna connessione reale</div></aside><main class="main"><button class="mobile" id="mob"></button><header class="head"><div><div class="eyebrow" id="eyebrow"></div><h1 id="title"></h1></div></header><div id="view"></div></main></div><div class="modalbg hidden" id="mb"><div class="modal" id="modal"></div></div><div id="toast" class="toast hidden"></div><script>
+<div class="app hidden" id="main-app"><aside class="side"><div class="logo">Rete Squillari<small>Aiuta un negozio</small></div><button class="role" id="role"><small id="profile-kind"></small><b id="who"></b>⌄</button><nav class="nav" id="nav"></nav><div class="foot" id="sidebar-foot"></div></aside><main class="main"><button class="mobile" id="mob"></button><header class="head"><div><div class="eyebrow" id="eyebrow"></div><h1 id="title"></h1></div></header><div id="view"></div></main></div><div class="modalbg hidden" id="mb"><div class="modal" id="modal"></div></div><div id="toast" class="toast hidden"></div><script>
 const KEY='rete-squillari-v2';const stores=['Responsabile centrale','2 – Malta','4 – Sestri','5 – Cantore','6 – Trento','7 – De Ferrari','8 – Armenia'];const allowed=stores.slice(1);let role=null,page='home';
 // Manager authorization lives only in this closure. It is set exclusively by
 // loadSession() from the validated rete_memberships row returned by Supabase;
@@ -191,14 +191,19 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   var adapter = window.RETE_BACKEND_ADAPTER.create(supabaseClient);
   var GOVERNED_ONLY_MGR_PAGES = ['dashboard', 'published', 'approve', 'arrivals'];
   var GOVERNED_ONLY_STORE_PAGES = ['home', 'mine', 'offers', 'prepare', 'transfers'];
+  var REQUEST_REASON_LABELS = { SALE: 'Vendita', CUSTOMER_ORDER: 'Ordine cliente', STORE_REPLENISHMENT: 'Riassortimento negozio', OTHER: 'Altro' };
+  var REQUEST_REASON_ORDER = ['SALE', 'CUSTOMER_ORDER', 'STORE_REPLENISHMENT', 'OTHER'];
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   function setBanner(mode) {
     var main = document.querySelector('.main');
-    if (!main) return;
-    var old = main.querySelector('.governed-banner');
-    if (old) old.remove();
+    var profileKind = document.getElementById('profile-kind');
+    var sidebarFoot = document.getElementById('sidebar-foot');
+    if (main) {
+      var old = main.querySelector('.governed-banner');
+      if (old) old.remove();
+    }
     if (mode === adapter.MODE.GOVERNED_BACKEND) {
       // The pre-existing "PROTOTIPO DIMOSTRATIVO" banner (injected
       // unconditionally by the earlier remediation layer, for every session
@@ -207,15 +212,22 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
       // reali di merce" - both false for a governed session, where mutations
       // create real rows via RPCs. It must be hidden here, not just have a
       // governed banner added alongside it.
-      var demoBanners = main.querySelectorAll('.public-demo-banner');
-      for (var i = 0; i < demoBanners.length; i++) { demoBanners[i].remove(); }
-      var b = document.createElement('div');
-      b.className = 'governed-banner';
-      b.innerHTML = '<strong>BACKEND GOVERNATO — PILOTA ATTIVO</strong><br>Le operazioni chiamano le funzioni Supabase reali (rete_*). Nessuna scrittura locale.';
-      main.prepend(b);
+      if (main) {
+        var demoBanners = main.querySelectorAll('.public-demo-banner');
+        for (var i = 0; i < demoBanners.length; i++) { demoBanners[i].remove(); }
+        var b = document.createElement('div');
+        b.className = 'governed-banner';
+        b.innerHTML = '<strong>AMBIENTE OPERATIVO</strong><br><span>Backend governato</span>';
+        main.prepend(b);
+      }
+      if (profileKind) profileKind.textContent = 'Ambiente operativo';
+      if (sidebarFoot) sidebarFoot.textContent = 'Backend governato';
     }
-    // In DEMO_LOCAL mode the pre-existing "PROTOTIPO DIMOSTRATIVO" banner is
-    // accurate as-is and is left untouched.
+    // In DEMO_LOCAL mode the pre-existing "PROTOTIPO DIMOSTRATIVO" banner and
+    // the (now-blank-by-default) sidebar labels are left untouched here -
+    // store-role DEMO_LOCAL actors never reach this far as "demo": they are
+    // intercepted by renderInactiveStore() below before this banner state
+    // matters to them.
   }
 
   async function refreshFromBackend() {
@@ -277,9 +289,22 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     // comparisons, which never match the real DA_CONFERMARE/DA_TROVARE
     // enum values.
     var originalReqCard = window.reqCard;
+    // Reason line is shown on EVERY card (own or not) that has one, per the
+    // existing request visibility rules already applied server-side to the
+    // row itself - there is no separate visibility gate for this field.
+    function reasonLineHtml(r) {
+      if (!r.requestReason || !REQUEST_REASON_LABELS[r.requestReason]) return '';
+      var text = 'Causale: ' + esc(REQUEST_REASON_LABELS[r.requestReason]);
+      if (r.requestReason === 'OTHER' && r.requestReasonNote) {
+        text += ' — ' + esc(r.requestReasonNote);
+      }
+      return '<div class="reason muted">' + text + '</div>';
+    }
     window.reqCard = function (r, own) {
       if (own === undefined) own = false;
       var html = originalReqCard(r, own);
+      var reasonHtml = reasonLineHtml(r);
+      if (reasonHtml) html = html.replace('<div class="qty">', reasonHtml + '<div class="qty">');
       if (!own) return html;
       var extra = '';
       if (r.rawStatus === 'DA_CONFERMARE') {
@@ -295,6 +320,25 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
       }
       if (!extra) return html;
       return html.replace('</div></article>', extra + '</div></article>');
+    };
+
+    // Same chaining pattern as the pre-existing trastaArrivalDate detail
+    // override: call through to whatever window.detail already is, then
+    // append a reason paragraph to the already-open modal if present.
+    var previousDetailFn = window.detail;
+    window.detail = function (id) {
+      previousDetailFn(id);
+      var r = db.requests.find(function (x) { return x.id === id; });
+      if (!r || !r.requestReason || !REQUEST_REASON_LABELS[r.requestReason]) return;
+      var text = esc(REQUEST_REASON_LABELS[r.requestReason]);
+      if (r.requestReason === 'OTHER' && r.requestReasonNote) {
+        text = esc(REQUEST_REASON_LABELS.OTHER) + ' — ' + esc(r.requestReasonNote);
+      }
+      var p = document.createElement('p');
+      p.className = 'muted';
+      p.innerHTML = '<b>Causale richiesta</b><br>' + text;
+      var modal = document.getElementById('modal');
+      if (modal) modal.appendChild(p);
     };
 
     window.saveOffer = async function (id) {
@@ -417,23 +461,40 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     };
 
     window.openManualRequestForm = function () {
+      var options = REQUEST_REASON_ORDER.map(function (code) {
+        return '<option value="' + code + '">' + esc(REQUEST_REASON_LABELS[code]) + '</option>';
+      }).join('');
       open('<h2>Nuova richiesta manuale</h2><div class="form">' +
         '<label>Codice prodotto<input id="mr-code" maxlength="64"></label>' +
         '<label>Descrizione<input id="mr-desc" maxlength="240"></label>' +
         '<label>Quantità<input id="mr-qty" type="number" min="1" step="1" value="6"></label>' +
-        '<label>Motivo (facoltativo)<input id="mr-reason" maxlength="500"></label>' +
+        '<label>Causale<select id="mr-reason" onchange="toggleManualReasonNote()"><option value="">Seleziona una causale</option>' + options + '</select></label>' +
+        '<label id="mr-reason-note-wrap" class="hidden">Dettaglio causale (facoltativo)<textarea id="mr-reason-note" maxlength="500"></textarea></label>' +
         '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button>' +
         '<button class="primary" onclick="submitManualRequest()">Crea richiesta</button></div></div>');
+    };
+    window.toggleManualReasonNote = function () {
+      var reasonEl = document.getElementById('mr-reason');
+      var wrap = document.getElementById('mr-reason-note-wrap');
+      if (!reasonEl || !wrap) return;
+      wrap.classList.toggle('hidden', reasonEl.value !== 'OTHER');
     };
     window.submitManualRequest = async function () {
       var code = document.getElementById('mr-code').value.trim();
       var desc = document.getElementById('mr-desc').value.trim();
       var qty = Number(document.getElementById('mr-qty').value);
-      var reason = document.getElementById('mr-reason').value.trim();
+      var requestReason = document.getElementById('mr-reason').value;
+      var reasonNoteEl = document.getElementById('mr-reason-note');
+      var requestReasonNote = reasonNoteEl ? reasonNoteEl.value.trim() : '';
       if (!code || !desc) return toast('Codice e descrizione sono obbligatori.');
       if (!Number.isInteger(qty) || qty < 1) return toast('Quantità non valida.');
+      if (!requestReason || !REQUEST_REASON_LABELS[requestReason]) return toast('Seleziona una causale.');
+      if (requestReason !== 'OTHER') requestReasonNote = '';
       try {
-        var result = await adapter.createManualRequest({ productCode: code, productDescription: desc, quantity: qty, reason: reason || null });
+        var result = await adapter.createManualRequest({
+          productCode: code, productDescription: desc, quantity: qty,
+          requestReason: requestReason, requestReasonNote: requestReasonNote || null
+        });
         closeModal();
         toast(result.requires_central_confirmation
           ? 'Richiesta creata: in attesa di conferma del responsabile centrale (possibile carenza generale).'
@@ -548,9 +609,41 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     };
   }
 
+  // Inactive-pilot store: fail closed. No live data, no local demo
+  // workspace, no request/offer/transfer creation - only the existing
+  // profile button (logout, unchanged) remains usable. Reuses the actor's
+  // own role/mode as already validated server-side by adapter.initialize();
+  // no new authorization logic is introduced here.
+  function renderInactiveStore() {
+    var main = document.querySelector('.main');
+    if (main) {
+      var demoBanners = main.querySelectorAll('.public-demo-banner');
+      for (var i = 0; i < demoBanners.length; i++) { demoBanners[i].remove(); }
+    }
+    db = { requests: [], offers: [], transfers: [], emails: [], audit: [], shortageRequests: [] };
+    window.save = function () { /* inactive store: no local demo persistence */ };
+    var nav = document.getElementById('nav');
+    if (nav) nav.innerHTML = '';
+    var eyebrow = document.getElementById('eyebrow');
+    if (eyebrow) eyebrow.textContent = '';
+    var title = document.getElementById('title');
+    if (title) title.textContent = 'Servizio non ancora attivo per questo negozio';
+    document.getElementById('view').innerHTML =
+      '<div class="empty">Servizio non ancora attivo per questo negozio<br>' +
+      '<span class="muted">L’accesso alla Rete Squillari sarà disponibile dopo l’attivazione.</span></div>';
+  }
+
   async function applyGovernedMode(actor) {
     setBanner(actor.mode);
-    if (actor.mode !== adapter.MODE.GOVERNED_BACKEND) return; // DEMO_LOCAL: leave the existing local-demo path fully untouched.
+    if (actor.mode !== adapter.MODE.GOVERNED_BACKEND) {
+      // A store membership without pilot_enabled must fail closed rather
+      // than fall through to the local demo workspace (which would let an
+      // inactive store create fake offers/shortages on a page served from
+      // the real production URL). Any other DEMO_LOCAL actor (there is none
+      // among real memberships today) keeps the existing local-demo path.
+      if (actor.role === 'store') { renderInactiveStore(); }
+      return;
+    }
     pruneNav(mgrNav, GOVERNED_ONLY_MGR_PAGES);
     pruneNav(storeNav, GOVERNED_ONLY_STORE_PAGES);
     installGovernedActionOverrides();
