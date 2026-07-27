@@ -518,13 +518,25 @@ class TestConcurrency(unittest.TestCase):
         run_psql(f"UPDATE public.rete_memberships SET pilot_enabled=true WHERE user_id='{SESTRI_ID}';")
 
     def test_two_idempotency_keys_same_resource_no_oversubscription(self):
-        """Two concurrent approval calls with DIFFERENT idempotency keys on the
-        same offer must not double-approve: exactly one can succeed (the offer
-        must be APPROVATA exactly once), the second gets a consistent error."""
+        """Two concurrent MANUAL approval calls with DIFFERENT idempotency keys
+        on the same offer must not double-approve or double-transfer.
+
+        Since rete_offer_create (automatic offer acceptance) now resolves a
+        normal offer straight to APPROVATA - with its transfer already
+        created - in the SAME transaction that creates it, there is no
+        PROPOSTA window left for rete_offer_approve to win a race against:
+        rete_offer_approve only accepts an offer in
+        ('PROPOSTA','DATA_REVIEW','CONFLICT_REVIEW','ARRIVAL_CONFLICT'), and
+        this offer is already APPROVATA by the time either concurrent call
+        starts. Both manual-approval attempts must be rejected consistently
+        - the "exactly one winner" race this test exercised previously is now
+        won, atomically, by rete_offer_create itself before either thread
+        runs. The invariant this test protects (no double transfer, no
+        oversubscription) still holds and is asserted below."""
 
         token_central = local_jwt(CENTRAL_ID)
 
-        # Create a fresh request and a fresh offer to approve twice
+        # Create a fresh request and a fresh offer - auto-accepted immediately.
         _, req_body = call_rpc("rete_request_publish", {
             "p_requesting_location_id": 5,
             "p_product_code": "PY-DOUBLEAPPROVE",
@@ -541,6 +553,8 @@ class TestConcurrency(unittest.TestCase):
             "p_idempotency_key": "concurrent-double-offer-1",
         }, token_malta)
         da_offer_id = offer_body["offer_id"]
+        self.assertEqual(offer_body.get("status"), "APPROVATA",
+            f"offer must already be auto-accepted before either manual approve call: {offer_body}")
 
         results = {}
 
@@ -558,17 +572,18 @@ class TestConcurrency(unittest.TestCase):
         t1.join(); t2.join()
 
         statuses = {k: v[0] for k, v in results.items()}
-        success_count = sum(1 for s in statuses.values() if s == 200)
-        # One must succeed, one must fail (offer already APPROVATA with different key)
-        self.assertEqual(success_count, 1,
-            f"Exactly one approval must succeed; got statuses: {statuses}")
+        # Both must be rejected: the offer already left the
+        # approve-eligible status set the instant it was created.
+        self.assertTrue(all(s == 400 for s in statuses.values()),
+            f"Both manual approvals must be rejected (already auto-accepted); got statuses: {statuses}")
 
-        # Exactly one transfer row must exist
+        # Exactly one transfer row must exist (created by rete_offer_create
+        # itself, not by either rejected manual-approve call).
         transfer_count = int(psql_scalar(
             f"SELECT count(*) FROM public.rete_transfers WHERE offer_id='{da_offer_id}'"
         ))
         self.assertEqual(transfer_count, 1,
-            f"Exactly one transfer must be created for the approved offer; got {transfer_count}")
+            f"Exactly one transfer must exist from automatic acceptance; got {transfer_count}")
 
         # remaining_quantity must be non-negative
         remaining = int(psql_scalar(
@@ -578,12 +593,21 @@ class TestConcurrency(unittest.TestCase):
             f"remaining_quantity must never be negative; got {remaining}")
 
     def test_concurrent_offer_withdraw_vs_approve(self):
-        """Concurrent offer-approve (central) and offer-withdraw (Malta) on the
-        same offer. Exactly one must win. No double transfer, no spurious audit."""
+        """Concurrent manual offer-approve (central) and offer-withdraw
+        (Malta) on the same offer, post automatic offer acceptance.
+
+        rete_offer_create now auto-accepts a normal offer (and creates its
+        transfer) in the same transaction that creates it, so by the time
+        either concurrent manual call starts the offer is already APPROVATA:
+        rete_offer_approve only accepts
+        ('PROPOSTA','DATA_REVIEW','CONFLICT_REVIEW','ARRIVAL_CONFLICT'), and
+        rete_offer_withdraw only accepts 'PROPOSTA' - neither matches
+        APPROVATA. Both manual calls must be rejected; the transfer created
+        by automatic acceptance must be the only one that exists."""
         token_central = local_jwt(CENTRAL_ID)
         token_malta   = local_jwt(MALTA_ID)
 
-        # Create request and offer
+        # Create request and offer - auto-accepted immediately.
         _, req_body = call_rpc("rete_request_publish", {
             "p_requesting_location_id": 5,
             "p_product_code": "PY-WITHDRAW-APPROVE",
@@ -599,6 +623,8 @@ class TestConcurrency(unittest.TestCase):
             "p_idempotency_key": "concurrent-wa-offer-1",
         }, token_malta)
         wa_offer_id = offer_body["offer_id"]
+        self.assertEqual(offer_body.get("status"), "APPROVATA",
+            f"offer must already be auto-accepted before either manual call: {offer_body}")
 
         results = {}
 
@@ -625,19 +651,20 @@ class TestConcurrency(unittest.TestCase):
         s_approve  = results["approve"][0]
         s_withdraw = results["withdraw"][0]
 
-        # Exactly one can succeed
-        success_count = sum(1 for s in (s_approve, s_withdraw) if s == 200)
-        self.assertEqual(success_count, 1,
-            f"approve-vs-withdraw: exactly one must win (approve={s_approve}, withdraw={s_withdraw})")
+        # Both must be rejected: the offer already left PROPOSTA the instant
+        # it was created.
+        self.assertEqual(s_approve, 400,
+            f"manual approve must be rejected (already auto-accepted): {results['approve']}")
+        self.assertEqual(s_withdraw, 400,
+            f"withdraw must be rejected (already auto-accepted, not PROPOSTA): {results['withdraw']}")
 
-        # Transfer count: 1 if approve won, 0 if withdraw won
+        # Exactly one transfer must exist - the one automatic acceptance
+        # created, untouched by either rejected manual call.
         transfer_count = int(psql_scalar(
             f"SELECT count(*) FROM public.rete_transfers WHERE offer_id='{wa_offer_id}'"
         ))
-        if s_approve == 200:
-            self.assertEqual(transfer_count, 1, "approve won: must have 1 transfer")
-        else:
-            self.assertEqual(transfer_count, 0, "withdraw won: must have 0 transfers")
+        self.assertEqual(transfer_count, 1,
+            f"exactly one transfer must exist from automatic acceptance; got {transfer_count}")
 
 
 class TestIdempotencyActorPayloadBindingConcurrency(unittest.TestCase):
