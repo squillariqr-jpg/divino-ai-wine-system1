@@ -22,7 +22,8 @@
     ARRIVO_PARZIALE_A_TRASTA: 'ARRIVO PARZIALE A TRASTA', ARRIVATO_A_TRASTA: 'ARRIVATO A TRASTA',
     RICEVUTA: 'RICEVUTA', CHIUSA: 'CHIUSA', ANNULLATA: 'ANNULLATA',
     PROPOSTA: 'DICHIARATA', APPROVATA: 'APPROVATA', RITIRATA: 'RITIRATA', RIFIUTATA: 'RIFIUTATA',
-    PRONTA: 'PRONTA'
+    PRONTA: 'PRONTA',
+    DATA_REVIEW: 'IN VERIFICA', CONFLICT_REVIEW: 'IN VERIFICA', ARRIVAL_CONFLICT: 'IN VERIFICA'
   };
 
   function createAdapter(supabaseClient) {
@@ -293,6 +294,88 @@
       };
     }
 
+    function mapExcessStockRow(row) {
+      return {
+        id: localIdFor('excess', row.id),
+        backendId: row.id,
+        store: locationLabel(row.offering_location_id),
+        storeLocationId: row.offering_location_id,
+        code: row.product_code,
+        ean: row.ean,
+        name: row.product_description,
+        initialQuantity: row.initial_quantity,
+        remainingQuantity: row.remaining_quantity,
+        reason: row.reason,
+        notes: row.notes,
+        status: row.status,
+        expiresAt: row.expires_at,
+        createdAt: row.created_at,
+        version: row.version || 0
+      };
+    }
+    function mapExcessReservationRow(row) {
+      return {
+        id: localIdFor('excessReservation', row.id),
+        backendId: row.id,
+        excessStockId: localIdFor('excess', row.excess_stock_id),
+        requestingLocationId: row.requesting_location_id,
+        store: locationLabel(row.requesting_location_id),
+        qty: row.quantity,
+        status: row.status,
+        createdAt: row.created_at,
+        transferBackendId: row.transfer_id
+      };
+    }
+
+    async function loadExcessStock() {
+      requireGovernedMode();
+      if (!locationsById) await loadLocations();
+      var [stockRes, resRes] = await Promise.all([
+        supabaseClient.from('rete_excess_stock').select('*').order('created_at', { ascending: false }),
+        supabaseClient.from('rete_excess_reservations').select('*').order('created_at', { ascending: false })
+      ]);
+      if (stockRes.error) throw normalizeRpcError(stockRes.error);
+      if (resRes.error) throw normalizeRpcError(resRes.error);
+      return {
+        items: stockRes.data.map(mapExcessStockRow),
+        reservations: resRes.data.map(mapExcessReservationRow)
+      };
+    }
+
+    async function publishExcessStock(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo un negozio può pubblicare un’eccedenza.', 'role=' + a.role);
+      var params = {
+        p_product_code: input.productCode, p_catalog_product_id: input.catalogProductId,
+        p_product_description: input.productDescription, p_quantity: input.quantity, p_reason: input.reason,
+        p_catalog_match_method: input.catalogMatchMethod || 'PRODUCT_CODE',
+        p_ean: input.ean || null, p_notes: input.notes || null, p_expires_at: input.expiresAt || null
+      };
+      return callRpc('publishExcessStock', 'loc:' + a.locationId + ':' + input.catalogProductId, 'rete_excess_stock_publish', params);
+    }
+
+    async function reserveExcessStock(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo un negozio può prenotare un’eccedenza.', 'role=' + a.role);
+      var excessUuid = uuidFor('excess', input.excessStockLocalId);
+      var params = { p_excess_stock_id: excessUuid, p_quantity: input.quantity };
+      return callRpc('reserveExcessStock', excessUuid, 'rete_excess_stock_reserve', params);
+    }
+
+    async function withdrawExcessStock(input) {
+      var a = requireGovernedMode();
+      var excessUuid = uuidFor('excess', input.excessStockLocalId);
+      return callRpc('withdrawExcessStock', excessUuid, 'rete_excess_stock_withdraw', { p_excess_stock_id: excessUuid });
+    }
+
+    async function updateExcessStockQuantity(input) {
+      var a = requireGovernedMode();
+      if (a.role !== 'store') throw new AdapterError('WRONG_ROLE', 'Solo il negozio offerente può modificare la quantità.', 'role=' + a.role);
+      var excessUuid = uuidFor('excess', input.excessStockLocalId);
+      var params = { p_excess_stock_id: excessUuid, p_new_remaining_quantity: input.newRemainingQuantity, p_expected_version: input.expectedVersion };
+      return callRpc('updateExcessStockQuantity', excessUuid, 'rete_excess_stock_update_quantity', params);
+    }
+
     async function publishRequest(input) {
       var a = requireGovernedMode();
       if (a.role !== 'central') throw new AdapterError('WRONG_ROLE', 'Solo il responsabile centrale può pubblicare richieste.', 'role=' + a.role);
@@ -465,7 +548,10 @@
       confirmRequest: confirmRequest, updateRequestQuantity: updateRequestQuantity,
       createManualRequest: createManualRequest, centralConfirmRequest: centralConfirmRequest,
       cancelRequest: cancelRequest, markRequestNoLongerNeeded: markRequestNoLongerNeeded,
-      resolveDiscrepancy: resolveDiscrepancy
+      resolveDiscrepancy: resolveDiscrepancy,
+      loadExcessStock: loadExcessStock, publishExcessStock: publishExcessStock,
+      reserveExcessStock: reserveExcessStock, withdrawExcessStock: withdrawExcessStock,
+      updateExcessStockQuantity: updateExcessStockQuantity
     };
   }
 
