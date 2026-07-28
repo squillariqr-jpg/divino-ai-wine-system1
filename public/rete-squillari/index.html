@@ -190,9 +190,12 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
   if (!window.RETE_BACKEND_ADAPTER) { return; }
   var adapter = window.RETE_BACKEND_ADAPTER.create(supabaseClient);
   var GOVERNED_ONLY_MGR_PAGES = ['dashboard', 'published', 'approve', 'arrivals'];
-  var GOVERNED_ONLY_STORE_PAGES = ['home', 'mine', 'offers', 'prepare', 'transfers'];
+  var GOVERNED_ONLY_STORE_PAGES = ['home', 'mine', 'offers', 'prepare', 'transfers', 'excess'];
   var REQUEST_REASON_LABELS = { SALE: 'Vendita', CUSTOMER_ORDER: 'Ordine cliente', STORE_REPLENISHMENT: 'Riassortimento negozio', OTHER: 'Altro' };
   var REQUEST_REASON_ORDER = ['SALE', 'CUSTOMER_ORDER', 'STORE_REPLENISHMENT', 'OTHER'];
+  var EXCESS_REASON_LABELS = { OVERSTOCK: 'Sovrastock', SEASONAL: 'Fine stagione', SLOW_MOVING: 'Bassa rotazione', RANGE_CHANGE: 'Cambio assortimento', OTHER: 'Altro' };
+  var EXCESS_REASON_ORDER = ['OVERSTOCK', 'SEASONAL', 'SLOW_MOVING', 'RANGE_CHANGE', 'OTHER'];
+  var EXCESS_STATUS_LABELS = { AVAILABLE: 'DISPONIBILE', PARTIALLY_RESERVED: 'PARZIALMENTE PRENOTATA', FULLY_RESERVED: 'COMPLETAMENTE PRENOTATA', WITHDRAWN: 'RITIRATA', EXPIRED: 'SCADUTA', COMPLETED: 'COMPLETATA' };
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -345,8 +348,16 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
       var q = Number(document.getElementById('oq').value);
       if (!Number.isInteger(q) || q < 1) return toast('Inserisci una quantità intera maggiore di zero.');
       try {
-        await adapter.createOffer({ requestLocalId: id, quantity: q });
-        closeModal(); toast('Disponibilità inviata.'); await refreshFromBackend(); go('home');
+        var result = await adapter.createOffer({ requestLocalId: id, quantity: q });
+        closeModal();
+        // Normal valid offers are accepted automatically - no central click,
+        // no "in attesa di approvazione" wording. requires_review is only
+        // ever true for the genuine exception case (an ambiguous/legacy
+        // request state), never for ordinary capacity competition.
+        toast(result && result.requires_review
+          ? 'Offerta in verifica: richiede controllo del responsabile centrale.'
+          : 'Offerta accettata automaticamente. Merce da preparare: ' + q + '.');
+        await refreshFromBackend(); go('home');
       } catch (e) { toast(e.message); console.error(e); }
     };
 
@@ -633,6 +644,183 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
       '<span class="muted">L’accesso alla Rete Squillari sarà disponibile dopo l’attivazione.</span></div>';
   }
 
+  // ---------------------------------------------------------------------
+  // Excess stock ("Eccedenze disponibili") - a genuinely separate business
+  // object from shortage requests, rendered in its own page/nav item, own
+  // local state (dbExcess), never mixed into db.requests/db.offers.
+  // ---------------------------------------------------------------------
+  var dbExcess = { items: [], reservations: [] };
+
+  function excessCard(item) {
+    var isOwn = item.storeLocationId === adapter.getCurrentActor().locationId;
+    var reasonLabel = EXCESS_REASON_LABELS[item.reason] || item.reason;
+    var statusLabel = EXCESS_STATUS_LABELS[item.status] || item.status;
+    var expiry = item.expiresAt ? String(item.expiresAt).slice(0, 10) : '—';
+    var published = item.createdAt ? String(item.createdAt).slice(0, 10) : '—';
+    var actions = '';
+    if (isOwn) {
+      if (item.status === 'AVAILABLE' || item.status === 'PARTIALLY_RESERVED') {
+        actions = '<button class="secondary" onclick="openEditExcessQuantityForm(' + item.id + ')">Modifica quantità residua</button>' +
+          '<button class="danger" onclick="withdrawExcess(' + item.id + ')">Ritira eccedenza</button>';
+      }
+    } else if (item.status === 'AVAILABLE' || item.status === 'PARTIALLY_RESERVED') {
+      actions = '<button class="primary" onclick="openReserveExcessForm(' + item.id + ')">Prenota</button>';
+    }
+    return '<article class="card"><span class="flag">' + esc(statusLabel) + '</span>' +
+      '<h3>' + esc(item.store) + (isOwn ? ' · MIA' : '') + '</h3>' +
+      '<div class="product"><div class="code">CODICE ' + esc(item.code) + '</div><strong>' + esc(item.name) + '</strong>' +
+      '<div class="qty">Quantità disponibile: <b>' + esc(item.remainingQuantity) + '</b> (di ' + esc(item.initialQuantity) + ' iniziali)<br>' +
+      'Motivo: ' + esc(reasonLabel) + '<br>Pubblicato: ' + esc(published) + ' · Scadenza: ' + esc(expiry) + '</div></div>' +
+      '<div class="actions">' + actions + '<button class="secondary" onclick="detailExcess(' + item.id + ')">Dettaglio</button></div></article>';
+  }
+
+  async function refreshExcessFromBackend() {
+    try {
+      dbExcess = await adapter.loadExcessStock();
+    } catch (e) {
+      console.error('[rete-backend-adapter] loadExcessStock failed', e);
+      toast(e.message || 'Impossibile caricare le eccedenze.');
+      dbExcess = { items: [], reservations: [] };
+    }
+  }
+
+  function renderExcessStock() {
+    var a = adapter.getCurrentActor();
+    var items = dbExcess.items.filter(function (it) {
+      return it.storeLocationId === a.locationId || it.status === 'AVAILABLE' || it.status === 'PARTIALLY_RESERVED';
+    });
+    document.getElementById('view').innerHTML =
+      '<div class="bar"><h2>Eccedenze disponibili</h2>' +
+      (a.role === 'store' ? '<button class="primary" onclick="openPublishExcessForm()">Pubblica eccedenza</button>' : '') +
+      '</div><div class="grid">' +
+      (items.length ? items.map(excessCard).join('') : '<div class="empty">Nessuna eccedenza disponibile al momento.</div>') +
+      '</div>';
+  }
+
+  window.detailExcess = function (id) {
+    var item = dbExcess.items.find(function (x) { return x.id === id; });
+    if (!item) return;
+    var reservations = dbExcess.reservations.filter(function (r) { return r.excessStockId === id; });
+    open('<h2>' + esc(item.store) + ' offre eccedenza</h2><p><b>' + esc(item.name) + '</b><br>Codice ' + esc(item.code) +
+      (item.ean ? '<br>EAN ' + esc(item.ean) : '') +
+      '<br>Quantità iniziale <b>' + esc(item.initialQuantity) + '</b> · Ancora disponibile <b>' + esc(item.remainingQuantity) + '</b>' +
+      (item.notes ? '<br>Note: ' + esc(item.notes) : '') + '</p>' +
+      '<h3>Prenotazioni</h3>' + (reservations.length ? reservations.map(function (r) { return '<p>' + esc(r.store) + ': ' + esc(r.qty) + ' unità · ' + esc(r.status) + '</p>'; }).join('') : '<p>Nessuna prenotazione.</p>') +
+      '<div class="actions"><button class="secondary" onclick="closeModal()">Chiudi</button></div>');
+  };
+
+  window.openPublishExcessForm = function () {
+    var options = EXCESS_REASON_ORDER.map(function (code) { return '<option value="' + code + '">' + esc(EXCESS_REASON_LABELS[code]) + '</option>'; }).join('');
+    open('<h2>Pubblica eccedenza</h2><div class="form">' +
+      '<label>Codice articolo<input id="ex-code" maxlength="64"></label>' +
+      '<label>EAN<input id="ex-ean" maxlength="32"></label>' +
+      '<label>Descrizione prodotto<input id="ex-desc" disabled placeholder="Verrà compilata automaticamente"></label>' +
+      '<p class="muted">La descrizione sarà compilata automaticamente dall’anagrafica.</p>' +
+      '<label>Quantità disponibile<input id="ex-qty" type="number" min="1" step="1" value="1"></label>' +
+      '<label>Motivo<select id="ex-reason"><option value="">Seleziona un motivo</option>' + options + '</select></label>' +
+      '<label>Scadenza (facoltativa)<input id="ex-expires" type="date"></label>' +
+      '<label>Note (facoltative)<textarea id="ex-notes" maxlength="500"></textarea></label>' +
+      '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button>' +
+      '<button class="primary" onclick="submitPublishExcess()">Pubblica eccedenza</button></div></div>');
+  };
+
+  window.submitPublishExcess = async function () {
+    var code = document.getElementById('ex-code').value.trim();
+    var ean = document.getElementById('ex-ean').value.trim();
+    var qty = Number(document.getElementById('ex-qty').value);
+    var reason = document.getElementById('ex-reason').value;
+    var expires = document.getElementById('ex-expires').value;
+    var notes = document.getElementById('ex-notes').value.trim();
+    if (!code && !ean) return toast('Inserisci il codice articolo o l’EAN.');
+    if (!Number.isInteger(qty) || qty < 1) return toast('Quantità non valida.');
+    if (!reason || !EXCESS_REASON_LABELS[reason]) return toast('Seleziona un motivo.');
+    try {
+      var session = (await supabaseClient.auth.getSession()).data.session;
+      var verifyRes = await fetch('/api/rete-squillari/excess-stock/verify-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ productCode: code || undefined, ean: ean || undefined })
+      });
+      var verify = await verifyRes.json();
+      if (verify.outcome === 'PRODUCT_NOT_FOUND') return toast('Prodotto non trovato in anagrafica. Verifica il codice o l’EAN.');
+      if (verify.outcome === 'AMBIGUOUS_PRODUCT_MATCH') return toast('Corrispondenza ambigua in anagrafica. Verifica il codice o l’EAN.');
+      if (verify.outcome !== 'MATCH') return toast('Anagrafica non disponibile al momento. Riprova.');
+
+      var result = await adapter.publishExcessStock({
+        productCode: verify.productCode, catalogProductId: verify.catalogProductId, productDescription: verify.productDescription,
+        ean: verify.ean, catalogMatchMethod: verify.catalogMatchMethod, quantity: qty, reason: reason,
+        notes: notes || null, expiresAt: expires || null
+      });
+      closeModal();
+      toast('Eccedenza pubblicata. Il prodotto è ora visibile agli altri negozi.');
+      await refreshExcessFromBackend(); go('excess');
+    } catch (e) { toast(e.message); console.error(e); }
+  };
+
+  window.openReserveExcessForm = function (id) {
+    var item = dbExcess.items.find(function (x) { return x.id === id; });
+    if (!item) return;
+    open('<h2>Prenota eccedenza</h2><p>' + esc(item.store) + '<br>' + esc(item.name) + '<br>Ancora disponibile: ' + esc(item.remainingQuantity) + '</p>' +
+      '<input id="ex-rq" type="number" min="1" max="' + item.remainingQuantity + '" placeholder="Quantità in bottiglie">' +
+      '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="primary" onclick="submitReserveExcess(' + id + ')">Prenota</button></div>');
+  };
+
+  window.submitReserveExcess = async function (id) {
+    var q = Number(document.getElementById('ex-rq').value);
+    if (!Number.isInteger(q) || q < 1) return toast('Inserisci una quantità intera maggiore di zero.');
+    try {
+      await adapter.reserveExcessStock({ excessStockLocalId: id, quantity: q });
+      closeModal();
+      toast('Prenotazione confermata. Merce da preparare: ' + q + '.');
+      await refreshExcessFromBackend(); go('excess');
+    } catch (e) { toast(e.message); console.error(e); }
+  };
+
+  window.openEditExcessQuantityForm = function (id) {
+    var item = dbExcess.items.find(function (x) { return x.id === id; });
+    if (!item) return;
+    open('<h2>Modifica quantità residua</h2><p>' + esc(item.name) + '<br>Quantità attuale: ' + esc(item.remainingQuantity) + '</p>' +
+      '<input id="ex-newq" type="number" min="1" max="' + item.remainingQuantity + '" value="' + item.remainingQuantity + '">' +
+      '<div class="actions"><button class="secondary" onclick="closeModal()">Annulla</button><button class="primary" onclick="submitEditExcessQuantity(' + id + ')">Salva</button></div>');
+  };
+
+  window.submitEditExcessQuantity = async function (id) {
+    var item = dbExcess.items.find(function (x) { return x.id === id; });
+    var q = Number(document.getElementById('ex-newq').value);
+    if (!Number.isInteger(q) || q < 1) return toast('Quantità non valida.');
+    try {
+      await adapter.updateExcessStockQuantity({ excessStockLocalId: id, newRemainingQuantity: q, expectedVersion: item.version });
+      closeModal(); toast('Quantità aggiornata.'); await refreshExcessFromBackend(); go('excess');
+    } catch (e) { toast(e.message); console.error(e); }
+  };
+
+  window.withdrawExcess = async function (id) {
+    try {
+      await adapter.withdrawExcessStock({ excessStockLocalId: id });
+      toast('Eccedenza ritirata.'); await refreshExcessFromBackend(); go('excess');
+    } catch (e) { toast(e.message); console.error(e); }
+  };
+
+  function installGovernedExcessStock() {
+    if (adapter.getCurrentActor().role === 'store') {
+      storeNav.push(['excess', '◆', 'Eccedenze disponibili']);
+    }
+    var originalGo = window.go;
+    window.go = function (next) {
+      if (next === 'excess') {
+        page = next;
+        refreshExcessFromBackend().then(boot);
+        return;
+      }
+      originalGo(next);
+    };
+    var originalRender = window.render;
+    window.render = function () {
+      if (page === 'excess') { renderExcessStock(); return; }
+      originalRender();
+    };
+  }
+
   async function applyGovernedMode(actor) {
     setBanner(actor.mode);
     if (actor.mode !== adapter.MODE.GOVERNED_BACKEND) {
@@ -650,6 +838,7 @@ body{overflow-x:hidden}.flag{max-width:48%;white-space:normal;text-align:right;l
     installGovernedPublishedPageButton();
     installGovernedManualRequestButton();
     installGovernedDiscrepancyResolution();
+    installGovernedExcessStock();
     await refreshFromBackend();
   }
 

@@ -44,6 +44,7 @@ class FakeElement {
 function buildSandbox() {
   const elementsById = Object.create(null);
   const storageData = Object.create(null);
+  const documentListeners = {};
   const documentMock = {
     head: new FakeElement('head'),
     body: new FakeElement('body'),
@@ -61,7 +62,8 @@ function buildSandbox() {
     },
     querySelectorAll() { return []; },
     createElement(tag) { return new FakeElement(tag); },
-    addEventListener() {},
+    addEventListener(type, fn) { (documentListeners[type] = documentListeners[type] || []).push(fn); },
+    _fire(type) { (documentListeners[type] || []).forEach((fn) => fn()); },
   };
   const localStorageMock = {
     getItem(k) { return Object.prototype.hasOwnProperty.call(storageData, k) ? storageData[k] : null; },
@@ -88,11 +90,36 @@ function buildSandbox() {
     Boolean,
     RegExp,
     Set,
+    Promise,
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  return { sandbox, elementsById };
+  return { sandbox, elementsById, documentMock };
+}
+
+// Real index.html builds its supabaseClient at top-level script load
+// (window.supabase.createClient(...)), same as every real browser session
+// (loaded via CDN <script> before the inline scripts run), then initAuth()
+// runs on DOMContentLoaded and only calls boot() (which populates #view)
+// once loadSession() resolves a valid membership - a 'central' membership
+// with no rete_locations join reaches the manager/demo-local dashboard
+// these tests exercise (setRole/go/openShortageForm), same shape used by
+// the adapter-level tests in tests/rete-squillari-store-environment-labels.test.js.
+function mockSupabase() {
+  return {
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: { user: { id: 'u-central-test' } } }, error: null }),
+      signOut: () => Promise.resolve({ error: null }),
+      signInWithPassword: () => Promise.resolve({ data: { session: null, user: null }, error: { message: 'not mocked' } }),
+    },
+    from: () => ({
+      select() { return this; },
+      eq() { return this; },
+      single: () => Promise.resolve({ data: { role: 'central', rete_locations: null }, error: null }),
+    }),
+    rpc: () => Promise.resolve({ data: { status: 'OK' }, error: null }),
+  };
 }
 
 function loadInlineScripts(html) {
@@ -111,24 +138,35 @@ const modelSource = fs.readFileSync(modelPath, 'utf8');
 const inlineScripts = loadInlineScripts(html);
 assert.strictEqual(inlineScripts.length, 3, 'expected exactly 3 inline <script> blocks (excluding location-model.js src)');
 
-function freshApp() {
-  const { sandbox, elementsById } = buildSandbox();
+async function freshApp() {
+  const { sandbox, elementsById, documentMock } = buildSandbox();
+  sandbox.window.supabase = { createClient: () => mockSupabase() };
   // Execution order matches the document: app script, remediation-layer
   // script, location-model.js (external), shortages overlay script.
   vm.runInContext(inlineScripts[0], sandbox, { filename: 'index-script-0.js' });
   vm.runInContext(inlineScripts[1], sandbox, { filename: 'index-script-1.js' });
   vm.runInContext(modelSource, sandbox, { filename: 'location-model.js' });
   vm.runInContext(inlineScripts[2], sandbox, { filename: 'index-script-2-overlay.js' });
+  documentMock._fire('DOMContentLoaded');
+  await vm.runInContext('initAuth()', sandbox, { filename: 'invoke-initAuth.js' });
+  // initAuth/loadSession are async; let their microtask chain settle before
+  // inspecting the DOM.
+  for (let i = 0; i < 6; i++) await Promise.resolve();
   return { sandbox, elementsById };
 }
 
 // --- BUG 1: shortages view must be injected into the DOM, not merely returned ---
-(function bug1Test() {
-  const { sandbox, elementsById } = freshApp();
+async function bug1Test() {
+  const { sandbox, elementsById } = await freshApp();
   const homeSnapshot = elementsById.view.innerHTML;
   assert.ok(homeSnapshot.length > 0, 'home view should have rendered something at boot');
   assert.ok(!homeSnapshot.includes('Schede ammanco'), 'home view must not already contain the shortages markup');
 
+  // The "Crea scheda ammanco" button only renders once a concrete store/
+  // warehouse location is selected (l ? button : '' in renderShortages) -
+  // a fresh central/manager session has no location selected yet, so a
+  // role must be picked first, same as bug2Test does for Trasta.
+  vm.runInContext("setRole('2 – Malta')", sandbox);
   vm.runInContext("go('shortages')", sandbox);
   const shortagesHtml = elementsById.view.innerHTML;
 
@@ -136,11 +174,11 @@ function freshApp() {
   assert.ok(shortagesHtml.includes('Schede ammanco'), 'BUG 1 regression: "Schede ammanco" heading missing from #view');
   assert.ok(shortagesHtml.includes('Crea scheda ammanco'), 'BUG 1 regression: "Crea scheda ammanco" button missing from #view');
   console.log('BUG_1_DOM_TEST: PASS');
-})();
+}
 
 // --- BUG 2: #role / #mob must resolve the CURRENT picker (with Trasta), not the stale one ---
-(function bug2Test() {
-  const { sandbox, elementsById } = freshApp();
+async function bug2Test() {
+  const { sandbox, elementsById } = await freshApp();
 
   // Simulate a real click: invoke the bound handler, exactly as the browser would.
   elementsById.role.onclick();
@@ -168,11 +206,11 @@ function freshApp() {
   assert.ok(trastaForm.includes('Copertura buco'), 'Trasta form must offer Copertura buco');
   assert.ok(!trastaForm.includes('Vendita a cliente'), 'Trasta form must NOT offer Vendita a cliente');
   console.log('BUG_2_TRASTA_IDENTITY_TEST: PASS');
-})();
+}
 
 // --- Regression: permission matrix must be unchanged for other locations ---
-(function permissionMatrixRegressionTest() {
-  const { sandbox, elementsById } = freshApp();
+async function permissionMatrixRegressionTest() {
+  const { sandbox, elementsById } = await freshApp();
 
   vm.runInContext("setRole('5 – Cantore')", sandbox);
   vm.runInContext('openShortageForm()', sandbox);
@@ -194,6 +232,11 @@ function freshApp() {
   assert.strictEqual(model.getLocation('malta').type, 'STORE', 'REGRESSION: Malta must remain STORE');
   assert.strictEqual(model.getLocation('cantore').type, 'STORE', 'REGRESSION: Cantore must remain STORE');
   console.log('PERMISSION_MATRIX_REGRESSION_TEST: PASS');
-})();
+}
 
-console.log('BROWSER_BINDINGS_TESTS: PASS (14 assertions)');
+(async function main() {
+  await bug1Test();
+  await bug2Test();
+  await permissionMatrixRegressionTest();
+  console.log('BROWSER_BINDINGS_TESTS: PASS (14 assertions)');
+})().catch((e) => { console.error('FATAL', e.message || e, e.stack); process.exit(1); });

@@ -72,6 +72,24 @@ function buildSandbox() {
     setItem(k, v) { storageData[k] = String(v); },
     removeItem(k) { delete storageData[k]; },
   };
+  // Real index.html builds its supabaseClient at top-level script load
+  // (window.supabase.createClient(...)), same as every real browser session
+  // (loaded via CDN <script> before the inline scripts run). This sandbox
+  // never exercises real backend calls, so a minimal, inert stub covering
+  // only what index.html calls directly on supabaseClient (getSession,
+  // signOut, signInWithPassword) is enough to avoid the crash without
+  // pulling in the fuller mockSupabase used by adapter-level tests.
+  const supabaseStub = {
+    createClient() {
+      return {
+        auth: {
+          getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+          signOut: () => Promise.resolve({ error: null }),
+          signInWithPassword: () => Promise.resolve({ data: { session: null, user: null }, error: { message: 'not mocked' } }),
+        },
+      };
+    },
+  };
   const sandbox = {
     document: documentMock,
     localStorage: localStorageMock,
@@ -92,6 +110,7 @@ function buildSandbox() {
     Boolean,
     RegExp,
     Set,
+    supabase: supabaseStub,
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;

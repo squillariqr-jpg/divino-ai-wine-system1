@@ -153,9 +153,13 @@ class GovernedBackendBrowserTests(unittest.TestCase):
         self.page.wait_for_timeout(300)  # allow the async governed-mode wiring layer to settle
 
     def test_pilot_session_resolves_governed_backend_mode(self):
+        # Banner copy was changed from "BACKEND GOVERNATO — PILOTA ATTIVO" to
+        # "AMBIENTE OPERATIVO / Backend governato" (sentence case) as part of
+        # the demo-label-removal gate - this assertion tracks the current,
+        # intentional wording, not the original all-caps text.
         self.login_as_pilot_central()
         banner = self.page.text_content('.governed-banner')
-        self.assertIn('BACKEND GOVERNATO', banner)
+        self.assertIn('Backend governato', banner)
         self.assertEqual(self.console_errors, [])
 
     def test_localstorage_before_and_after_no_operational_writes(self):

@@ -453,8 +453,15 @@ window.supabase = {
             },
             signOut: async () => { sessionStorage.removeItem('mockSession'); }
         },
-        from: (table) => ({
-            select: () => ({
+        from: (table) => {
+            // A pilot_enabled=true store membership now routes through
+            // GOVERNED_BACKEND mode (refreshFromBackend/loadDashboard), which
+            // queries several more tables directly (no .eq(), list results via
+            // .select().order() or plain .select()) - all mocked here as
+            // empty, successful reads so the governed init path never throws.
+            const chain = {
+                select: () => chain,
+                order: () => chain,
                 eq: () => ({
                     single: async () => {
                         if (table === 'rete_memberships') {
@@ -463,9 +470,11 @@ window.supabase = {
                         }
                         return { error: { message: 'Not found' }, data: null };
                     }
-                })
-            })
-        })
+                }),
+                then: (resolve) => Promise.resolve({ data: [], error: null }).then(resolve)
+            };
+            return chain;
+        }
     })
 };
 """
@@ -548,7 +557,7 @@ class CleanUrlRoutingTests(unittest.TestCase):
     def test_shortages_section_renders_for_store_with_clean_url(self):
         self.page.goto(self.base_url + '/rete-squillari')
         self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.set_mock_member({'role': 'store', 'location_id': 2, 'pilot_enabled': True, 'active': True, 'rete_locations': {'code': 2, 'name': '2 – Malta', 'active': True}})
         self.page.select_option('#login-store', 'malta@rete.squillari.it')
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
@@ -564,7 +573,7 @@ class CleanUrlRoutingTests(unittest.TestCase):
     def test_no_console_errors_through_clean_url_flow(self):
         self.page.goto(self.base_url + '/rete-squillari')
         self.page.wait_for_selector('#login-screen', state='visible', timeout=10000)
-        self.set_mock_member({'role': 'store', 'rete_locations': {'name': '2 – Malta', 'active': True}})
+        self.set_mock_member({'role': 'store', 'location_id': 2, 'pilot_enabled': True, 'active': True, 'rete_locations': {'code': 2, 'name': '2 – Malta', 'active': True}})
         self.page.select_option('#login-store', 'malta@rete.squillari.it')
         self.page.fill('#login-pin', '123456')
         self.page.click('#login-btn')
