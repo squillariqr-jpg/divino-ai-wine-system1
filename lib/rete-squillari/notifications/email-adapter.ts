@@ -18,15 +18,20 @@ export interface EmailProviderAdapter {
 // Real adapter, built on AgentMail - the email provider this repo already
 // depends on ("agentmail" in package.json) and already uses for inbound
 // Rete Squillari shortage-email ingestion (app/api/agentmail/webhook/route.ts,
-// lib/emailAgent/*). No new provider dependency was added for this gate;
-// per Phase 9 this is reported rather than silently assumed. The outbound
-// send() call below has not been exercised against the live AgentMail API
-// this session (no network calls are made in this gate) - verify the
-// exact SDK method before the first real send.
+// lib/emailAgent/*). No new provider dependency was added for this gate.
+// Verified against the installed SDK's own type declarations
+// (node_modules/agentmail@0.4.13, dist/cjs/api/resources/messages/types):
+// the real method is `client.inboxes.messages.send(inboxId, request)`,
+// `SendMessageRequest` has no `fromName` field (the sender display name is
+// configured once on the inbox itself, e.g. via `client.inboxes.update()`,
+// not per message - so it is intentionally not sent here), and
+// `SendMessageResponse` is `{ messageId, threadId }` (camelCase - not
+// `message_id`/`id`, which this adapter previously read and which would
+// have always produced a null providerMessageId even on a successful
+// send). Still never exercised against the live network this session.
 export class AgentMailEmailAdapter implements EmailProviderAdapter {
   private readonly apiKey: string;
   private readonly inboxId: string;
-  private readonly fromName: string;
 
   constructor() {
     const apiKey = process.env.AGENTMAIL_API_KEY;
@@ -36,21 +41,19 @@ export class AgentMailEmailAdapter implements EmailProviderAdapter {
     }
     this.apiKey = apiKey;
     this.inboxId = inboxId;
-    this.fromName = process.env.AGENT_FROM_NAME || 'Rete Squillari';
   }
 
   async send(input: EmailSendInput): Promise<EmailSendResult> {
     const { AgentMailClient } = await import('agentmail');
     const client = new AgentMailClient({ apiKey: this.apiKey });
     try {
-      const res: any = await (client as any).inboxes.messages.send(this.inboxId, {
+      const res = await client.inboxes.messages.send(this.inboxId, {
         to: [input.to],
         subject: input.subject,
         text: input.text,
         html: input.html,
-        fromName: this.fromName,
       });
-      return { success: true, providerMessageId: res?.message_id ?? res?.id ?? null, errorCode: null };
+      return { success: true, providerMessageId: res?.messageId ?? null, errorCode: null };
     } catch (err) {
       return { success: false, providerMessageId: null, errorCode: err instanceof Error ? err.message.slice(0, 200) : 'UNKNOWN_ERROR' };
     }
