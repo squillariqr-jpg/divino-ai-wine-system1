@@ -1,10 +1,12 @@
 // Static structural safety checks over the new migrations - additive-only,
 // no destructive DDL, WhatsApp-era objects never touched, RLS enabled with
-// no direct grants to authenticated/anon on the new raw tables. DB-level
-// verification (actually applying these migrations, running RLS as a
-// real Postgres role) could not be executed this session - local Docker
-// was unavailable. This mirrors the exact same disclosed limitation as
-// tests/rete-squillari-automatic-offer-acceptance.test.js in this repo.
+// no direct grants to authenticated/anon on the new raw tables. These are
+// static/textual checks; the migrations have also been applied to a real
+// local Postgres via `supabase db reset` and exercised end-to-end through
+// PostgREST (anon rejection, authenticated list/unread/mark-read/mark-all,
+// cross-store isolation, WHATSAPP always SKIPPED_DISABLED, EXCESS_STOCK_
+// PUBLISHED never creating a WEB_PUSH row) during this gate's manual
+// verification pass - not re-run here since CI has no live database.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -109,6 +111,17 @@ check('WHATSAPP deliveries created by the routing engine are always SKIPPED_DISA
 check('rete_notification_preferences enforces in_app_enabled = true at the database level (cannot be disabled even via direct write)', () => {
   const prefsSql = contents['20260729080200_rete_notification_preferences.sql'];
   assert.ok(/CHECK\s*\(\s*"in_app_enabled"\s*=\s*true\s*\)/.test(prefsSql));
+});
+
+check('no function calling rete_require_active_membership() is declared STABLE (its FOR KEY SHARE lock cannot run in the read-only transaction PostgREST opens for STABLE functions)', () => {
+  const rpcSql = contents['20260729080500_rete_notification_engine_rpcs.sql'];
+  const fnBlocks = rpcSql.split(/(?=CREATE OR REPLACE FUNCTION)/);
+  for (const block of fnBlocks) {
+    if (block.includes('rete_require_active_membership()') && /^\s*STABLE\s*$/m.test(block)) {
+      const nameMatch = block.match(/CREATE OR REPLACE FUNCTION "public"\."(\w+)"/);
+      assert.fail((nameMatch ? nameMatch[1] : 'unknown function') + ' calls rete_require_active_membership() but is declared STABLE');
+    }
+  }
 });
 
 console.log(JSON.stringify({ PASS: pass, FAIL: fail }));

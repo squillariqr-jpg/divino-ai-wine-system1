@@ -309,7 +309,8 @@ RETURNS TABLE (
 )
 LANGUAGE "plpgsql"
 SECURITY DEFINER
-STABLE
+-- Not STABLE: rete_require_active_membership()'s FOR KEY SHARE lock cannot
+-- run in the read-only transaction PostgREST opens for STABLE functions.
 SET "search_path" = "public", "pg_temp"
 AS $$
 DECLARE
@@ -340,7 +341,7 @@ CREATE OR REPLACE FUNCTION "public"."rete_notifications_unread_count"()
 RETURNS integer
 LANGUAGE "plpgsql"
 SECURITY DEFINER
-STABLE
+-- Not STABLE: see rete_notifications_list above.
 SET "search_path" = "public", "pg_temp"
 AS $$
 DECLARE
@@ -517,7 +518,7 @@ CREATE OR REPLACE FUNCTION "public"."rete_push_subscriptions_list_own"()
 RETURNS TABLE ("id" "uuid", "user_agent" "text", "created_at" timestamp with time zone, "last_used_at" timestamp with time zone, "revoked_at" timestamp with time zone)
 LANGUAGE "plpgsql"
 SECURITY DEFINER
-STABLE
+-- Not STABLE: see rete_notifications_list above.
 SET "search_path" = "public", "pg_temp"
 AS $$
 BEGIN
@@ -771,7 +772,7 @@ CREATE OR REPLACE FUNCTION "public"."rete_notification_preferences_get"()
 RETURNS SETOF "public"."rete_notification_preferences"
 LANGUAGE "plpgsql"
 SECURITY DEFINER
-STABLE
+-- Not STABLE: see rete_notifications_list above.
 SET "search_path" = "public", "pg_temp"
 AS $$
 BEGIN
