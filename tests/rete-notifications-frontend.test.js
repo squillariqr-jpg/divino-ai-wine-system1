@@ -62,7 +62,7 @@ check('push module exposes a disable/unsubscribe path', () => {
 });
 
 check('service worker contains no secret-shaped strings (API keys, service-role keys, VAPID private key material)', () => {
-  const forbidden = [/SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*['"][^'"]+['"]/, /AGENTMAIL_API_KEY\s*[:=]\s*['"][^'"]+['"]/, /RETE_PUSH_VAPID_PRIVATE_KEY\s*[:=]\s*['"][^'"]+['"]/, /BEGIN (EC )?PRIVATE KEY/];
+  const forbidden = [/SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*['"][^'"]+['"]/, /AGENTMAIL_API_KEY\s*[:=]\s*['"][^'"]+['"]/, /RETE_WEB_PUSH_VAPID_PRIVATE_KEY\s*[:=]\s*['"][^'"]+['"]/, /BEGIN (EC )?PRIVATE KEY/];
   for (const pattern of forbidden) assert.ok(!pattern.test(swJs), 'sw.js matched forbidden pattern ' + pattern);
 });
 

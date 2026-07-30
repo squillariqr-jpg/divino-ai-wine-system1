@@ -11,7 +11,7 @@
   // Placeholder only - no real VAPID key is committed to this repo. Until
   // an operator sets this (via a future build-time injection step), every
   // subscribe attempt reports NOT_CONFIGURED instead of silently failing.
-  var VAPID_PUBLIC_KEY = (root.RETE_PUSH_VAPID_PUBLIC_KEY || '').trim();
+  var VAPID_PUBLIC_KEY = (root.RETE_WEB_PUSH_VAPID_PUBLIC_KEY || '').trim();
 
   function isSupported() {
     return !!(root.navigator && 'serviceWorker' in root.navigator && 'PushManager' in root && 'Notification' in root);

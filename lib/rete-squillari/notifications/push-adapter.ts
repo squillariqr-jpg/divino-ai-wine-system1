@@ -137,11 +137,11 @@ export class WebPushAdapter implements PushProviderAdapter {
   private readonly subject: string;
 
   constructor() {
-    const publicKey = process.env.RETE_PUSH_VAPID_PUBLIC_KEY;
-    const privateKey = process.env.RETE_PUSH_VAPID_PRIVATE_KEY;
-    const subject = process.env.RETE_PUSH_VAPID_SUBJECT || 'mailto:ai@divinomarket.it';
+    const publicKey = process.env.RETE_WEB_PUSH_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.RETE_WEB_PUSH_VAPID_PRIVATE_KEY;
+    const subject = process.env.RETE_WEB_PUSH_VAPID_SUBJECT || 'mailto:ai@divinomarket.it';
     if (!publicKey || !privateKey) {
-      throw new Error('Web Push not configured: RETE_PUSH_VAPID_PUBLIC_KEY/RETE_PUSH_VAPID_PRIVATE_KEY missing');
+      throw new Error('Web Push not configured: RETE_WEB_PUSH_VAPID_PUBLIC_KEY/RETE_WEB_PUSH_VAPID_PRIVATE_KEY missing');
     }
     this.publicKey = publicKey;
     this.privateKey = privateKey;
