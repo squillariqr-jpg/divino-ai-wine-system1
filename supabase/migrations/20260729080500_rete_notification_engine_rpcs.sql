@@ -170,7 +170,7 @@ BEGIN
       INSERT INTO public.rete_notification_deliveries (notification_event_id, channel, recipient_reference, status)
       VALUES (
         p_event_id, 'WEB_PUSH', 'push_subscription:' || v_sub.id::text,
-        CASE WHEN v_user_web_push THEN 'PENDING' ELSE 'SKIPPED_DISABLED' END
+        (CASE WHEN v_user_web_push THEN 'PENDING' ELSE 'SKIPPED_DISABLED' END)::"public"."rete_notification_delivery_status"
       )
       ON CONFLICT (notification_event_id, channel, recipient_reference) DO NOTHING;
     END LOOP;
@@ -192,7 +192,15 @@ BEGIN
     SELECT * INTO v_loc_pref FROM public.rete_notification_preferences
       WHERE user_id IS NULL AND location_id = v_event.recipient_location_id AND event_type = v_event.event_type;
 
-    IF NOT FOUND OR v_contact.email_address IS NULL THEN
+    -- v_contact.location_id IS NULL, not NOT FOUND: FOUND reflects the
+    -- immediately preceding statement (the v_loc_pref lookup above, which
+    -- legitimately finds nothing in the common no-override case), not the
+    -- v_contact lookup two statements up - using NOT FOUND here made every
+    -- event with no location-level preference override (i.e. almost all
+    -- of them) report SKIPPED_NO_DESTINATION even with a fully verified
+    -- contact on file. Caught by exercising this path against a real
+    -- verified contact locally, not by any static test.
+    IF v_contact.location_id IS NULL OR v_contact.email_address IS NULL THEN
       INSERT INTO public.rete_notification_deliveries (notification_event_id, channel, recipient_reference, status)
       VALUES (p_event_id, 'EMAIL', 'contact:' || v_event.recipient_location_id::text, 'SKIPPED_NO_DESTINATION')
       ON CONFLICT (notification_event_id, channel, recipient_reference) DO NOTHING;

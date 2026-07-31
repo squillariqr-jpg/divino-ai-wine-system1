@@ -124,5 +124,20 @@ check('no function calling rete_require_active_membership() is declared STABLE (
   }
 });
 
+check('the WEB_PUSH delivery-status CASE expression is explicitly cast to rete_notification_delivery_status (bare CASE branches of string literals resolve to text, which has no implicit cast to an enum column and fails INSERT with a real subscription present)', () => {
+  const rpcSql = contents['20260729080500_rete_notification_engine_rpcs.sql'];
+  const idx = rpcSql.indexOf("'push_subscription:'");
+  const snippet = rpcSql.slice(idx, idx + 400);
+  assert.ok(/CASE WHEN v_user_web_push THEN 'PENDING' ELSE 'SKIPPED_DISABLED' END\)::"public"\."rete_notification_delivery_status"/.test(snippet), 'WEB_PUSH status CASE must be explicitly cast to the enum type');
+});
+
+check('the EMAIL destination check tests v_contact.location_id IS NULL, not NOT FOUND (a second SELECT INTO for the location preference runs in between and clobbers FOUND, which made a verified contact always report SKIPPED_NO_DESTINATION whenever no location-level preference override existed)', () => {
+  const rpcSql = contents['20260729080500_rete_notification_engine_rpcs.sql'];
+  const idx = rpcSql.indexOf('---- EMAIL');
+  const snippet = rpcSql.slice(idx, idx + 1500);
+  assert.ok(/IF v_contact\.location_id IS NULL OR v_contact\.email_address IS NULL THEN/.test(snippet), 'EMAIL destination check must not rely on FOUND after an intervening SELECT INTO');
+  assert.ok(!/IF NOT FOUND OR v_contact\.email_address IS NULL THEN/.test(snippet), 'the old FOUND-clobbering check must not reappear');
+});
+
 console.log(JSON.stringify({ PASS: pass, FAIL: fail }));
 if (fail > 0) process.exitCode = 1;
