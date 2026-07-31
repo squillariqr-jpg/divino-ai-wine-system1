@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "rete:notifications-in-app": "npx tsx scripts/rete-squillari-notifications-in-app-worker.ts",
+    "rete:web-push-worker": "npx tsx scripts/rete-squillari-web-push-worker.ts",
+    "rete:web-push-preview": "npx tsx scripts/rete-squillari-web-push-preview.ts",
+    "rete:email-digest-preview": "npx tsx scripts/rete-squillari-email-digest-preview.ts",
+    "rete:email-digest-send": "npx tsx scripts/rete-squillari-email-digest-send.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

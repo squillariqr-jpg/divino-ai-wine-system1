@@ -1,0 +1,15 @@
+{
+  "name": "Rete Squillari",
+  "short_name": "Rete Squillari",
+  "description": "Rete Squillari - notifiche operative multi-canale",
+  "start_url": "/rete-squillari/",
+  "scope": "/rete-squillari/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2937",
+  "lang": "it",
+  "icons": [
+    { "src": "/rete-squillari/assets/logo-squillari.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/rete-squillari/assets/logo-squillari.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

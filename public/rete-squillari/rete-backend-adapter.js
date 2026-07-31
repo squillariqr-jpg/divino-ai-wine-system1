@@ -527,6 +527,59 @@
       return supabaseClient.auth.signOut();
     }
 
+    // Plain RPC calls with no idempotency-key bookkeeping - either
+    // read-only (list/count) or naturally idempotent (mark-read,
+    // subscription create/revoke, preference upsert already dedupe
+    // server-side on their own unique keys), so callRpc's
+    // pendingOps/RESULT_UNKNOWN retry machinery does not apply here.
+    async function simpleRpc(rpcName, params) {
+      var response;
+      try {
+        response = await supabaseClient.rpc(rpcName, params);
+      } catch (networkErr) {
+        throw new AdapterError('RESULT_UNKNOWN', 'Rete non disponibile. Riprova.', String(networkErr));
+      }
+      if (response.error) throw normalizeRpcError(response.error);
+      return response.data;
+    }
+
+    async function listNotifications(opts) {
+      opts = opts || {};
+      return simpleRpc('rete_notifications_list', {
+        p_limit: opts.limit || 20, p_before: opts.before || null, p_unread_only: !!opts.unreadOnly
+      });
+    }
+    async function unreadNotificationCount() {
+      return simpleRpc('rete_notifications_unread_count', {});
+    }
+    async function markNotificationRead(deliveryId) {
+      return simpleRpc('rete_notification_mark_read', { p_delivery_id: deliveryId });
+    }
+    async function markAllNotificationsRead() {
+      return simpleRpc('rete_notifications_mark_all_read', {});
+    }
+    async function subscribePush(input) {
+      return simpleRpc('rete_push_subscription_create', {
+        p_endpoint: input.endpoint, p_p256dh: input.p256dh, p_auth_secret: input.authSecret,
+        p_user_agent: input.userAgent || null, p_idempotency_key: uuidv4()
+      });
+    }
+    async function unsubscribePush(subscriptionId) {
+      return simpleRpc('rete_push_subscription_revoke', { p_subscription_id: subscriptionId });
+    }
+    async function listPushSubscriptions() {
+      return simpleRpc('rete_push_subscriptions_list_own', {});
+    }
+    async function getNotificationPreferences() {
+      return simpleRpc('rete_notification_preferences_get', {});
+    }
+    async function setNotificationPreferences(input) {
+      return simpleRpc('rete_notification_preferences_set', {
+        p_event_type: input.eventType, p_web_push_enabled: input.webPushEnabled !== false,
+        p_email_digest_enabled: !!input.emailDigestEnabled, p_idempotency_key: uuidv4()
+      });
+    }
+
     // Read-only accessor for the UI layer to build a label -> location_id
     // reverse lookup (e.g. the request-publish store picker). Not part of
     // the mutating surface.
@@ -551,7 +604,11 @@
       resolveDiscrepancy: resolveDiscrepancy,
       loadExcessStock: loadExcessStock, publishExcessStock: publishExcessStock,
       reserveExcessStock: reserveExcessStock, withdrawExcessStock: withdrawExcessStock,
-      updateExcessStockQuantity: updateExcessStockQuantity
+      updateExcessStockQuantity: updateExcessStockQuantity,
+      listNotifications: listNotifications, unreadNotificationCount: unreadNotificationCount,
+      markNotificationRead: markNotificationRead, markAllNotificationsRead: markAllNotificationsRead,
+      subscribePush: subscribePush, unsubscribePush: unsubscribePush, listPushSubscriptions: listPushSubscriptions,
+      getNotificationPreferences: getNotificationPreferences, setNotificationPreferences: setNotificationPreferences
     };
   }
 
