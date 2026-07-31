@@ -26,6 +26,7 @@ const NEW_MIGRATIONS = [
   '20260729080400_rete_notification_contacts.sql',
   '20260729080500_rete_notification_engine_rpcs.sql',
   '20260729080600_rete_notification_event_producer_wiring.sql',
+  '20260731000000_rete_notification_enqueue_event_authenticated_revoke.sql',
 ];
 const contents = {};
 for (const name of NEW_MIGRATIONS) contents[name] = fs.readFileSync(path.join(migrationsDir, name), 'utf8');
@@ -137,6 +138,25 @@ check('the EMAIL destination check tests v_contact.location_id IS NULL, not NOT 
   const snippet = rpcSql.slice(idx, idx + 1500);
   assert.ok(/IF v_contact\.location_id IS NULL OR v_contact\.email_address IS NULL THEN/.test(snippet), 'EMAIL destination check must not rely on FOUND after an intervening SELECT INTO');
   assert.ok(!/IF NOT FOUND OR v_contact\.email_address IS NULL THEN/.test(snippet), 'the old FOUND-clobbering check must not reappear');
+});
+
+check('every server-only function (no GRANT EXECUTE to authenticated anywhere in the file) has its REVOKE explicitly list "authenticated", not just PUBLIC/anon (PUBLIC alone does not cover a role that separately inherits a platform-level default EXECUTE grant - this exact gap left rete_notification_enqueue_event callable directly by any authenticated user in production until a same-day hotfix)', () => {
+  const rpcSql = contents['20260729080500_rete_notification_engine_rpcs.sql'];
+  const serverOnlyFns = ['rete_notification_route_deliveries', 'rete_notification_enqueue_event', 'rete_push_claim_pending_deliveries', 'rete_push_record_delivery_result', 'rete_email_digest_claim_locations', 'rete_email_digest_claim_deliveries', 'rete_email_digest_record_result'];
+  for (const fn of serverOnlyFns) {
+    const idx = rpcSql.indexOf(`CREATE OR REPLACE FUNCTION "public"."${fn}"`);
+    assert.ok(idx !== -1, fn + ' not found');
+    const nextIdx = rpcSql.indexOf('CREATE OR REPLACE FUNCTION', idx + 10);
+    const block = rpcSql.slice(idx, nextIdx === -1 ? rpcSql.length : nextIdx);
+    assert.ok(!new RegExp(`GRANT EXECUTE ON FUNCTION "public"\\."${fn}"[^;]*TO "authenticated"`).test(block), fn + ' must never GRANT EXECUTE to authenticated');
+    assert.ok(/REVOKE ALL ON FUNCTION[^;]*FROM[^;]*"authenticated"/.test(block), fn + ' REVOKE must explicitly list "authenticated"');
+  }
+});
+
+check('the 20260731000000 hotfix migration exists and revokes authenticated EXECUTE on rete_notification_enqueue_event', () => {
+  const hotfixSql = contents['20260731000000_rete_notification_enqueue_event_authenticated_revoke.sql'];
+  assert.ok(/REVOKE ALL ON FUNCTION "public"\."rete_notification_enqueue_event"/.test(hotfixSql));
+  assert.ok(/FROM "authenticated"/.test(hotfixSql));
 });
 
 console.log(JSON.stringify({ PASS: pass, FAIL: fail }));

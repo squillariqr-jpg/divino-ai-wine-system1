@@ -295,7 +295,7 @@ ALTER FUNCTION "public"."rete_notification_enqueue_event"(
 REVOKE ALL ON FUNCTION "public"."rete_notification_enqueue_event"(
   "public"."rete_notification_event_type", "text", "text", "jsonb", smallint, "uuid", "uuid", "uuid", "uuid", "uuid", "uuid",
   "public"."rete_notification_priority", "text", timestamp with time zone
-) FROM PUBLIC, "anon";
+) FROM PUBLIC, "anon", "authenticated";
 -- Callable only from other SECURITY DEFINER functions owned by postgres
 -- (the business RPCs wired in 20260729080600) - never granted to
 -- authenticated/anon directly, same lockdown as rete_whatsapp_enqueue_notification.
