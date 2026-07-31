@@ -22,6 +22,15 @@
     return root.Notification.permission; // 'default' | 'granted' | 'denied'
   }
 
+  // Whether this deployment has real VAPID key material wired up at all -
+  // independent of browser permission state. Lets the UI show "Notifiche
+  // push non ancora attive" instead of an activation button that would
+  // just fail after the user clicks it (this gate ships with
+  // RETE_NOTIFICATIONS_WEB_PUSH_ENABLED=false and no VAPID keys).
+  function isConfigured() {
+    return !!VAPID_PUBLIC_KEY;
+  }
+
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -75,6 +84,7 @@
 
   root.RETE_PUSH_NOTIFICATIONS = {
     isSupported: isSupported,
+    isConfigured: isConfigured,
     permissionState: permissionState,
     registerServiceWorker: registerServiceWorker,
     requestAndSubscribe: requestAndSubscribe,

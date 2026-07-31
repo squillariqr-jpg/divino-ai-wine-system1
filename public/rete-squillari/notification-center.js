@@ -124,6 +124,10 @@
         box.appendChild(el('div', { text: 'Notifiche push bloccate dal browser per questo sito.', style: 'color:#943a2c;font:11px Arial' }));
         return box;
       }
+      if (!push.isConfigured()) {
+        box.appendChild(el('div', { text: 'Notifiche push non ancora attive.', style: 'color:#6d756f;font:11px Arial' }));
+        return box;
+      }
       box.appendChild(el('strong', { text: 'Attiva le notifiche operative', style: 'display:block;font:700 12px Arial;margin-bottom:3px' }));
       box.appendChild(el('div', {
         text: 'Riceverai avvisi per merce da preparare, trasferimenti e arrivi.',

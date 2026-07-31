@@ -91,5 +91,14 @@ check('rete-backend-adapter.js exposes the new notification/push/preference RPC 
   }
 });
 
+check('push settings panel shows "Notifiche push non ancora attive" instead of an activation button when VAPID is unconfigured (this release ships RETE_NOTIFICATIONS_WEB_PUSH_ENABLED=false with no VAPID keys - an "Attiva" button that only fails after being clicked would be a misleading active-looking status)', () => {
+  assert.ok(notificationCenterJs.includes('Notifiche push non ancora attive'));
+  const configuredCheckIdx = notificationCenterJs.indexOf('push.isConfigured()');
+  const activateButtonIdx = notificationCenterJs.indexOf("'Attiva le notifiche operative'");
+  assert.ok(configuredCheckIdx !== -1, 'isConfigured() must be checked');
+  assert.ok(configuredCheckIdx < activateButtonIdx, 'the configured check must gate the activation button, not just react after a failed click');
+  assert.ok(pushNotificationsJs.includes('function isConfigured()') && pushNotificationsJs.includes('isConfigured: isConfigured'));
+});
+
 console.log(JSON.stringify({ PASS: pass, FAIL: fail }));
 if (fail > 0) process.exitCode = 1;
