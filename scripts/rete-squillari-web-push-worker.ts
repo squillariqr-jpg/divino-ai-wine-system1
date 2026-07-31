@@ -28,6 +28,16 @@ async function main() {
   const limitArg = args.find((a) => a.startsWith('--limit'));
   const limit = limitArg ? Number(limitArg.split('=')[1] || args[args.indexOf(limitArg) + 1]) : 20;
 
+  // In-app-first rollout gate: the channel must be BOTH configured
+  // (VAPID keys present, checked by createWebPushAdapter()) AND
+  // explicitly enabled - never active solely because credentials exist.
+  // --dry-run bypasses this (it never sends for real either way) so the
+  // worker's claim/route/rate-limit logic can still be exercised locally.
+  if (!dryRun && process.env.RETE_NOTIFICATIONS_WEB_PUSH_ENABLED !== 'true') {
+    console.log(JSON.stringify({ WORKER_RUN: false, REASON: 'RETE_NOTIFICATIONS_WEB_PUSH_ENABLED is not "true"', CLAIMED_COUNT: 0 }));
+    return;
+  }
+
   const supabase = getSupabase();
   const adapter: PushProviderAdapter = dryRun ? new MockWebPushAdapter() : createWebPushAdapter();
   const rateLimiter = new PushRateLimiter();

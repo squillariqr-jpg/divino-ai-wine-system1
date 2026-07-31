@@ -23,6 +23,17 @@ function getSupabase() {
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
+
+  // In-app-first rollout gate: the channel must be BOTH configured
+  // (AgentMail credentials present, checked by createEmailAdapter()) AND
+  // explicitly enabled - never active solely because credentials exist.
+  // --dry-run bypasses this (it never sends for real either way) so the
+  // worker's claim/render/digest logic can still be exercised locally.
+  if (!dryRun && process.env.RETE_NOTIFICATIONS_EMAIL_ENABLED !== 'true') {
+    console.log(JSON.stringify({ WORKER_RUN: false, REASON: 'RETE_NOTIFICATIONS_EMAIL_ENABLED is not "true"', LOCATIONS_WITH_PENDING: 0 }));
+    return;
+  }
+
   const supabase = getSupabase();
   const adapter: EmailProviderAdapter = dryRun ? new MockEmailAdapter() : createEmailAdapter();
   const dateISO = new Date().toISOString().slice(0, 10);
